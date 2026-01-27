@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdn.tailwindcss.com 'unsafe-inline'; style-src 'self' https://cdn.tailwindcss.com 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://api.hetzner.cloud; base-uri 'self'; form-action 'self';">
+    <title>Devbox</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // WCAG AAA compliant color palette using CSS variables
+        // All color combinations meet 7:1 contrast ratio for normal text
+        // Themes can be switched at runtime by updating CSS custom properties
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        background: 'var(--color-background)',
+                        foreground: 'var(--color-foreground)',
+                        card: 'var(--color-card)',
+                        'card-foreground': 'var(--color-card-foreground)',
+                        muted: 'var(--color-muted)',
+                        'muted-foreground': 'var(--color-muted-foreground)',
+                        'muted-hover': 'var(--color-muted-hover)',
+                        border: 'var(--color-border)',
+                        input: 'var(--color-input)',
+                        primary: 'var(--color-primary)',
+                        'primary-hover': 'var(--color-primary-hover)',
+                        'primary-foreground': 'var(--color-primary-foreground)',
+                        focus: 'var(--color-focus)',
+                        destructive: 'var(--color-destructive)',
+                        'destructive-hover': 'var(--color-destructive-hover)',
+                        'destructive-foreground': 'var(--color-destructive-foreground)',
+                        success: 'var(--color-success)',
+                        'success-foreground': 'var(--color-success-foreground)',
+                        warning: 'var(--color-warning)',
+                        'warning-foreground': 'var(--color-warning-foreground)',
+                        placeholder: 'var(--color-placeholder)',
+                    },
+                    ringWidth: {
+                        '3': '3px',
+                    },
+                    fontSize: {
+                        'base': ['1rem', { lineHeight: '1.6' }],
+                        'sm': ['0.9375rem', { lineHeight: '1.5' }],
+                        'xs': ['0.875rem', { lineHeight: '1.5' }],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        /* =================================================================
+           WCAG AAA COMPLIANT STYLES WITH THEME SUPPORT
+           - All text meets 7:1 contrast ratio minimum
+           - Focus indicators are clearly visible (3px ring)
+           - Touch targets are minimum 44x44px
+           - Links have underlines (not color-only distinction)
+           - Colors use CSS custom properties for theme switching
+           ================================================================= */
+
+        /* Default theme CSS variables (Default Dark) */
+        :root {
+            --color-background: #0a0a0b;
+            --color-foreground: #f5f5f5;
+            --color-card: #141416;
+            --color-card-foreground: #f5f5f5;
+            --color-muted: #27272a;
+            --color-muted-foreground: #d4d4d8;
+            --color-muted-hover: #3f3f46;
+            --color-border: #3f3f46;
+            --color-input: #27272a;
+            --color-primary: #60a5fa;
+            --color-primary-hover: #3b82f6;
+            --color-primary-foreground: #0a0a0b;
+            --color-focus: #fbbf24;
+            --color-destructive: #f87171;
+            --color-destructive-hover: #ef4444;
+            --color-destructive-foreground: #0a0a0b;
+            --color-success: #4ade80;
+            --color-success-foreground: #166534;
+            --color-warning: #fbbf24;
+            --color-warning-foreground: #713f12;
+            --color-placeholder: #9ca3af;
+        }
+
+        /* Base */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        /* Skip to main content link - WCAG AAA keyboard navigation */
+        .skip-link {
+            position: absolute;
+            top: -100%;
+            left: 0;
+            background: var(--color-focus);
+            color: var(--color-background);
+            padding: 1rem 1.5rem;
+            font-weight: 600;
+            font-size: 1rem;
+            z-index: 100;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+        .skip-link:focus {
+            top: 0;
+            outline: 3px solid var(--color-foreground);
+            outline-offset: 2px;
+        }
+
+        /* Global focus styles - WCAG AAA visible focus */
+        :focus {
+            outline: 3px solid var(--color-focus);
+            outline-offset: 2px;
+        }
+        :focus:not(:focus-visible) {
+            outline: none;
+        }
+        :focus-visible {
+            outline: 3px solid var(--color-focus);
+            outline-offset: 2px;
+        }
+
+        /* Links - WCAG AAA requires non-color distinction */
+        a {
+            text-decoration: underline;
+            text-underline-offset: 3px;
+            text-decoration-thickness: 2px;
+        }
+        a:hover {
+            text-decoration-thickness: 3px;
+        }
+        a:focus-visible {
+            outline: 3px solid var(--color-focus);
+            outline-offset: 2px;
+            border-radius: 2px;
+        }
+
+        /* Navigation links - styled differently but still accessible */
+        .nav-link {
+            text-decoration: none;
+            border-bottom: 2px solid transparent;
+            padding-bottom: 2px;
+        }
+        .nav-link:hover,
+        .nav-link.active {
+            border-bottom-color: currentColor;
+        }
+        .nav-link:focus-visible {
+            outline: 3px solid var(--color-focus);
+            outline-offset: 2px;
+        }
+
+        /* Scrollbar - sufficient contrast */
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-track { background: var(--color-card); }
+        ::-webkit-scrollbar-thumb { background: var(--color-muted-hover); border-radius: 5px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--color-border); }
+
+        /* Toast container */
+        .toast-container {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .toast {
+            padding: 1rem 1.25rem;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            animation: slideIn 0.2s ease-out;
+            border: 2px solid currentColor;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Multi-select combobox - WCAG AAA compliant */
+        .combobox {
+            position: relative;
+        }
+        .combobox-trigger {
+            width: 100%;
+            min-height: 44px;
+            padding: 0.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.375rem;
+            align-items: center;
+            background: var(--color-background);
+            border: 2px solid var(--color-border);
+            border-radius: 0.375rem;
+            cursor: pointer;
+        }
+        .combobox-trigger:focus-within {
+            outline: 3px solid var(--color-focus);
+            outline-offset: 2px;
+            border-color: var(--color-primary);
+        }
+        .combobox-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.25rem 0.625rem;
+            background: var(--color-muted);
+            border-radius: 0.25rem;
+            font-size: 0.9375rem;
+            color: var(--color-foreground);
+        }
+        .combobox-tag-remove {
+            cursor: pointer;
+            min-width: 20px;
+            min-height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 2px;
+        }
+        .combobox-tag-remove:hover {
+            background: var(--color-muted-hover);
+        }
+        .combobox-tag-remove:focus-visible {
+            outline: 2px solid var(--color-focus);
+            outline-offset: 1px;
+        }
+        .combobox-input {
+            flex: 1;
+            min-width: 120px;
+            min-height: 32px;
+            border: none;
+            background: transparent;
+            outline: none;
+            font-size: 1rem;
+            color: var(--color-foreground);
+        }
+        .combobox-input::placeholder {
+            color: var(--color-placeholder);
+        }
+        .combobox-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            margin-top: 0.25rem;
+            max-height: 300px;
+            overflow-y: auto;
+            background: var(--color-card);
+            border: 2px solid var(--color-border);
+            border-radius: 0.375rem;
+            z-index: 50;
+            display: none;
+        }
+        .combobox-dropdown.open {
+            display: block;
+        }
+        .combobox-group {
+            padding: 0.25rem 0;
+        }
+        .combobox-group-label {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: var(--color-muted-foreground);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .combobox-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem;
+            min-height: 44px;
+            font-size: 1rem;
+            cursor: pointer;
+            color: var(--color-foreground);
+        }
+        .combobox-option:hover {
+            background: var(--color-muted);
+        }
+        .combobox-option:focus-visible {
+            outline: 2px solid var(--color-focus);
+            outline-offset: -2px;
+        }
+        .combobox-option.selected {
+            background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+        }
+        .combobox-option.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            color: var(--color-muted-foreground);
+        }
+        .combobox-option.disabled:hover {
+            background: transparent;
+        }
+        .combobox-option-check {
+            color: var(--color-primary);
+            font-weight: bold;
+        }
+        .combobox-empty {
+            padding: 1rem;
+            text-align: center;
+            font-size: 1rem;
+            color: var(--color-muted-foreground);
+        }
+
+        /* Single-select combobox variant */
+        .combobox-single {
+            position: relative;
+        }
+        .combobox-trigger-single {
+            width: 100%;
+            min-height: 44px;
+            padding: 0 0.75rem;
+            display: flex;
+            align-items: center;
+            background: var(--color-background);
+            border: 2px solid var(--color-border);
+            border-radius: 0.375rem;
+            cursor: pointer;
+        }
+        .combobox-trigger-single:focus-within {
+            outline: 3px solid var(--color-focus);
+            outline-offset: 2px;
+            border-color: var(--color-primary);
+        }
+        .combobox-input-single {
+            flex: 1;
+            min-height: 40px;
+            border: none;
+            background: transparent;
+            outline: none;
+            font-size: 1rem;
+            color: var(--color-foreground);
+            cursor: pointer;
+        }
+        .combobox-input-single::placeholder {
+            color: var(--color-foreground);
+        }
+        .combobox-input-single:focus::placeholder {
+            color: var(--color-placeholder);
+        }
+        .combobox-chevron {
+            flex-shrink: 0;
+            color: var(--color-muted-foreground);
+            transition: transform 0.15s;
+        }
+        .combobox-dropdown.open + .combobox-chevron,
+        .combobox-trigger-single:focus-within .combobox-chevron {
+            transform: rotate(180deg);
+        }
+
+        /* Modal - WCAG AAA compliant */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+        .modal-overlay.hidden {
+            display: none;
+        }
+        .modal-content {
+            background: var(--color-card);
+            border: 2px solid var(--color-border);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            max-width: 400px;
+            width: 90%;
+            animation: modalIn 0.15s ease-out;
+        }
+        .modal-content:focus {
+            outline: 3px solid var(--color-focus);
+            outline-offset: 2px;
+        }
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--color-foreground);
+            margin-bottom: 0.75rem;
+        }
+        .modal-message {
+            font-size: 1rem;
+            color: var(--color-muted-foreground);
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+        }
+        .modal-btn {
+            min-height: 44px;
+            min-width: 44px;
+            padding: 0.625rem 1.25rem;
+            border-radius: 0.375rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .modal-btn:focus-visible {
+            outline: 3px solid var(--color-focus);
+            outline-offset: 2px;
+        }
+        .modal-btn-secondary {
+            background: var(--color-muted);
+            border: 2px solid var(--color-border);
+            color: var(--color-foreground);
+        }
+        .modal-btn-secondary:hover {
+            background: var(--color-muted-hover);
+        }
+        .modal-btn-primary {
+            background: var(--color-primary);
+            border: 2px solid var(--color-primary);
+            color: var(--color-primary-foreground);
+        }
+        .modal-btn-primary:hover {
+            background: var(--color-primary-hover);
+            border-color: var(--color-primary-hover);
+        }
+        .modal-btn-destructive {
+            background: var(--color-destructive);
+            border: 2px solid var(--color-destructive);
+            color: var(--color-destructive-foreground);
+        }
+        .modal-btn-destructive:hover {
+            background: var(--color-destructive-hover);
+            border-color: var(--color-destructive-hover);
+        }
+
+        /* Theme dropdown */
+        .theme-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 0.5rem;
+            min-width: 220px;
+            background: var(--color-card);
+            border: 2px solid var(--color-border);
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+            z-index: 60;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            display: none;
+        }
+        .theme-dropdown.open {
+            display: block;
+        }
+        .theme-option {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            width: 100%;
+            min-height: 44px;
+            padding: 0.5rem 0.75rem;
+            border: none;
+            background: transparent;
+            color: var(--color-foreground);
+            font-size: 1rem;
+            text-align: left;
+            border-radius: 0.375rem;
+            cursor: pointer;
+        }
+        .theme-option:hover {
+            background: var(--color-muted);
+        }
+        .theme-option:focus-visible {
+            outline: 3px solid var(--color-focus);
+            outline-offset: -2px;
+        }
+        .theme-option.selected {
+            background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+        }
+        .theme-option .check {
+            margin-left: auto;
+            color: var(--color-primary);
+            font-weight: bold;
+        }
+        .theme-preview {
+            width: 24px;
+            height: 24px;
+            border-radius: 0.25rem;
+            border: 2px solid;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .theme-preview span {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        .theme-family-label {
+            padding: 0.5rem 0.75rem 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--color-muted-foreground);
+        }
+        .theme-divider {
+            height: 1px;
+            background: var(--color-border);
+            margin: 0.5rem 0;
+        }
+
+        /* Reduced motion preference */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-background text-foreground min-h-screen">
+    <!-- Skip to main content - WCAG AAA keyboard navigation -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <!-- Navigation -->
+    <nav class="border-b-2 border-border bg-card sticky top-0 z-40" role="navigation" aria-label="Main navigation">
+        <div class="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+            <span class="text-xl font-bold">Devbox</span>
+            <div class="flex items-center gap-1">
+                <div class="flex gap-1" role="menubar">
+                    <a href="#dashboard" class="nav-link min-h-[44px] min-w-[44px] px-4 py-2 rounded-md text-base font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors flex items-center" data-nav="dashboard" role="menuitem">Dashboard</a>
+                    <a href="#config" class="nav-link min-h-[44px] min-w-[44px] px-4 py-2 rounded-md text-base font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors flex items-center" data-nav="config" role="menuitem">Global</a>
+                    <a href="#profiles" class="nav-link min-h-[44px] min-w-[44px] px-4 py-2 rounded-md text-base font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors flex items-center" data-nav="profiles" role="menuitem">Profiles</a>
+                    <a href="#cloudinit" class="nav-link min-h-[44px] min-w-[44px] px-4 py-2 rounded-md text-base font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors flex items-center" data-nav="cloudinit" role="menuitem">Cloud-Init</a>
+                    <a href="#credentials" class="nav-link min-h-[44px] min-w-[44px] px-4 py-2 rounded-md text-base font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors flex items-center" data-nav="credentials" role="menuitem">Credentials</a>
+                </div>
+                <!-- Theme toggle -->
+                <div class="relative ml-2">
+                    <button
+                        id="theme-toggle"
+                        class="nav-link min-h-[44px] min-w-[44px] px-3 py-2 rounded-md text-base font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors flex items-center"
+                        aria-label="Change color theme"
+                        aria-haspopup="listbox"
+                        aria-expanded="false"
+                        onclick="window.devbox.toggleThemeDropdown()"
+                    >
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                        </svg>
+                    </button>
+                    <div id="theme-dropdown" class="theme-dropdown" role="listbox" aria-label="Select color theme"></div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main content -->
+    <main class="max-w-4xl mx-auto px-4 py-6" id="main-content" aria-label="Main content">
+        <div id="app">
+            <div class="bg-card border-2 border-border rounded-lg p-6">
+                <p class="text-muted-foreground">Loading...</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast container - ARIA live region for announcements -->
+    <div id="toasts" class="toast-container" role="status" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- Modal container -->
+    <!-- Confirm modal -->
+    <div id="modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-message">
+        <div class="modal-content" tabindex="-1">
+            <h2 id="modal-title" class="modal-title"></h2>
+            <p id="modal-message" class="modal-message"></p>
+            <div class="modal-actions">
+                <button id="modal-cancel" class="modal-btn modal-btn-secondary" type="button">Cancel</button>
+                <button id="modal-confirm" class="modal-btn modal-btn-destructive" type="button">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Input/prompt modal -->
+    <div id="prompt-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="prompt-title">
+        <div class="modal-content" tabindex="-1">
+            <h2 id="prompt-title" class="modal-title"></h2>
+            <div class="mb-4">
+                <input type="text" id="prompt-input" class="w-full min-h-[44px] px-3 py-2 bg-background border-2 border-border rounded-md text-base text-foreground placeholder:text-placeholder focus:outline-none focus:ring-3 focus:ring-focus focus:border-primary" autocomplete="off">
+            </div>
+            <div class="modal-actions">
+                <button id="prompt-cancel" class="modal-btn modal-btn-secondary" type="button">Cancel</button>
+                <button id="prompt-confirm" class="modal-btn modal-btn-primary" type="button">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
