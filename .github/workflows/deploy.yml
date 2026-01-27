@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [master]
+    branches: [main]
 
 permissions:
   contents: read
@@ -39,7 +39,7 @@ jobs:
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: web
+          path: dist
 
       - id: deployment
         uses: actions/deploy-pages@v4
