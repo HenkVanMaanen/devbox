@@ -2,15 +2,22 @@
   "type": "module",
   "packageManager": "pnpm@10.28.2",
   "scripts": {
-    "build": "tailwindcss -i web/src/input.css -o web/css/style.css --minify",
-    "dev": "tailwindcss -i web/src/input.css -o web/css/style.css --watch",
+    "build": "rm -rf dist && node esbuild.js build",
+    "dev": "node esbuild.js",
     "test": "node --test 'tests/*.test.mjs'"
   },
   "dependencies": {
     "playwright": "^1.58.0"
   },
   "devDependencies": {
-    "@tailwindcss/cli": "^4.1.0",
+    "@tailwindcss/postcss": "^4.1.18",
+    "esbuild": "^0.25.0",
+    "postcss": "^8.5.6",
     "tailwindcss": "^4.1.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }
