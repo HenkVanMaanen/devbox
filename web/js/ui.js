@@ -14,7 +14,7 @@ export const UI = {
     hint: 'text-sm text-muted-foreground mt-1',
 
     // Buttons (WCAG AAA: min 44px touch targets, high contrast focus)
-    btn: 'inline-flex items-center justify-center min-h-[44px] min-w-[44px] px-4 py-2 text-base font-medium rounded-md transition-colors focus:outline-none focus:ring-3 focus:ring-focus focus:ring-offset-2 focus:ring-offset-background disabled:opacity-60 disabled:cursor-not-allowed',
+    btn: 'inline-flex items-center justify-center min-h-[44px] min-w-[44px] px-4 py-2 text-base font-medium rounded-md transition-colors focus:outline-hidden focus:ring-3 focus:ring-focus focus:ring-offset-2 focus:ring-offset-background disabled:opacity-60 disabled:cursor-not-allowed',
     btnPrimary: 'bg-primary text-primary-foreground hover:bg-primary-hover',
     btnSecondary: 'bg-muted text-foreground hover:bg-muted-hover',
     btnDestructive: 'bg-destructive text-destructive-foreground hover:bg-destructive-hover',
@@ -23,9 +23,9 @@ export const UI = {
     btnSm: 'min-h-[44px] px-3 py-1.5 text-sm',
 
     // Form elements (WCAG AAA: visible focus, adequate sizing)
-    input: 'w-full min-h-[44px] px-3 py-2 text-base bg-background border-2 border-border rounded-md focus:outline-none focus:ring-3 focus:ring-focus focus:ring-offset-2 focus:ring-offset-background focus:border-primary placeholder:text-placeholder',
-    select: 'w-full min-h-[44px] px-3 py-2 text-base bg-background border-2 border-border rounded-md focus:outline-none focus:ring-3 focus:ring-focus focus:ring-offset-2 focus:ring-offset-background focus:border-primary',
-    textarea: 'w-full min-h-[88px] px-3 py-2 text-base bg-background border-2 border-border rounded-md focus:outline-none focus:ring-3 focus:ring-focus focus:ring-offset-2 focus:ring-offset-background focus:border-primary placeholder:text-placeholder resize-y',
+    input: 'w-full min-h-[44px] px-3 py-2 text-base bg-background border-2 border-border rounded-md focus:outline-hidden focus:ring-3 focus:ring-focus focus:ring-offset-2 focus:ring-offset-background focus:border-primary placeholder:text-placeholder',
+    select: 'w-full min-h-[44px] px-3 py-2 text-base bg-background border-2 border-border rounded-md focus:outline-hidden focus:ring-3 focus:ring-focus focus:ring-offset-2 focus:ring-offset-background focus:border-primary',
+    textarea: 'w-full min-h-[88px] px-3 py-2 text-base bg-background border-2 border-border rounded-md focus:outline-hidden focus:ring-3 focus:ring-focus focus:ring-offset-2 focus:ring-offset-background focus:border-primary placeholder:text-placeholder resize-y',
     checkbox: 'w-5 h-5 rounded border-2 border-border text-primary focus:ring-3 focus:ring-focus bg-background cursor-pointer',
 
     // Layout
