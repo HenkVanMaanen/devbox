@@ -32,7 +32,12 @@ globalThis.window = {
 
 const { state, setState, setRenderCallback } = await import('../web/js/state.js');
 const storage = await import('../web/js/storage.js');
-const { addCustomPackage, addCustomPackageToProfile, toggleComboboxValue, addListItem, removeListItem } = await import('../web/js/handlers.js');
+const {
+    addCustomPackage, addCustomPackageToProfile, toggleComboboxValue,
+    addListItem, removeListItem,
+    addGitCredentialToConfig, removeGitCredentialFromConfig,
+    addGitCredentialToProfile, removeGitCredentialFromProfile
+} = await import('../web/js/handlers.js');
 
 describe('handlers.js', () => {
     let renderCalled;
@@ -169,6 +174,135 @@ describe('handlers.js', () => {
             const updated = storage.getGlobalConfig();
             assert.equal(updated.repos.length, 1);
             assert.equal(updated.repos[0], 'https://github.com/c/d.git');
+        });
+    });
+
+    describe('git credential handlers', () => {
+        describe('addGitCredentialToConfig', () => {
+            it('does nothing with empty fields', () => {
+                mockElements = {
+                    'git-credentials-host': { value: '' },
+                    'git-credentials-username': { value: 'user' },
+                    'git-credentials-token': { value: 'token' }
+                };
+                addGitCredentialToConfig();
+                const config = storage.getGlobalConfig();
+                assert.deepEqual(config.git.credentials, []);
+            });
+
+            it('adds git credential to global config', () => {
+                mockElements = {
+                    'git-credentials-host': { value: 'github.com' },
+                    'git-credentials-username': { value: 'myuser' },
+                    'git-credentials-token': { value: 'ghp_token123' }
+                };
+                addGitCredentialToConfig();
+                const config = storage.getGlobalConfig();
+                assert.equal(config.git.credentials.length, 1);
+                assert.equal(config.git.credentials[0].host, 'github.com');
+                assert.equal(config.git.credentials[0].username, 'myuser');
+            });
+
+            it('replaces existing credential for same host', () => {
+                const config = storage.getGlobalConfig();
+                config.git.credentials = [{ host: 'github.com', username: 'old', token: 'old' }];
+                storage.saveGlobalConfig(config);
+
+                mockElements = {
+                    'git-credentials-host': { value: 'github.com' },
+                    'git-credentials-username': { value: 'newuser' },
+                    'git-credentials-token': { value: 'newtoken' }
+                };
+                addGitCredentialToConfig();
+                const updated = storage.getGlobalConfig();
+                assert.equal(updated.git.credentials.length, 1);
+                assert.equal(updated.git.credentials[0].username, 'newuser');
+            });
+        });
+
+        describe('removeGitCredentialFromConfig', () => {
+            it('removes credential by index', () => {
+                const config = storage.getGlobalConfig();
+                config.git.credentials = [
+                    { host: 'github.com', username: 'u1', token: 't1' },
+                    { host: 'gitlab.com', username: 'u2', token: 't2' }
+                ];
+                storage.saveGlobalConfig(config);
+
+                removeGitCredentialFromConfig(0);
+                const updated = storage.getGlobalConfig();
+                assert.equal(updated.git.credentials.length, 1);
+                assert.equal(updated.git.credentials[0].host, 'gitlab.com');
+            });
+
+            it('does nothing for invalid index', () => {
+                const config = storage.getGlobalConfig();
+                config.git.credentials = [{ host: 'github.com', username: 'u', token: 't' }];
+                storage.saveGlobalConfig(config);
+
+                removeGitCredentialFromConfig(5);
+                const updated = storage.getGlobalConfig();
+                assert.equal(updated.git.credentials.length, 1);
+            });
+        });
+
+        describe('addGitCredentialToProfile', () => {
+            it('adds credential to profile overrides', () => {
+                const profileId = storage.createProfile('git-test');
+                storage.saveProfile(profileId, { name: 'git-test', overrides: {} });
+                Object.assign(state, { editingProfileId: profileId });
+
+                mockElements = {
+                    'profile-git-credentials-host': { value: 'github.com' },
+                    'profile-git-credentials-username': { value: 'profuser' },
+                    'profile-git-credentials-token': { value: 'proftoken' }
+                };
+                addGitCredentialToProfile();
+                const profile = storage.getProfile(profileId);
+                assert.ok(Object.hasOwn(profile.overrides, 'git.credentials'));
+                assert.equal(profile.overrides['git.credentials'].length, 1);
+                assert.equal(profile.overrides['git.credentials'][0].host, 'github.com');
+            });
+
+            it('copies global credentials before first override add', () => {
+                const config = storage.getGlobalConfig();
+                config.git.credentials = [{ host: 'existing.com', username: 'e', token: 't' }];
+                storage.saveGlobalConfig(config);
+
+                const profileId = storage.createProfile('copy-test');
+                storage.saveProfile(profileId, { name: 'copy-test', overrides: {} });
+                Object.assign(state, { editingProfileId: profileId });
+
+                mockElements = {
+                    'profile-git-credentials-host': { value: 'newhost.com' },
+                    'profile-git-credentials-username': { value: 'new' },
+                    'profile-git-credentials-token': { value: 'new' }
+                };
+                addGitCredentialToProfile();
+                const profile = storage.getProfile(profileId);
+                assert.equal(profile.overrides['git.credentials'].length, 2);
+            });
+        });
+
+        describe('removeGitCredentialFromProfile', () => {
+            it('removes credential from profile override', () => {
+                const profileId = storage.createProfile('remove-test');
+                storage.saveProfile(profileId, {
+                    name: 'remove-test',
+                    overrides: {
+                        'git.credentials': [
+                            { host: 'a.com', username: 'a', token: 'a' },
+                            { host: 'b.com', username: 'b', token: 'b' }
+                        ]
+                    }
+                });
+                Object.assign(state, { editingProfileId: profileId });
+
+                removeGitCredentialFromProfile(0);
+                const profile = storage.getProfile(profileId);
+                assert.equal(profile.overrides['git.credentials'].length, 1);
+                assert.equal(profile.overrides['git.credentials'][0].host, 'b.com');
+            });
         });
     });
 });

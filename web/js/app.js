@@ -11,7 +11,9 @@ import { renderDashboard, renderProfiles, renderProfileEdit, renderConfig, rende
 import {
     toggleComboboxValue, selectComboboxValue,
     addCustomPackage, addCustomPackageToProfile,
-    addListItem, removeListItem, addListItemToProfile, removeListItemFromProfile
+    addListItem, removeListItem, addListItemToProfile, removeListItemFromProfile,
+    addGitCredentialToConfig, removeGitCredentialFromConfig,
+    addGitCredentialToProfile, removeGitCredentialFromProfile
 } from './handlers.js';
 
 // ============================================================================
@@ -82,7 +84,7 @@ async function createServer() {
     const token = storage.getHetznerToken();
     const selectedProfileId = state.selectedProfileId || storage.getDefaultProfileId();
     const config = storage.getConfigForProfile(selectedProfileId);
-    const sshPubKey = storage.getSSHPubKey();
+    const sshPubKey = config.ssh?.pubKey || '';
 
     if (!token) {
         showToast('Hetzner token not configured', 'error');
@@ -221,6 +223,8 @@ function saveConfig() {
         return document.getElementById(fieldId)?.checked ?? defaultValue;
     };
 
+    config.ssh.pubKey = getFieldValue('ssh.pubKey').trim();
+
     config.git.userName = getFieldValue('git.userName');
     config.git.userEmail = getFieldValue('git.userEmail');
 
@@ -253,13 +257,11 @@ function saveConfig() {
 
 function saveCredentials() {
     const token = document.getElementById('hetznerToken')?.value || '';
-    const sshPubKey = document.getElementById('sshPubKey')?.value || '';
 
     storage.saveHetznerToken(token);
-    storage.saveSSHPubKey(sshPubKey);
     setState({ serverTypes: [], locations: [], images: [], hetznerOptionsError: false });
 
-    showToast('Credentials saved', 'success');
+    showToast('API token saved', 'success');
     loadServers();
 }
 
@@ -300,31 +302,6 @@ function clearClaudeCredentials() {
     config.claude.credentialsJson = null;
     storage.saveGlobalConfig(config);
     showToast('Claude credentials cleared', 'success');
-    render();
-}
-
-// ============================================================================
-// GIT CREDENTIALS
-// ============================================================================
-
-function addGitCredential() {
-    const host = document.getElementById('gitCredHost')?.value;
-    const username = document.getElementById('gitCredUsername')?.value;
-    const token = document.getElementById('gitCredToken')?.value;
-
-    if (!host || !username || !token) {
-        showToast('Please fill all fields', 'error');
-        return;
-    }
-
-    storage.addGitCredential(host, username, token);
-    showToast('Git credential added', 'success');
-    render();
-}
-
-function removeGitCredential(host) {
-    storage.removeGitCredential(host);
-    showToast('Git credential removed', 'success');
     render();
 }
 
@@ -603,8 +580,10 @@ window.devbox = {
     saveConfig,
     saveCredentials,
     validateToken,
-    addGitCredential,
-    removeGitCredential,
+    addGitCredentialToConfig,
+    removeGitCredentialFromConfig,
+    addGitCredentialToProfile,
+    removeGitCredentialFromProfile,
     clearAll,
     exportConfig,
     importConfig,

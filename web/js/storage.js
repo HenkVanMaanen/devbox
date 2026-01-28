@@ -5,17 +5,19 @@ const KEYS = {
     PROFILES: 'devbox:profiles',
     DEFAULT_PROFILE: 'devbox:default-profile',
     HETZNER_TOKEN: 'devbox:hetzner-token',
-    GIT_CREDENTIALS: 'devbox:git-credentials',
-    SSH_PUBKEY: 'devbox:ssh-pubkey',
     THEME: 'devbox:theme',
     SERVER_TOKENS: 'devbox:server-tokens'
 };
 
 // Default global configuration
 const DEFAULT_GLOBAL_CONFIG = {
+    ssh: {
+        pubKey: ''
+    },
     git: {
         userName: '',
-        userEmail: ''
+        userEmail: '',
+        credentials: []
     },
     hetzner: {
         location: 'fsn1',
@@ -227,7 +229,7 @@ export function getDefaultProfileConfig() {
 }
 
 // ============================================================================
-// CREDENTIALS (unchanged - always global)
+// HETZNER TOKEN
 // ============================================================================
 
 export function getHetznerToken() {
@@ -239,42 +241,6 @@ export function saveHetznerToken(token) {
         localStorage.setItem(KEYS.HETZNER_TOKEN, token);
     } else {
         localStorage.removeItem(KEYS.HETZNER_TOKEN);
-    }
-}
-
-export function getGitCredentials() {
-    const stored = localStorage.getItem(KEYS.GIT_CREDENTIALS);
-    if (stored) {
-        try { return JSON.parse(stored); } catch { /* corrupted data */ }
-    }
-    return [];
-}
-
-export function saveGitCredentials(credentials) {
-    localStorage.setItem(KEYS.GIT_CREDENTIALS, JSON.stringify(credentials));
-}
-
-export function addGitCredential(host, username, token) {
-    const creds = getGitCredentials();
-    const filtered = creds.filter(c => c.host !== host);
-    filtered.push({ host, username, token });
-    saveGitCredentials(filtered);
-}
-
-export function removeGitCredential(host) {
-    const creds = getGitCredentials();
-    saveGitCredentials(creds.filter(c => c.host !== host));
-}
-
-export function getSSHPubKey() {
-    return localStorage.getItem(KEYS.SSH_PUBKEY) || '';
-}
-
-export function saveSSHPubKey(pubkey) {
-    if (pubkey) {
-        localStorage.setItem(KEYS.SSH_PUBKEY, pubkey.trim());
-    } else {
-        localStorage.removeItem(KEYS.SSH_PUBKEY);
     }
 }
 
@@ -332,8 +298,6 @@ export function clearAll() {
     localStorage.removeItem(KEYS.PROFILES);
     localStorage.removeItem(KEYS.DEFAULT_PROFILE);
     localStorage.removeItem(KEYS.HETZNER_TOKEN);
-    localStorage.removeItem(KEYS.GIT_CREDENTIALS);
-    localStorage.removeItem(KEYS.SSH_PUBKEY);
     localStorage.removeItem(KEYS.THEME);
     localStorage.removeItem(KEYS.SERVER_TOKENS);
     // Also clear old config key
@@ -346,8 +310,6 @@ export function exportAll() {
         profiles: getProfiles(),
         defaultProfile: getDefaultProfileId(),
         hetznerToken: getHetznerToken(),
-        gitCredentials: getGitCredentials(),
-        sshPubKey: getSSHPubKey(),
         theme: getTheme(),
         serverTokens: getServerTokens()
     };
@@ -365,12 +327,6 @@ export function importAll(data) {
     }
     if ('hetznerToken' in data) {
         saveHetznerToken(data.hetznerToken);
-    }
-    if (data.gitCredentials) {
-        saveGitCredentials(data.gitCredentials);
-    }
-    if ('sshPubKey' in data) {
-        saveSSHPubKey(data.sshPubKey);
     }
     if (data.theme) {
         saveTheme(data.theme);

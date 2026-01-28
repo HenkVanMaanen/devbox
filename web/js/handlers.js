@@ -307,3 +307,82 @@ export function removeListItemFromProfile(path, index) {
         setState({});
     }
 }
+
+// ============================================================================
+// GIT CREDENTIAL MANAGEMENT
+// ============================================================================
+
+export function addGitCredentialToConfig() {
+    const host = document.getElementById('git-credentials-host')?.value?.trim();
+    const username = document.getElementById('git-credentials-username')?.value?.trim();
+    const token = document.getElementById('git-credentials-token')?.value?.trim();
+
+    if (!host || !username || !token) {
+        showToast('Please fill all fields', 'error');
+        return;
+    }
+
+    const config = storage.getGlobalConfig();
+    if (!Array.isArray(config.git.credentials)) config.git.credentials = [];
+    config.git.credentials = config.git.credentials.filter(c => c.host !== host);
+    config.git.credentials.push({ host, username, token });
+    storage.saveGlobalConfig(config);
+    showToast('Git credential added', 'success');
+    setState({});
+}
+
+export function removeGitCredentialFromConfig(index) {
+    const config = storage.getGlobalConfig();
+    if (!Array.isArray(config.git.credentials)) return;
+
+    if (index >= 0 && index < config.git.credentials.length) {
+        config.git.credentials.splice(index, 1);
+        storage.saveGlobalConfig(config);
+        showToast('Git credential removed', 'success');
+        setState({});
+    }
+}
+
+export function addGitCredentialToProfile() {
+    const host = document.getElementById('profile-git-credentials-host')?.value?.trim();
+    const username = document.getElementById('profile-git-credentials-username')?.value?.trim();
+    const token = document.getElementById('profile-git-credentials-token')?.value?.trim();
+
+    if (!host || !username || !token) {
+        showToast('Please fill all fields', 'error');
+        return;
+    }
+
+    const profileId = state.editingProfileId;
+    const profile = storage.getProfile(profileId);
+    if (!profile) return;
+
+    if (!Object.hasOwn(profile.overrides, 'git.credentials')) {
+        const globalConfig = storage.getGlobalConfig();
+        profile.overrides['git.credentials'] = JSON.parse(JSON.stringify(globalConfig.git?.credentials || []));
+    }
+
+    profile.overrides['git.credentials'] = profile.overrides['git.credentials'].filter(c => c.host !== host);
+    profile.overrides['git.credentials'].push({ host, username, token });
+    storage.saveProfile(profileId, profile);
+    showToast('Git credential added', 'success');
+    setState({});
+}
+
+export function removeGitCredentialFromProfile(index) {
+    const profileId = state.editingProfileId;
+    const profile = storage.getProfile(profileId);
+    if (!profile) return;
+
+    if (!Object.hasOwn(profile.overrides, 'git.credentials')) {
+        const globalConfig = storage.getGlobalConfig();
+        profile.overrides['git.credentials'] = JSON.parse(JSON.stringify(globalConfig.git?.credentials || []));
+    }
+
+    if (index >= 0 && index < profile.overrides['git.credentials'].length) {
+        profile.overrides['git.credentials'].splice(index, 1);
+        storage.saveProfile(profileId, profile);
+        showToast('Git credential removed', 'success');
+        setState({});
+    }
+}

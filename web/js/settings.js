@@ -29,11 +29,22 @@ export const SETTINGS_SECTIONS = [
         ]
     },
     {
+        id: 'ssh',
+        title: 'SSH',
+        fields: [
+            { path: 'ssh.pubKey', label: 'SSH Public Key (Optional)', type: 'textarea',
+              placeholder: 'ssh-ed25519 AAAA... you@example.com',
+              hint: 'Paste your public key for SSH access. Web service access works without this.' }
+        ]
+    },
+    {
         id: 'git',
         title: 'Git Settings',
         fields: [
             { path: 'git.userName', label: 'User Name', type: 'text', placeholder: 'Your Name' },
-            { path: 'git.userEmail', label: 'User Email', type: 'email', placeholder: 'you@example.com' }
+            { path: 'git.userEmail', label: 'User Email', type: 'email', placeholder: 'you@example.com' },
+            { path: 'git.credentials', label: 'Git Credentials', type: 'gitCredentials',
+              hint: 'Only add tokens that cannot delete repositories. Use scoped tokens or a machine user with write-only access.' }
         ]
     },
     {
@@ -215,6 +226,10 @@ export function getFieldHint(hintKey, config) {
 export function formatGlobalValue(value) {
     if (Array.isArray(value)) {
         if (value.length === 0) return '(empty)';
+        if (value[0] && typeof value[0] === 'object' && value[0].host) {
+            const preview = value.slice(0, 3).map(v => escapeHtml(v.host)).join(', ');
+            return preview + (value.length > 3 ? '...' : '');
+        }
         const preview = value.slice(0, 3).map(v => escapeHtml(String(v))).join(', ');
         return preview + (value.length > 3 ? '...' : '');
     }
@@ -334,6 +349,28 @@ function renderFieldInput(field, fieldId, value, options, dataAttr, isProfile) {
             return `<textarea id="${fieldId}" class="${UI.textarea}" rows="3" placeholder="${escapeHtml(field.placeholder || '')}" ${dataAttr}>${escapeHtml(String(value || ''))}</textarea>`;
         case 'textarea-array':
             return `<textarea id="${fieldId}" class="${UI.textarea}" rows="4" placeholder="${escapeHtml(field.placeholder || '')}" ${dataAttr}>${escapeHtml(Array.isArray(value) ? value.join('\n') : String(value || ''))}</textarea>`;
+        case 'gitCredentials': {
+            const creds = Array.isArray(value) ? value : [];
+            const addFn = isProfile ? 'addGitCredentialToProfile' : 'addGitCredentialToConfig';
+            const removeFn = isProfile ? 'removeGitCredentialFromProfile' : 'removeGitCredentialFromConfig';
+            const credsHtml = creds.length ? creds.map((cred, i) => `
+                <div class="flex items-center justify-between bg-muted/30 rounded-md px-3 py-2">
+                    <span class="text-sm">${escapeHtml(cred.host)} <span class="text-muted-foreground">(${escapeHtml(cred.username)})</span></span>
+                    <button class="${cn(UI.btn, UI.btnDestructive, UI.btnSm)}" onclick="window.devbox.${removeFn}(${i})">Remove</button>
+                </div>
+            `).join('') : `<p class="${UI.subtitle}">No git credentials configured</p>`;
+            return `
+                <div class="space-y-2 mb-4">${credsHtml}</div>
+                <div>
+                    <label class="${UI.label}">Add Git Credential</label>
+                    <div class="flex gap-2 flex-wrap">
+                        <input type="text" id="${fieldId}-host" class="${UI.input}" placeholder="github.com" style="flex: 1; min-width: 100px">
+                        <input type="text" id="${fieldId}-username" class="${UI.input}" placeholder="username" style="flex: 1; min-width: 100px">
+                        <input type="password" id="${fieldId}-token" class="${UI.input}" placeholder="Personal Access Token" style="flex: 2; min-width: 150px">
+                        <button class="${cn(UI.btn, UI.btnSecondary)}" onclick="window.devbox.${addFn}()">Add</button>
+                    </div>
+                </div>`;
+        }
         case 'list': {
             const items = Array.isArray(value) ? value : [];
             const listId = fieldId + '-list';
@@ -375,7 +412,7 @@ export function renderSettingsSection(section, config, token, mode = 'global', p
                 <div class="${UI.card} mb-4">
                     <div class="${UI.cardHeader}"><h2 class="${UI.title}">${section.title}</h2></div>
                     <div class="${UI.cardBody}">
-                        <p class="${UI.subtitle}">Configure your Hetzner API token in <a href="#credentials" class="text-primary hover:underline">Credentials</a> to load options.</p>
+                        <p class="${UI.subtitle}">Configure your Hetzner API token in <a href="#credentials" class="text-primary hover:underline">API Token</a> to load options.</p>
                     </div>
                 </div>`;
         }

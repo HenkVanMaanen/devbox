@@ -17,7 +17,7 @@ export function renderDashboard() {
                 <div class="${UI.cardBody} text-center py-12">
                     <h2 class="${UI.title} mb-2">Welcome to Devbox</h2>
                     <p class="${UI.subtitle} mb-6">Configure your Hetzner API token to get started.</p>
-                    <a href="#credentials" class="${cn(UI.btn, UI.btnPrimary)}">Configure Credentials</a>
+                    <a href="#credentials" class="${cn(UI.btn, UI.btnPrimary)}">Configure API Token</a>
                 </div>
             </div>
         `;

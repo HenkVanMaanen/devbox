@@ -24,7 +24,8 @@ const baseConfig = {
     hetzner: { serverType: 'cpx21', baseImage: 'debian-12', location: 'fsn1' },
     packages: { apt: ['git', 'curl'], mise: [] },
     shell: { default: 'bash', starship: false },
-    git: { userName: '', userEmail: '' },
+    ssh: { pubKey: '' },
+    git: { userName: '', userEmail: '', credentials: [] },
     claude: { apiKey: '', credentialsJson: null, theme: '', settings: '' },
     services: {
         codeServer: false, claudeTerminal: false, shellTerminal: false,

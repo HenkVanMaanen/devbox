@@ -28,6 +28,8 @@ describe('storage.js', () => {
             assert.equal(config.shell.default, 'fish');
             assert.equal(config.autoDelete.enabled, true);
             assert.equal(config.autoDelete.timeoutMinutes, 90);
+            assert.equal(config.ssh.pubKey, '');
+            assert.deepEqual(config.git.credentials, []);
         });
 
         it('merges stored config with defaults', () => {
@@ -61,14 +63,6 @@ describe('storage.js', () => {
             localStorage.setItem('devbox:profiles', 'corrupted');
             const profiles = storage.getProfiles();
             assert.ok(profiles.default); // falls back to defaults
-        });
-    });
-
-    describe('getGitCredentials - error handling', () => {
-        it('handles corrupted credentials JSON', () => {
-            localStorage.setItem('devbox:git-credentials', '{broken');
-            const creds = storage.getGitCredentials();
-            assert.deepEqual(creds, []); // returns empty array
         });
     });
 
@@ -199,7 +193,7 @@ describe('storage.js', () => {
         });
     });
 
-    describe('credentials', () => {
+    describe('Hetzner token', () => {
         it('get/save Hetzner token', () => {
             assert.equal(storage.getHetznerToken(), '');
             storage.saveHetznerToken('mytoken');
@@ -210,34 +204,6 @@ describe('storage.js', () => {
             storage.saveHetznerToken('mytoken');
             storage.saveHetznerToken('');
             assert.equal(storage.getHetznerToken(), '');
-        });
-
-        it('get/save git credentials', () => {
-            assert.deepEqual(storage.getGitCredentials(), []);
-            storage.addGitCredential('github.com', 'user', 'token123');
-            const creds = storage.getGitCredentials();
-            assert.equal(creds.length, 1);
-            assert.equal(creds[0].host, 'github.com');
-        });
-
-        it('replaces git credential for same host', () => {
-            storage.addGitCredential('github.com', 'user1', 'token1');
-            storage.addGitCredential('github.com', 'user2', 'token2');
-            const creds = storage.getGitCredentials();
-            assert.equal(creds.length, 1);
-            assert.equal(creds[0].username, 'user2');
-        });
-
-        it('removes git credential by host', () => {
-            storage.addGitCredential('github.com', 'user', 'token');
-            storage.removeGitCredential('github.com');
-            assert.deepEqual(storage.getGitCredentials(), []);
-        });
-
-        it('get/save SSH public key', () => {
-            assert.equal(storage.getSSHPubKey(), '');
-            storage.saveSSHPubKey('  ssh-ed25519 AAAA test  ');
-            assert.equal(storage.getSSHPubKey(), 'ssh-ed25519 AAAA test'); // trimmed
         });
     });
 
@@ -261,25 +227,27 @@ describe('storage.js', () => {
     describe('exportAll / importAll', () => {
         it('round-trips all data', () => {
             storage.saveHetznerToken('token123');
-            storage.addGitCredential('github.com', 'user', 'pass');
-            storage.saveSSHPubKey('ssh-ed25519 AAAA');
             storage.saveTheme('dracula-dark');
-            storage.saveGlobalConfig({ hetzner: { location: 'nbg1' } });
+            storage.saveGlobalConfig({
+                hetzner: { location: 'nbg1' },
+                ssh: { pubKey: 'ssh-ed25519 AAAA' },
+                git: { userName: '', userEmail: '', credentials: [{ host: 'github.com', username: 'user', token: 'pass' }] }
+            });
 
             const exported = storage.exportAll();
             localStorage.clear();
 
             storage.importAll(exported);
             assert.equal(storage.getHetznerToken(), 'token123');
-            assert.equal(storage.getGitCredentials()[0].host, 'github.com');
-            assert.equal(storage.getSSHPubKey(), 'ssh-ed25519 AAAA');
             assert.equal(storage.getTheme(), 'dracula-dark');
+            const config = storage.getGlobalConfig();
+            assert.equal(config.ssh.pubKey, 'ssh-ed25519 AAAA');
+            assert.equal(config.git.credentials[0].host, 'github.com');
         });
 
         it('handles partial import', () => {
             storage.importAll({ hetznerToken: 'abc' });
             assert.equal(storage.getHetznerToken(), 'abc');
-            assert.deepEqual(storage.getGitCredentials(), []); // untouched
         });
     });
 

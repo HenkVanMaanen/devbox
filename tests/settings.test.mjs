@@ -174,6 +174,24 @@ describe('settings.js', () => {
         it('escapes HTML in strings', () => {
             assert.equal(formatGlobalValue('<script>'), '&lt;script&gt;');
         });
+
+        it('formats array of objects with host', () => {
+            assert.equal(
+                formatGlobalValue([{ host: 'github.com', username: 'u', token: 't' }]),
+                'github.com'
+            );
+        });
+
+        it('formats multiple objects with host', () => {
+            const result = formatGlobalValue([
+                { host: 'github.com', username: 'u', token: 't' },
+                { host: 'gitlab.com', username: 'u', token: 't' },
+                { host: 'bitbucket.org', username: 'u', token: 't' },
+                { host: 'codeberg.org', username: 'u', token: 't' }
+            ]);
+            assert.ok(result.includes('github.com'));
+            assert.ok(result.includes('...'));
+        });
     });
 
     describe('getFieldOptions', () => {

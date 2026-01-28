@@ -242,8 +242,6 @@ export function getClaudeAccountInfo(credentials) {
 
 export function renderCredentials() {
     const token = storage.getHetznerToken();
-    const sshPubKey = storage.getSSHPubKey();
-    const gitCreds = storage.getGitCredentials();
 
     return `
         <div class="${UI.card} mb-4">
@@ -259,44 +257,8 @@ export function renderCredentials() {
             </div>
         </div>
 
-        <div class="${UI.card} mb-4">
-            <div class="${UI.cardHeader}">
-                <h2 class="${UI.title}">SSH Public Key (Optional)</h2>
-            </div>
-            <div class="${UI.cardBody}">
-                <textarea id="sshPubKey" class="${UI.textarea}" rows="3" placeholder="ssh-ed25519 AAAA... you@example.com">${escapeHtml(sshPubKey)}</textarea>
-                <p class="${UI.hint} mt-2">Optional. Paste your public key for SSH access. Access via web services works without this.</p>
-            </div>
-        </div>
-
-        <div class="${UI.card} mb-4">
-            <div class="${UI.cardHeader}">
-                <h2 class="${UI.title}">Git Credentials</h2>
-            </div>
-            <div class="${UI.cardBody}">
-                <p class="text-sm text-warning mb-4">Only add tokens that cannot delete repositories. Use scoped tokens or a machine user with write-only access.</p>
-                <div id="gitCredsList" class="space-y-2 mb-4">
-                    ${gitCreds.map(cred => `
-                        <div class="flex items-center justify-between bg-muted/30 rounded-md px-3 py-2">
-                            <span class="text-sm">${escapeHtml(cred.host)} <span class="text-muted-foreground">(${escapeHtml(cred.username)})</span></span>
-                            <button class="${cn(UI.btn, UI.btnDestructive, UI.btnSm)}" onclick="window.devbox.removeGitCredential(${escapeAttr(JSON.stringify(cred.host))})">Remove</button>
-                        </div>
-                    `).join('') || `<p class="${UI.subtitle}">No git credentials configured</p>`}
-                </div>
-                <div>
-                    <label class="${UI.label}">Add Git Credential</label>
-                    <div class="flex gap-2 flex-wrap">
-                        <input type="text" id="gitCredHost" class="${UI.input}" placeholder="github.com" style="flex: 1; min-width: 100px">
-                        <input type="text" id="gitCredUsername" class="${UI.input}" placeholder="username" style="flex: 1; min-width: 100px">
-                        <input type="password" id="gitCredToken" class="${UI.input}" placeholder="Personal Access Token" style="flex: 2; min-width: 150px">
-                        <button class="${cn(UI.btn, UI.btnSecondary)}" onclick="window.devbox.addGitCredential()">Add</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <div class="${UI.row}">
-            <button class="${cn(UI.btn, UI.btnPrimary)}" onclick="window.devbox.saveCredentials()">Save Credentials</button>
+            <button class="${cn(UI.btn, UI.btnPrimary)}" onclick="window.devbox.saveCredentials()">Save API Token</button>
             <button class="${cn(UI.btn, UI.btnDestructive)}" onclick="window.devbox.clearAll()">Clear All Data</button>
         </div>
     `;

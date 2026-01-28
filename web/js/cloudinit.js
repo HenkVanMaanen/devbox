@@ -1,14 +1,14 @@
 // Cloud-init user-data generator - using native cloud-init modules
 
-import { getDefaultProfileConfig, getGitCredentials, getSSHPubKey, getTheme as getStoredTheme } from './storage.js';
+import { getDefaultProfileConfig, getTheme as getStoredTheme } from './storage.js';
 import { getTheme, getDefaultTheme, THEMES } from './themes.js';
 import { shellEscape, buildGitCredentials, buildAutodeleteScript, buildCaddyConfig, buildIndexPage } from './cloudinit-builders.js';
 
 // Main generate function - creates cloud-init user-data with native modules
 export function generate(serverName, hetznerToken, config, options = {}) {
     if (!config) config = getDefaultProfileConfig();
-    const gitCreds = options.gitCredentials || getGitCredentials();
-    const sshPubKey = options.sshPubKey || getSSHPubKey();
+    const gitCreds = options.gitCredentials || config.git?.credentials || [];
+    const sshPubKey = options.sshPubKey || config.ssh?.pubKey || '';
 
     // Resolve theme colors
     let themeColors;
