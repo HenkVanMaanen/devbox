@@ -343,11 +343,12 @@ describe('cloudinit.js generate()', () => {
     });
 
     describe('git config', () => {
-        it('sets git user name and email', () => {
+        it('sets git user name and email in gitconfig file', () => {
             const config = { ...baseConfig, git: { userName: 'Test User', userEmail: 'test@ex.com' } };
             const yaml = generate('test', 'token', config, baseOptions);
-            assert.ok(yaml.includes('user.name "Test User"'));
-            assert.ok(yaml.includes('user.email "test@ex.com"'));
+            assert.ok(yaml.includes('.gitconfig'));
+            assert.ok(yaml.includes('name = "Test User"'));
+            assert.ok(yaml.includes('email = "test@ex.com"'));
         });
 
         it('sets credential helper when git credentials present', () => {
@@ -356,34 +357,103 @@ describe('cloudinit.js generate()', () => {
                 gitCredentials: [{ host: 'github.com', username: 'u', token: 't' }]
             };
             const yaml = generate('test', 'token', baseConfig, opts);
-            assert.ok(yaml.includes('credential.helper store'));
+            assert.ok(yaml.includes('helper = store'));
         });
 
-        it('skips user name/email when empty', () => {
+        it('skips user section in gitconfig when no name/email', () => {
             const yaml = generate('test', 'token', baseConfig, baseOptions);
-            assert.ok(!yaml.includes('user.name'));
-            assert.ok(!yaml.includes('user.email'));
+            // Should have gitconfig with init section, but no [user] section
+            assert.ok(yaml.includes('.gitconfig'));
+            assert.ok(yaml.includes('defaultBranch = main'));
         });
 
-        it('escapes shell metacharacters in userName', () => {
-            const config = { ...baseConfig, git: { userName: 'User"; rm -rf /', userEmail: '' } };
+        it('escapes quotes in userName for gitconfig', () => {
+            const config = { ...baseConfig, git: { userName: 'User "Nick"', userEmail: '' } };
             const yaml = generate('test', 'token', config, baseOptions);
-            const line = yaml.split('\n').find(l => l.includes('user.name'));
-            // The unescaped quote-semicolon pattern should NOT appear (would break out of string)
-            // Instead the quote should be preceded by a backslash
-            assert.ok(line.includes('User\\"'), 'double quote in userName should be backslash-escaped');
+            assert.ok(yaml.includes('User \\"Nick\\"'));
         });
 
-        it('escapes dollar signs in userName', () => {
-            const config = { ...baseConfig, git: { userName: 'User $HOME', userEmail: '' } };
+        it('escapes backslashes in userName for gitconfig', () => {
+            const config = { ...baseConfig, git: { userName: 'User\\Name', userEmail: '' } };
             const yaml = generate('test', 'token', config, baseOptions);
-            assert.ok(yaml.includes('\\$HOME'));
+            assert.ok(yaml.includes('User\\\\Name'));
+        });
+    });
+
+    describe('per-host git identity', () => {
+        it('generates host-specific gitconfig when credential has name/email', () => {
+            const opts = {
+                ...baseOptions,
+                gitCredentials: [{ host: 'github.com', username: 'u', token: 't', name: 'Work User', email: 'work@example.com' }]
+            };
+            const yaml = generate('test', 'token', baseConfig, opts);
+            assert.ok(yaml.includes('.gitconfig-github.com'));
+            assert.ok(yaml.includes('name = "Work User"'));
+            assert.ok(yaml.includes('email = "work@example.com"'));
         });
 
-        it('escapes backticks in userEmail', () => {
-            const config = { ...baseConfig, git: { userName: '', userEmail: 'user`whoami`@test.com' } };
-            const yaml = generate('test', 'token', config, baseOptions);
-            assert.ok(yaml.includes('\\`'));
+        it('generates includeIf directives for hosts with custom identity', () => {
+            const opts = {
+                ...baseOptions,
+                gitCredentials: [{ host: 'github.com', username: 'u', token: 't', name: 'Work', email: 'w@e.com' }]
+            };
+            const yaml = generate('test', 'token', baseConfig, opts);
+            assert.ok(yaml.includes('includeIf "hasconfig:remote.*.url:https://github.com/**"'));
+            assert.ok(yaml.includes('includeIf "hasconfig:remote.*.url:git@github.com:*/**"'));
+            assert.ok(yaml.includes('path = ~/.gitconfig-github.com'));
+        });
+
+        it('skips host-specific gitconfig when credential has no name/email', () => {
+            const opts = {
+                ...baseOptions,
+                gitCredentials: [{ host: 'github.com', username: 'u', token: 't' }]
+            };
+            const yaml = generate('test', 'token', baseConfig, opts);
+            assert.ok(!yaml.includes('.gitconfig-github.com'));
+            assert.ok(!yaml.includes('includeIf'));
+        });
+
+        it('writes main gitconfig with global identity as fallback', () => {
+            const config = { ...baseConfig, git: { userName: 'Global User', userEmail: 'global@ex.com' } };
+            const opts = {
+                ...baseOptions,
+                gitCredentials: [{ host: 'github.com', username: 'u', token: 't', name: 'Work', email: 'w@e.com' }]
+            };
+            const yaml = generate('test', 'token', config, opts);
+            // Main gitconfig should have global user
+            assert.ok(yaml.includes('name = "Global User"'));
+            assert.ok(yaml.includes('email = "global@ex.com"'));
+            // And also host-specific
+            assert.ok(yaml.includes('.gitconfig-github.com'));
+        });
+
+        it('escapes special characters in per-host identity', () => {
+            const opts = {
+                ...baseOptions,
+                gitCredentials: [{ host: 'github.com', username: 'u', token: 't', name: 'User "Nick" \\Dev', email: 'e@e.com' }]
+            };
+            const yaml = generate('test', 'token', baseConfig, opts);
+            assert.ok(yaml.includes('User \\"Nick\\" \\\\Dev'));
+        });
+
+        it('handles credential with only name set', () => {
+            const opts = {
+                ...baseOptions,
+                gitCredentials: [{ host: 'github.com', username: 'u', token: 't', name: 'Work User' }]
+            };
+            const yaml = generate('test', 'token', baseConfig, opts);
+            assert.ok(yaml.includes('.gitconfig-github.com'));
+            assert.ok(yaml.includes('name = "Work User"'));
+        });
+
+        it('handles credential with only email set', () => {
+            const opts = {
+                ...baseOptions,
+                gitCredentials: [{ host: 'github.com', username: 'u', token: 't', email: 'work@example.com' }]
+            };
+            const yaml = generate('test', 'token', baseConfig, opts);
+            assert.ok(yaml.includes('.gitconfig-github.com'));
+            assert.ok(yaml.includes('email = "work@example.com"'));
         });
     });
 

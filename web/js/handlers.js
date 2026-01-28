@@ -316,6 +316,8 @@ export function addGitCredentialToConfig() {
     const host = document.getElementById('git-credentials-host')?.value?.trim();
     const username = document.getElementById('git-credentials-username')?.value?.trim();
     const token = document.getElementById('git-credentials-token')?.value?.trim();
+    const name = document.getElementById('git-credentials-name')?.value?.trim();
+    const email = document.getElementById('git-credentials-email')?.value?.trim();
 
     if (!host || !username || !token) {
         showToast('Please fill all fields', 'error');
@@ -325,7 +327,10 @@ export function addGitCredentialToConfig() {
     const config = storage.getGlobalConfig();
     if (!Array.isArray(config.git.credentials)) config.git.credentials = [];
     config.git.credentials = config.git.credentials.filter(c => c.host !== host);
-    config.git.credentials.push({ host, username, token });
+    const cred = { host, username, token };
+    if (name) cred.name = name;
+    if (email) cred.email = email;
+    config.git.credentials.push(cred);
     storage.saveGlobalConfig(config);
     showToast('Git credential added', 'success');
     setState({});
@@ -347,6 +352,8 @@ export function addGitCredentialToProfile() {
     const host = document.getElementById('profile-git-credentials-host')?.value?.trim();
     const username = document.getElementById('profile-git-credentials-username')?.value?.trim();
     const token = document.getElementById('profile-git-credentials-token')?.value?.trim();
+    const name = document.getElementById('profile-git-credentials-name')?.value?.trim();
+    const email = document.getElementById('profile-git-credentials-email')?.value?.trim();
 
     if (!host || !username || !token) {
         showToast('Please fill all fields', 'error');
@@ -363,7 +370,10 @@ export function addGitCredentialToProfile() {
     }
 
     profile.overrides['git.credentials'] = profile.overrides['git.credentials'].filter(c => c.host !== host);
-    profile.overrides['git.credentials'].push({ host, username, token });
+    const cred = { host, username, token };
+    if (name) cred.name = name;
+    if (email) cred.email = email;
+    profile.overrides['git.credentials'].push(cred);
     storage.saveProfile(profileId, profile);
     showToast('Git credential added', 'success');
     setState({});

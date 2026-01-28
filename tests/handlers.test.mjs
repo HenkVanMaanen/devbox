@@ -218,6 +218,38 @@ describe('handlers.js', () => {
                 assert.equal(updated.git.credentials.length, 1);
                 assert.equal(updated.git.credentials[0].username, 'newuser');
             });
+
+            it('adds git credential with optional name and email', () => {
+                mockElements = {
+                    'git-credentials-host': { value: 'github.com' },
+                    'git-credentials-username': { value: 'myuser' },
+                    'git-credentials-token': { value: 'ghp_token123' },
+                    'git-credentials-name': { value: 'Work Name' },
+                    'git-credentials-email': { value: 'work@example.com' }
+                };
+                addGitCredentialToConfig();
+                const config = storage.getGlobalConfig();
+                assert.equal(config.git.credentials.length, 1);
+                assert.equal(config.git.credentials[0].name, 'Work Name');
+                assert.equal(config.git.credentials[0].email, 'work@example.com');
+            });
+
+            it('adds git credential without optional name/email', () => {
+                mockElements = {
+                    'git-credentials-host': { value: 'bitbucket.org' },
+                    'git-credentials-username': { value: 'user' },
+                    'git-credentials-token': { value: 'tok' },
+                    'git-credentials-name': { value: '' },
+                    'git-credentials-email': { value: '' }
+                };
+                addGitCredentialToConfig();
+                const config = storage.getGlobalConfig();
+                // Find the credential we just added
+                const cred = config.git.credentials.find(c => c.host === 'bitbucket.org');
+                assert.ok(cred, 'credential should exist');
+                assert.ok(!Object.hasOwn(cred, 'name'), 'name should not be set');
+                assert.ok(!Object.hasOwn(cred, 'email'), 'email should not be set');
+            });
         });
 
         describe('removeGitCredentialFromConfig', () => {

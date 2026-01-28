@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { shellEscape, toBase64URL, buildGitCredentials, buildAutodeleteScript, buildCaddyConfig, buildIndexPage } from '../web/js/cloudinit-builders.js';
+import { shellEscape, escapeGitConfig, toBase64URL, buildGitCredentials, buildGitConfig, buildHostGitConfig, buildAutodeleteScript, buildCaddyConfig, buildIndexPage } from '../web/js/cloudinit-builders.js';
 
 describe('cloudinit-builders.js', () => {
     describe('shellEscape', () => {
@@ -39,6 +39,33 @@ describe('cloudinit-builders.js', () => {
 
         it('leaves safe strings unchanged', () => {
             assert.equal(shellEscape('hello world'), 'hello world');
+        });
+    });
+
+    describe('escapeGitConfig', () => {
+        it('escapes backslashes', () => {
+            assert.equal(escapeGitConfig('a\\b'), 'a\\\\b');
+        });
+
+        it('escapes double quotes', () => {
+            assert.equal(escapeGitConfig('hello "world"'), 'hello \\"world\\"');
+        });
+
+        it('handles combined escapes', () => {
+            assert.equal(escapeGitConfig('path\\to\\"file"'), 'path\\\\to\\\\\\"file\\"');
+        });
+
+        it('handles empty string', () => {
+            assert.equal(escapeGitConfig(''), '');
+        });
+
+        it('handles null/undefined', () => {
+            assert.equal(escapeGitConfig(null), '');
+            assert.equal(escapeGitConfig(undefined), '');
+        });
+
+        it('leaves safe strings unchanged', () => {
+            assert.equal(escapeGitConfig('hello world'), 'hello world');
         });
     });
 
@@ -120,6 +147,88 @@ describe('cloudinit-builders.js', () => {
 
         it('returns empty string for null', () => {
             assert.equal(buildGitCredentials(null), '');
+        });
+    });
+
+    describe('buildGitConfig', () => {
+        it('generates correct structure with all options', () => {
+            const config = { git: { userName: 'Test User', userEmail: 'test@example.com' } };
+            const creds = [{ host: 'github.com', username: 'u', token: 't', name: 'Work', email: 'w@e.com' }];
+            const result = buildGitConfig(config, creds);
+            assert.ok(result.includes('[init]'));
+            assert.ok(result.includes('defaultBranch = main'));
+            assert.ok(result.includes('[user]'));
+            assert.ok(result.includes('name = "Test User"'));
+            assert.ok(result.includes('email = "test@example.com"'));
+            assert.ok(result.includes('[credential]'));
+            assert.ok(result.includes('helper = store'));
+            assert.ok(result.includes('[includeIf'));
+        });
+
+        it('omits [user] section when no global name/email', () => {
+            const config = { git: {} };
+            const result = buildGitConfig(config, []);
+            assert.ok(result.includes('[init]'));
+            assert.ok(!result.includes('[user]'));
+        });
+
+        it('adds includeIf only for credentials with identity', () => {
+            const config = { git: {} };
+            const creds = [
+                { host: 'github.com', username: 'u', token: 't', name: 'Work' },
+                { host: 'gitlab.com', username: 'u2', token: 't2' }
+            ];
+            const result = buildGitConfig(config, creds);
+            assert.ok(result.includes('includeIf'));
+            assert.ok(result.includes('github.com'));
+            assert.ok(!result.includes('gitlab.com'));
+        });
+
+        it('generates includeIf for both HTTPS and SSH URLs', () => {
+            const config = { git: {} };
+            const creds = [{ host: 'github.com', username: 'u', token: 't', name: 'Work' }];
+            const result = buildGitConfig(config, creds);
+            assert.ok(result.includes('hasconfig:remote.*.url:https://github.com/**'));
+            assert.ok(result.includes('hasconfig:remote.*.url:git@github.com:*/**'));
+        });
+
+        it('sanitizes host in includeIf path', () => {
+            const config = { git: {} };
+            const creds = [{ host: 'evil.com/path', username: 'u', token: 't', name: 'Work' }];
+            const result = buildGitConfig(config, creds);
+            assert.ok(result.includes('evil.compath'));
+            assert.ok(!result.includes('evil.com/path'));
+        });
+    });
+
+    describe('buildHostGitConfig', () => {
+        it('returns null when no name or email', () => {
+            assert.equal(buildHostGitConfig({ host: 'h', username: 'u', token: 't' }), null);
+        });
+
+        it('handles partial identity (only name)', () => {
+            const result = buildHostGitConfig({ host: 'h', username: 'u', token: 't', name: 'Work User' });
+            assert.ok(result.includes('[user]'));
+            assert.ok(result.includes('name = "Work User"'));
+            assert.ok(!result.includes('email'));
+        });
+
+        it('handles partial identity (only email)', () => {
+            const result = buildHostGitConfig({ host: 'h', username: 'u', token: 't', email: 'work@example.com' });
+            assert.ok(result.includes('[user]'));
+            assert.ok(result.includes('email = "work@example.com"'));
+            assert.ok(!result.includes('name'));
+        });
+
+        it('generates full identity when both set', () => {
+            const result = buildHostGitConfig({ host: 'h', username: 'u', token: 't', name: 'Work', email: 'w@e.com' });
+            assert.ok(result.includes('name = "Work"'));
+            assert.ok(result.includes('email = "w@e.com"'));
+        });
+
+        it('escapes special characters', () => {
+            const result = buildHostGitConfig({ host: 'h', username: 'u', token: 't', name: 'User "Nick" \\Dev', email: 'e@e.com' });
+            assert.ok(result.includes('User \\"Nick\\" \\\\Dev'));
         });
     });
 

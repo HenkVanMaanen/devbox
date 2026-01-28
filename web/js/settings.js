@@ -353,12 +353,17 @@ function renderFieldInput(field, fieldId, value, options, dataAttr, isProfile) {
             const creds = Array.isArray(value) ? value : [];
             const addFn = isProfile ? 'addGitCredentialToProfile' : 'addGitCredentialToConfig';
             const removeFn = isProfile ? 'removeGitCredentialFromProfile' : 'removeGitCredentialFromConfig';
-            const credsHtml = creds.length ? creds.map((cred, i) => `
+            const credsHtml = creds.length ? creds.map((cred, i) => {
+                const identityHtml = (cred.name || cred.email)
+                    ? `<br><span class="text-xs text-muted-foreground">${escapeHtml(cred.name || '')}${cred.name && cred.email ? ' &lt;' + escapeHtml(cred.email) + '&gt;' : (cred.email ? '&lt;' + escapeHtml(cred.email) + '&gt;' : '')}</span>`
+                    : '';
+                return `
                 <div class="flex items-center justify-between bg-muted/30 rounded-md px-3 py-2">
-                    <span class="text-sm">${escapeHtml(cred.host)} <span class="text-muted-foreground">(${escapeHtml(cred.username)})</span></span>
+                    <span class="text-sm">${escapeHtml(cred.host)} <span class="text-muted-foreground">(${escapeHtml(cred.username)})</span>${identityHtml}</span>
                     <button class="${cn(UI.btn, UI.btnDestructive, UI.btnSm)}" onclick="window.devbox.${removeFn}(${i})">Remove</button>
                 </div>
-            `).join('') : `<p class="${UI.subtitle}">No git credentials configured</p>`;
+            `;
+            }).join('') : `<p class="${UI.subtitle}">No git credentials configured</p>`;
             return `
                 <div class="space-y-2 mb-4">${credsHtml}</div>
                 <div>
@@ -367,6 +372,10 @@ function renderFieldInput(field, fieldId, value, options, dataAttr, isProfile) {
                         <input type="text" id="${fieldId}-host" class="${UI.input}" placeholder="github.com" style="flex: 1; min-width: 100px">
                         <input type="text" id="${fieldId}-username" class="${UI.input}" placeholder="username" style="flex: 1; min-width: 100px">
                         <input type="password" id="${fieldId}-token" class="${UI.input}" placeholder="Personal Access Token" style="flex: 2; min-width: 150px">
+                    </div>
+                    <div class="flex gap-2 flex-wrap mt-2">
+                        <input type="text" id="${fieldId}-name" class="${UI.input}" placeholder="Git Name (optional)" style="flex: 1; min-width: 120px">
+                        <input type="email" id="${fieldId}-email" class="${UI.input}" placeholder="Git Email (optional)" style="flex: 1; min-width: 150px">
                         <button class="${cn(UI.btn, UI.btnSecondary)}" onclick="window.devbox.${addFn}()">Add</button>
                     </div>
                 </div>`;

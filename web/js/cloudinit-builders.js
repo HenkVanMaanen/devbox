@@ -12,6 +12,12 @@ export function shellEscape(s) {
     return s.replace(/[\\"$`!]/g, '\\$&').replace(/\n/g, '');
 }
 
+// Escape a value for gitconfig (backslashes and double quotes)
+export function escapeGitConfig(val) {
+    if (!val) return '';
+    return val.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
 // Convert standard base64 to base64url (for Actalis EAB keys)
 export function toBase64URL(s) {
     if (!s) return '';
@@ -28,6 +34,41 @@ export function buildGitCredentials(credentials) {
         const host = cred.host.replace(/[^a-zA-Z0-9._-]/g, '');
         return `https://${username}:${token}@${host}`;
     }).join('\n') + '\n';
+}
+
+// Build main .gitconfig content
+export function buildGitConfig(config, gitCreds) {
+    let content = '[init]\n    defaultBranch = main\n';
+
+    if (config.git?.userName || config.git?.userEmail) {
+        content += '[user]\n';
+        if (config.git.userName) content += `    name = "${escapeGitConfig(config.git.userName)}"\n`;
+        if (config.git.userEmail) content += `    email = "${escapeGitConfig(config.git.userEmail)}"\n`;
+    }
+
+    if (gitCreds.length > 0) {
+        content += '[credential]\n    helper = store\n';
+    }
+
+    // Add includeIf for each credential with custom identity
+    gitCreds.forEach(cred => {
+        if (cred.name || cred.email) {
+            const safeHost = cred.host.replace(/[^a-zA-Z0-9._-]/g, '');
+            content += `[includeIf "hasconfig:remote.*.url:https://${safeHost}/**"]\n    path = ~/.gitconfig-${safeHost}\n`;
+            content += `[includeIf "hasconfig:remote.*.url:git@${safeHost}:*/**"]\n    path = ~/.gitconfig-${safeHost}\n`;
+        }
+    });
+
+    return content;
+}
+
+// Build per-host gitconfig for credentials with custom identity
+export function buildHostGitConfig(cred) {
+    if (!cred.name && !cred.email) return null;
+    let content = '[user]\n';
+    if (cred.name) content += `    name = "${escapeGitConfig(cred.name)}"\n`;
+    if (cred.email) content += `    email = "${escapeGitConfig(cred.email)}"\n`;
+    return content;
 }
 
 // Build autodelete daemon script with config values baked in

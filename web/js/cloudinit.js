@@ -2,7 +2,7 @@
 
 import { getDefaultProfileConfig, getTheme as getStoredTheme } from './storage.js';
 import { getTheme, getDefaultTheme, THEMES } from './themes.js';
-import { shellEscape, buildGitCredentials, buildAutodeleteScript, buildCaddyConfig, buildIndexPage } from './cloudinit-builders.js';
+import { shellEscape, buildGitCredentials, buildGitConfig, buildHostGitConfig, buildAutodeleteScript, buildCaddyConfig, buildIndexPage } from './cloudinit-builders.js';
 
 // Main generate function - creates cloud-init user-data with native modules
 export function generate(serverName, hetznerToken, config, options = {}) {
@@ -124,6 +124,30 @@ export function generate(serverName, hetznerToken, config, options = {}) {
             content: buildGitCredentials(gitCreds)
         });
     }
+
+    // Main gitconfig
+    cloudInit.write_files.push({
+        path: '/home/dev/.gitconfig',
+        owner: 'dev:dev',
+        permissions: '0644',
+        defer: true,
+        content: buildGitConfig(config, gitCreds)
+    });
+
+    // Per-host gitconfigs for credentials with custom identity
+    gitCreds.forEach(cred => {
+        const hostConfig = buildHostGitConfig(cred);
+        if (hostConfig) {
+            const safeHost = cred.host.replace(/[^a-zA-Z0-9._-]/g, '');
+            cloudInit.write_files.push({
+                path: `/home/dev/.gitconfig-${safeHost}`,
+                owner: 'dev:dev',
+                permissions: '0644',
+                defer: true,
+                content: hostConfig
+            });
+        }
+    });
 
     // Claude config
     cloudInit.write_files.push({
@@ -247,12 +271,6 @@ export function generate(serverName, hetznerToken, config, options = {}) {
         ).join('\n');
         runcmd.push(['bash', '-c', `${miseInstalls}\nwait`]);
     }
-
-    // Git config
-    runcmd.push('su - dev -c \'git config --global init.defaultBranch main\' || true');
-    if (config.git.userName) runcmd.push(`su - dev -c 'git config --global user.name "${shellEscape(config.git.userName)}"' || true`);
-    if (config.git.userEmail) runcmd.push(`su - dev -c 'git config --global user.email "${shellEscape(config.git.userEmail)}"' || true`);
-    if (gitCreds.length > 0) runcmd.push('su - dev -c \'git config --global credential.helper store\' || true');
 
     // claude-code (npm fallback since GCS bucket is geo-restricted in some datacenters)
     runcmd.push('npm install -g @anthropic-ai/claude-code || true');
