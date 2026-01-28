@@ -136,7 +136,7 @@ http.createServer((q,r)=>{
   if(p==='/keepalive'&&q.method==='POST'){last=Date.now();warn=false;return j(200,{ok:true})}
   if(p==='/services'){return j(200,getServices())}
   j(404,{error:'not found'})
-}).listen(8081,'127.0.0.1');
+}).listen(65531,'127.0.0.1');
 
 let sid;try{sid=execSync('curl -s -H "Metadata-Flavor:hetzner" http://169.254.169.254/hetzner/v1/metadata/instance-id',{encoding:'utf8',timeout:5000}).trim()}catch{}
 if(!sid)process.exit(0);
@@ -201,16 +201,16 @@ export function buildCaddyConfig(config, serverName) {
     const authBlock = '  basic_auth {\n    devbox __HASH__\n  }\n';
 
     // Index page
-    caddyfile += `${serverName}.__IP__.${dns} {\n${authBlock}  route /api/* {\n    uri strip_prefix /api\n    reverse_proxy localhost:8081\n  }\n  root * /var/www/devbox-index\n  file_server\n}\n`;
+    caddyfile += `${serverName}.__IP__.${dns} {\n${authBlock}  route /api/* {\n    uri strip_prefix /api\n    reverse_proxy localhost:65531\n  }\n  root * /var/www/devbox-index\n  file_server\n}\n`;
 
     if (config.services.codeServer) {
-        caddyfile += `code.${serverName}.__IP__.${dns} {\n${authBlock}  reverse_proxy localhost:8090\n}\n`;
+        caddyfile += `code.${serverName}.__IP__.${dns} {\n${authBlock}  reverse_proxy localhost:65532\n}\n`;
     }
     if (config.services.claudeTerminal) {
-        caddyfile += `claude.${serverName}.__IP__.${dns} {\n${authBlock}  reverse_proxy localhost:7681\n}\n`;
+        caddyfile += `claude.${serverName}.__IP__.${dns} {\n${authBlock}  reverse_proxy localhost:65533\n}\n`;
     }
     if (config.services.shellTerminal) {
-        caddyfile += `term.${serverName}.__IP__.${dns} {\n${authBlock}  reverse_proxy localhost:7682\n}\n`;
+        caddyfile += `term.${serverName}.__IP__.${dns} {\n${authBlock}  reverse_proxy localhost:65534\n}\n`;
     }
     return caddyfile;
 }

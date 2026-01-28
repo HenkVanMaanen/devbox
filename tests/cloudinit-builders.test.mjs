@@ -258,9 +258,9 @@ describe('cloudinit-builders.js', () => {
             assert.ok(script.includes("USER='Test User'"));
         });
 
-        it('creates HTTP server on port 8081', () => {
+        it('creates HTTP server on port 65531', () => {
             const script = buildAutodeleteScript(config, 'token');
-            assert.ok(script.includes('8081'));
+            assert.ok(script.includes('65531'));
         });
 
         it('has /status endpoint', () => {
@@ -312,19 +312,19 @@ describe('cloudinit-builders.js', () => {
         it('includes code-server block when enabled', () => {
             const caddy = buildCaddyConfig(baseConfig, 'devbox');
             assert.ok(caddy.includes('code.devbox.__IP__.sslip.io'));
-            assert.ok(caddy.includes('localhost:8090'));
+            assert.ok(caddy.includes('localhost:65532'));
         });
 
         it('includes claude block when enabled', () => {
             const caddy = buildCaddyConfig(baseConfig, 'devbox');
             assert.ok(caddy.includes('claude.devbox.__IP__.sslip.io'));
-            assert.ok(caddy.includes('localhost:7681'));
+            assert.ok(caddy.includes('localhost:65533'));
         });
 
         it('includes terminal block when enabled', () => {
             const caddy = buildCaddyConfig(baseConfig, 'devbox');
             assert.ok(caddy.includes('term.devbox.__IP__.sslip.io'));
-            assert.ok(caddy.includes('localhost:7682'));
+            assert.ok(caddy.includes('localhost:65534'));
         });
 
         it('omits disabled services', () => {

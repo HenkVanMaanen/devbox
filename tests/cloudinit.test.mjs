@@ -60,10 +60,11 @@ describe('cloudinit.js generate()', () => {
         assert.ok(yaml.includes('- curl'));
     });
 
-    it('adds gh and nodejs packages always', () => {
+    it('adds gh, nodejs, and ufw packages always', () => {
         const yaml = generate('test', 'token', baseConfig, baseOptions);
         assert.ok(yaml.includes('- gh'));
         assert.ok(yaml.includes('- nodejs'));
+        assert.ok(yaml.includes('- ufw'));
     });
 
     it('creates dev user with correct shell', () => {
@@ -209,14 +210,14 @@ describe('cloudinit.js generate()', () => {
             const config = { ...baseConfig, services: { ...baseConfig.services, codeServer: true } };
             const yaml = generate('test', 'token', config, baseOptions);
             assert.ok(yaml.includes('code-server'));
-            assert.ok(yaml.includes('8090'));
+            assert.ok(yaml.includes('65532'));
         });
 
         it('includes claude terminal config', () => {
             const config = { ...baseConfig, services: { ...baseConfig.services, claudeTerminal: true } };
             const yaml = generate('test', 'token', config, baseOptions);
             assert.ok(yaml.includes('ttyd-claude'));
-            assert.ok(yaml.includes('7681'));
+            assert.ok(yaml.includes('65533'));
             assert.ok(yaml.includes('claude-terminal'));
         });
 
@@ -224,7 +225,7 @@ describe('cloudinit.js generate()', () => {
             const config = { ...baseConfig, services: { ...baseConfig.services, shellTerminal: true } };
             const yaml = generate('test', 'token', config, baseOptions);
             assert.ok(yaml.includes('ttyd-term'));
-            assert.ok(yaml.includes('7682'));
+            assert.ok(yaml.includes('65534'));
         });
 
         it('uses configured shell for terminal', () => {
@@ -482,6 +483,18 @@ describe('cloudinit.js generate()', () => {
             const config = { ...baseConfig, repos: ['https://github.com/user/my-project.git'] };
             const yaml = generate('test', 'token', config, baseOptions);
             assert.ok(yaml.includes('~/my-project'));
+        });
+    });
+
+    describe('firewall', () => {
+        it('configures ufw with default deny and allows SSH/HTTP/HTTPS', () => {
+            const yaml = generate('test', 'token', baseConfig, baseOptions);
+            assert.ok(yaml.includes('ufw default deny incoming'));
+            assert.ok(yaml.includes('ufw default allow outgoing'));
+            assert.ok(yaml.includes('ufw allow 22'));
+            assert.ok(yaml.includes('ufw allow 80'));
+            assert.ok(yaml.includes('ufw allow 443'));
+            assert.ok(yaml.includes('ufw --force enable'));
         });
     });
 

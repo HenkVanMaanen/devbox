@@ -46,7 +46,7 @@ export function generate(serverName, hetznerToken, config, options = {}) {
                 }
             }
         },
-        packages: [...new Set([...config.packages.apt, 'gh', 'nodejs'])],
+        packages: [...new Set([...config.packages.apt, 'gh', 'nodejs', 'ufw'])],
         users: [
             {
                 name: 'dev',
@@ -214,7 +214,7 @@ export function generate(serverName, hetznerToken, config, options = {}) {
             owner: 'dev:dev',
             permissions: '0600',
             defer: true,
-            content: 'bind-addr: 127.0.0.1:8090\nauth: none\ncert: false\n'
+            content: 'bind-addr: 127.0.0.1:65532\nauth: none\ncert: false\n'
         });
         cloudInit.write_files.push({
             path: '/etc/systemd/system/code-server.service',
@@ -233,7 +233,7 @@ export function generate(serverName, hetznerToken, config, options = {}) {
         cloudInit.write_files.push({
             path: '/etc/systemd/system/ttyd-claude.service',
             permissions: '0644',
-            content: '[Unit]\nDescription=Claude\nAfter=network.target\n[Service]\nType=simple\nUser=dev\nWorkingDirectory=/home/dev\nExecStart=/usr/local/bin/ttyd -p 7681 -t fontSize=14 -t theme={"background":"#1a1a2e"} -W /usr/local/bin/claude-terminal\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\n'
+            content: '[Unit]\nDescription=Claude\nAfter=network.target\n[Service]\nType=simple\nUser=dev\nWorkingDirectory=/home/dev\nExecStart=/usr/local/bin/ttyd -p 65533 -t fontSize=14 -t theme={"background":"#1a1a2e"} -W /usr/local/bin/claude-terminal\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\n'
         });
     }
 
@@ -242,7 +242,7 @@ export function generate(serverName, hetznerToken, config, options = {}) {
         cloudInit.write_files.push({
             path: '/etc/systemd/system/ttyd-term.service',
             permissions: '0644',
-            content: `[Unit]\nDescription=Terminal\nAfter=network.target\n[Service]\nType=simple\nUser=dev\nWorkingDirectory=/home/dev\nEnvironment=HOME=/home/dev\nExecStart=/usr/local/bin/ttyd -p 7682 -t fontSize=14 -t theme={"background":"#1a1a2e"} -W dtach -A /tmp/devbox-shell -z ${config.shell.default || 'bash'}\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\n`
+            content: `[Unit]\nDescription=Terminal\nAfter=network.target\n[Service]\nType=simple\nUser=dev\nWorkingDirectory=/home/dev\nEnvironment=HOME=/home/dev\nExecStart=/usr/local/bin/ttyd -p 65534 -t fontSize=14 -t theme={"background":"#1a1a2e"} -W dtach -A /tmp/devbox-shell -z ${config.shell.default || 'bash'}\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\n`
         });
     }
 
@@ -262,6 +262,9 @@ export function generate(serverName, hetznerToken, config, options = {}) {
 
     // ========== RUNCMD ==========
     const runcmd = [];
+
+    // Configure firewall (default deny, allow SSH/HTTP/HTTPS only)
+    runcmd.push('ufw default deny incoming && ufw default allow outgoing && ufw allow 22 && ufw allow 80 && ufw allow 443 && ufw --force enable');
 
     // Mise installation (only if user has mise packages configured)
     if (config.packages.mise && config.packages.mise.length > 0) {
