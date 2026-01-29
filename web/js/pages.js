@@ -98,12 +98,8 @@ export function renderProfileEdit() {
 
     return `
         <div class="${UI.card} mb-4">
-            <div class="${UI.cardHeader} flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <button class="${cn(UI.btn, UI.btnOutline, UI.btnSm)}" onclick="window.devbox.backToProfiles()">\u2190 Back</button>
-                    <h2 class="${UI.title}">Edit Profile: ${escapeHtml(profile.name)}</h2>
-                </div>
-                <button class="${cn(UI.btn, UI.btnPrimary)}" onclick="window.devbox.saveProfileEdit()">Save Changes</button>
+            <div class="${UI.cardHeader}">
+                <h2 class="${UI.title}">Edit Profile: ${escapeHtml(profile.name)}</h2>
             </div>
             <div class="${UI.cardBody}">
                 <div class="mb-6">
@@ -113,6 +109,16 @@ export function renderProfileEdit() {
                 ${sectionsHtml}
             </div>
         </div>
+
+        <div class="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t border-border p-4 z-50">
+            <div class="max-w-4xl mx-auto flex items-center justify-between">
+                <div class="${UI.row}">
+                    <button class="${cn(UI.btn, UI.btnPrimary)}" onclick="window.devbox.saveProfileEdit()">Save Changes</button>
+                    <button class="${cn(UI.btn, UI.btnOutline)}" onclick="window.devbox.backToProfiles()">Cancel</button>
+                </div>
+            </div>
+        </div>
+        <div class="h-20"></div>
     `;
 }
 
@@ -141,14 +147,30 @@ export function renderConfig() {
 
         ${sectionsHtml}
 
-        <div class="${UI.row}">
-            <button class="${cn(UI.btn, UI.btnPrimary)}" onclick="window.devbox.saveConfig()">Save Configuration</button>
-            <button class="${cn(UI.btn, UI.btnSecondary)}" onclick="window.devbox.exportConfig()">Export</button>
-            <label class="${cn(UI.btn, UI.btnSecondary)} cursor-pointer">
-                Import
-                <input type="file" id="importFile" accept=".json" class="hidden" onchange="window.devbox.importConfig(this)">
-            </label>
+        <div class="${UI.card} mb-4">
+            <div class="${UI.cardHeader}">
+                <h2 class="${UI.title}">Import / Export</h2>
+            </div>
+            <div class="${UI.cardBody}">
+                <div class="${UI.row}">
+                    <button class="${cn(UI.btn, UI.btnSecondary)}" onclick="window.devbox.exportConfig()">Export Configuration</button>
+                    <label class="${cn(UI.btn, UI.btnSecondary)} cursor-pointer">
+                        Import Configuration
+                        <input type="file" id="importFile" accept=".json" class="hidden" onchange="window.devbox.importConfig(this)">
+                    </label>
+                </div>
+            </div>
         </div>
+
+        <div class="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t border-border p-4 z-50">
+            <div class="max-w-4xl mx-auto flex items-center justify-between">
+                <div class="${UI.row}">
+                    <button class="${cn(UI.btn, UI.btnPrimary)}" onclick="window.devbox.saveConfig()">Save Changes</button>
+                    <button class="${cn(UI.btn, UI.btnOutline)}" onclick="window.location.hash = '#dashboard'">Cancel</button>
+                </div>
+            </div>
+        </div>
+        <div class="h-20"></div>
     `;
 }
 
@@ -257,9 +279,23 @@ export function renderCredentials() {
             </div>
         </div>
 
-        <div class="${UI.row}">
-            <button class="${cn(UI.btn, UI.btnPrimary)}" onclick="window.devbox.saveCredentials()">Save API Token</button>
-            <button class="${cn(UI.btn, UI.btnDestructive)}" onclick="window.devbox.clearAll()">Clear All Data</button>
+        <div class="${UI.card} mb-4">
+            <div class="${UI.cardHeader}">
+                <h2 class="${UI.title}">Danger Zone</h2>
+            </div>
+            <div class="${UI.cardBody}">
+                <button class="${cn(UI.btn, UI.btnDestructive)}" onclick="window.devbox.clearAll()">Clear All Data</button>
+            </div>
         </div>
+
+        <div class="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t border-border p-4 z-50">
+            <div class="max-w-4xl mx-auto flex items-center justify-between">
+                <div class="${UI.row}">
+                    <button class="${cn(UI.btn, UI.btnPrimary)}" onclick="window.devbox.saveCredentials()">Save Changes</button>
+                    <button class="${cn(UI.btn, UI.btnOutline)}" onclick="window.location.hash = '#dashboard'">Cancel</button>
+                </div>
+            </div>
+        </div>
+        <div class="h-20"></div>
     `;
 }

@@ -61,7 +61,7 @@ export function renderDashboard() {
     const serverCards = state.servers.map(server => renderServerCard(server, config)).join('');
     const createFormCard = renderCreateForm(config);
 
-    return creatingCard + serverCards + createFormCard;
+    return creatingCard + createFormCard + serverCards;
 }
 
 function renderServerCard(server, config) {
