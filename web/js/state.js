@@ -17,7 +17,8 @@ export const state = {
     loadingHetznerOptions: false,
     hetznerOptionsError: false,
     selectedProfileId: null,
-    editingProfileId: null
+    editingProfileId: null,
+    editingListItem: null  // { field: 'git.credentials', index: 2, isProfile: false }
 };
 
 let renderCallback = null;

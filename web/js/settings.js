@@ -32,9 +32,8 @@ export const SETTINGS_SECTIONS = [
         id: 'ssh',
         title: 'SSH',
         fields: [
-            { path: 'ssh.pubKey', label: 'SSH Public Key (Optional)', type: 'textarea',
-              placeholder: 'ssh-ed25519 AAAA... you@example.com',
-              hint: 'Paste your public key for SSH access. Web service access works without this.' }
+            { path: 'ssh.keys', label: 'SSH Public Keys (Optional)', type: 'sshKeys',
+              hint: 'Add SSH public keys for SSH access. Web service access works without this.' }
         ]
     },
     {
@@ -230,6 +229,10 @@ export function formatGlobalValue(value) {
             const preview = value.slice(0, 3).map(v => escapeHtml(v.host)).join(', ');
             return preview + (value.length > 3 ? '...' : '');
         }
+        if (value[0] && typeof value[0] === 'object' && value[0].name !== undefined) {
+            const preview = value.slice(0, 3).map(v => escapeHtml(v.name || 'Unnamed')).join(', ');
+            return preview + (value.length > 3 ? '...' : '');
+        }
         const preview = value.slice(0, 3).map(v => escapeHtml(String(v))).join(', ');
         return preview + (value.length > 3 ? '...' : '');
     }
@@ -353,14 +356,39 @@ function renderFieldInput(field, fieldId, value, options, dataAttr, isProfile) {
             const creds = Array.isArray(value) ? value : [];
             const addFn = isProfile ? 'addGitCredentialToProfile' : 'addGitCredentialToConfig';
             const removeFn = isProfile ? 'removeGitCredentialFromProfile' : 'removeGitCredentialFromConfig';
+            const saveFn = isProfile ? 'saveGitCredentialEditToProfile' : 'saveGitCredentialEdit';
             const credsHtml = creds.length ? creds.map((cred, i) => {
+                const isEditing = state.editingListItem?.field === field.path &&
+                                  state.editingListItem?.index === i &&
+                                  state.editingListItem?.isProfile === isProfile;
+                if (isEditing) {
+                    return `
+                    <div class="bg-muted/30 rounded-md px-3 py-2 space-y-2">
+                        <div class="flex gap-2 flex-wrap">
+                            <input type="text" id="git-credentials-edit-host" class="${UI.input}" value="${escapeHtml(cred.host || '')}" placeholder="github.com" style="flex: 1; min-width: 100px">
+                            <input type="text" id="git-credentials-edit-username" class="${UI.input}" value="${escapeHtml(cred.username || '')}" placeholder="username" style="flex: 1; min-width: 100px">
+                            <input type="password" id="git-credentials-edit-token" class="${UI.input}" value="${escapeHtml(cred.token || '')}" placeholder="Personal Access Token" style="flex: 2; min-width: 150px">
+                        </div>
+                        <div class="flex gap-2 flex-wrap">
+                            <input type="text" id="git-credentials-edit-name" class="${UI.input}" value="${escapeHtml(cred.name || '')}" placeholder="Git Name (optional)" style="flex: 1; min-width: 120px">
+                            <input type="email" id="git-credentials-edit-email" class="${UI.input}" value="${escapeHtml(cred.email || '')}" placeholder="Git Email (optional)" style="flex: 1; min-width: 150px">
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="${cn(UI.btn, UI.btnSecondary, UI.btnSm)}" onclick="window.devbox.${saveFn}(${i})">Save</button>
+                            <button class="${cn(UI.btn, UI.btnSm)}" onclick="window.devbox.cancelEditListItem()">Cancel</button>
+                        </div>
+                    </div>`;
+                }
                 const identityHtml = (cred.name || cred.email)
                     ? `<br><span class="text-xs text-muted-foreground">${escapeHtml(cred.name || '')}${cred.name && cred.email ? ' &lt;' + escapeHtml(cred.email) + '&gt;' : (cred.email ? '&lt;' + escapeHtml(cred.email) + '&gt;' : '')}</span>`
                     : '';
                 return `
                 <div class="flex items-center justify-between bg-muted/30 rounded-md px-3 py-2">
                     <span class="text-sm">${escapeHtml(cred.host)} <span class="text-muted-foreground">(${escapeHtml(cred.username)})</span>${identityHtml}</span>
-                    <button class="${cn(UI.btn, UI.btnDestructive, UI.btnSm)}" onclick="window.devbox.${removeFn}(${i})">Remove</button>
+                    <div class="flex gap-2">
+                        <button class="${cn(UI.btn, UI.btnSecondary, UI.btnSm)}" onclick="window.devbox.startEditListItem('${field.path}', ${i}, ${isProfile})">Edit</button>
+                        <button class="${cn(UI.btn, UI.btnDestructive, UI.btnSm)}" onclick="window.devbox.${removeFn}(${i})">Remove</button>
+                    </div>
                 </div>
             `;
             }).join('') : `<p class="${UI.subtitle}">No git credentials configured</p>`;
@@ -376,6 +404,56 @@ function renderFieldInput(field, fieldId, value, options, dataAttr, isProfile) {
                     <div class="flex gap-2 flex-wrap mt-2">
                         <input type="text" id="${fieldId}-name" class="${UI.input}" placeholder="Git Name (optional)" style="flex: 1; min-width: 120px">
                         <input type="email" id="${fieldId}-email" class="${UI.input}" placeholder="Git Email (optional)" style="flex: 1; min-width: 150px">
+                        <button class="${cn(UI.btn, UI.btnSecondary)}" onclick="window.devbox.${addFn}()">Add</button>
+                    </div>
+                </div>`;
+        }
+        case 'sshKeys': {
+            const keys = Array.isArray(value) ? value : [];
+            const addFn = isProfile ? 'addSSHKeyToProfile' : 'addSSHKey';
+            const removeFn = isProfile ? 'removeSSHKeyFromProfile' : 'removeSSHKey';
+            const saveFn = isProfile ? 'saveSSHKeyEditToProfile' : 'saveSSHKeyEdit';
+            const keysHtml = keys.length ? keys.map((key, i) => {
+                const isEditing = state.editingListItem?.field === field.path &&
+                                  state.editingListItem?.index === i &&
+                                  state.editingListItem?.isProfile === isProfile;
+                if (isEditing) {
+                    return `
+                    <div class="bg-muted/30 rounded-md px-3 py-2 space-y-2">
+                        <div class="flex gap-2 flex-wrap">
+                            <input type="text" id="ssh-keys-edit-name" class="${UI.input}" value="${escapeHtml(key.name || '')}" placeholder="Key name (e.g., work-laptop)" style="flex: 1; min-width: 120px">
+                        </div>
+                        <div class="flex gap-2 flex-wrap">
+                            <textarea id="ssh-keys-edit-pubKey" class="${UI.textarea}" rows="2" placeholder="ssh-ed25519 AAAA... you@example.com" style="flex: 1; min-width: 200px">${escapeHtml(key.pubKey || '')}</textarea>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="${cn(UI.btn, UI.btnSecondary, UI.btnSm)}" onclick="window.devbox.${saveFn}(${i})">Save</button>
+                            <button class="${cn(UI.btn, UI.btnSm)}" onclick="window.devbox.cancelEditListItem()">Cancel</button>
+                        </div>
+                    </div>`;
+                }
+                const keyPreview = key.pubKey ? key.pubKey.substring(0, 30) + '...' : '(empty)';
+                return `
+                <div class="flex items-center justify-between bg-muted/30 rounded-md px-3 py-2">
+                    <span class="text-sm"><strong>${escapeHtml(key.name || 'Unnamed')}</strong><br><span class="text-xs text-muted-foreground font-mono">${escapeHtml(keyPreview)}</span></span>
+                    <div class="flex gap-2">
+                        <button class="${cn(UI.btn, UI.btnSecondary, UI.btnSm)}" onclick="window.devbox.startEditListItem('${field.path}', ${i}, ${isProfile})">Edit</button>
+                        <button class="${cn(UI.btn, UI.btnDestructive, UI.btnSm)}" onclick="window.devbox.${removeFn}(${i})">Remove</button>
+                    </div>
+                </div>
+            `;
+            }).join('') : `<p class="${UI.subtitle}">No SSH keys configured</p>`;
+            return `
+                <div class="space-y-2 mb-4">${keysHtml}</div>
+                <div>
+                    <label class="${UI.label}">Add SSH Key</label>
+                    <div class="flex gap-2 flex-wrap">
+                        <input type="text" id="${fieldId}-name" class="${UI.input}" placeholder="Key name (e.g., work-laptop)" style="flex: 1; min-width: 120px">
+                    </div>
+                    <div class="flex gap-2 flex-wrap mt-2">
+                        <textarea id="${fieldId}-pubKey" class="${UI.textarea}" rows="2" placeholder="ssh-ed25519 AAAA... you@example.com" style="flex: 1; min-width: 200px"></textarea>
+                    </div>
+                    <div class="flex gap-2 mt-2">
                         <button class="${cn(UI.btn, UI.btnSecondary)}" onclick="window.devbox.${addFn}()">Add</button>
                     </div>
                 </div>`;

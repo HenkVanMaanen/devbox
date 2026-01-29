@@ -28,7 +28,7 @@ describe('storage.js', () => {
             assert.equal(config.shell.default, 'fish');
             assert.equal(config.autoDelete.enabled, true);
             assert.equal(config.autoDelete.timeoutMinutes, 90);
-            assert.equal(config.ssh.pubKey, '');
+            assert.deepEqual(config.ssh.keys, []);
             assert.deepEqual(config.git.credentials, []);
         });
 
@@ -230,7 +230,7 @@ describe('storage.js', () => {
             storage.saveTheme('dracula-dark');
             storage.saveGlobalConfig({
                 hetzner: { location: 'nbg1' },
-                ssh: { pubKey: 'ssh-ed25519 AAAA' },
+                ssh: { keys: [{ name: 'work', pubKey: 'ssh-ed25519 AAAA' }] },
                 git: { userName: '', userEmail: '', credentials: [{ host: 'github.com', username: 'user', token: 'pass' }] }
             });
 
@@ -241,7 +241,8 @@ describe('storage.js', () => {
             assert.equal(storage.getHetznerToken(), 'token123');
             assert.equal(storage.getTheme(), 'dracula-dark');
             const config = storage.getGlobalConfig();
-            assert.equal(config.ssh.pubKey, 'ssh-ed25519 AAAA');
+            assert.equal(config.ssh.keys[0].pubKey, 'ssh-ed25519 AAAA');
+            assert.equal(config.ssh.keys[0].name, 'work');
             assert.equal(config.git.credentials[0].host, 'github.com');
         });
 

@@ -396,3 +396,217 @@ export function removeGitCredentialFromProfile(index) {
         setState({});
     }
 }
+
+// ============================================================================
+// SSH KEY MANAGEMENT
+// ============================================================================
+
+export function addSSHKey() {
+    const name = document.getElementById('ssh-keys-name')?.value?.trim();
+    const pubKey = document.getElementById('ssh-keys-pubKey')?.value?.trim();
+
+    if (!name || !pubKey) {
+        showToast('Please fill in both name and public key', 'error');
+        return;
+    }
+
+    const config = storage.getGlobalConfig();
+    if (!Array.isArray(config.ssh.keys)) config.ssh.keys = [];
+
+    // Check for duplicate name
+    if (config.ssh.keys.some(k => k.name === name)) {
+        showToast('A key with this name already exists', 'error');
+        return;
+    }
+
+    config.ssh.keys.push({ name, pubKey });
+    storage.saveGlobalConfig(config);
+    showToast('SSH key added', 'success');
+    setState({});
+}
+
+export function removeSSHKey(index) {
+    const config = storage.getGlobalConfig();
+    if (!Array.isArray(config.ssh.keys)) return;
+
+    if (index >= 0 && index < config.ssh.keys.length) {
+        config.ssh.keys.splice(index, 1);
+        storage.saveGlobalConfig(config);
+        showToast('SSH key removed', 'success');
+        setState({});
+    }
+}
+
+export function addSSHKeyToProfile() {
+    const name = document.getElementById('profile-ssh-keys-name')?.value?.trim();
+    const pubKey = document.getElementById('profile-ssh-keys-pubKey')?.value?.trim();
+
+    if (!name || !pubKey) {
+        showToast('Please fill in both name and public key', 'error');
+        return;
+    }
+
+    const profileId = state.editingProfileId;
+    const profile = storage.getProfile(profileId);
+    if (!profile) return;
+
+    if (!Object.hasOwn(profile.overrides, 'ssh.keys')) {
+        const globalConfig = storage.getGlobalConfig();
+        profile.overrides['ssh.keys'] = JSON.parse(JSON.stringify(globalConfig.ssh?.keys || []));
+    }
+
+    // Check for duplicate name
+    if (profile.overrides['ssh.keys'].some(k => k.name === name)) {
+        showToast('A key with this name already exists', 'error');
+        return;
+    }
+
+    profile.overrides['ssh.keys'].push({ name, pubKey });
+    storage.saveProfile(profileId, profile);
+    showToast('SSH key added', 'success');
+    setState({});
+}
+
+export function removeSSHKeyFromProfile(index) {
+    const profileId = state.editingProfileId;
+    const profile = storage.getProfile(profileId);
+    if (!profile) return;
+
+    if (!Object.hasOwn(profile.overrides, 'ssh.keys')) {
+        const globalConfig = storage.getGlobalConfig();
+        profile.overrides['ssh.keys'] = JSON.parse(JSON.stringify(globalConfig.ssh?.keys || []));
+    }
+
+    if (index >= 0 && index < profile.overrides['ssh.keys'].length) {
+        profile.overrides['ssh.keys'].splice(index, 1);
+        storage.saveProfile(profileId, profile);
+        showToast('SSH key removed', 'success');
+        setState({});
+    }
+}
+
+// ============================================================================
+// LIST ITEM EDITING
+// ============================================================================
+
+export function startEditListItem(field, index, isProfile) {
+    setState({ editingListItem: { field, index, isProfile } });
+}
+
+export function cancelEditListItem() {
+    setState({ editingListItem: null });
+}
+
+export function saveGitCredentialEdit(index) {
+    const host = document.getElementById('git-credentials-edit-host')?.value?.trim();
+    const username = document.getElementById('git-credentials-edit-username')?.value?.trim();
+    const token = document.getElementById('git-credentials-edit-token')?.value?.trim();
+    const name = document.getElementById('git-credentials-edit-name')?.value?.trim();
+    const email = document.getElementById('git-credentials-edit-email')?.value?.trim();
+
+    if (!host || !username || !token) {
+        showToast('Host, username, and token are required', 'error');
+        return;
+    }
+
+    const config = storage.getGlobalConfig();
+    if (!Array.isArray(config.git.credentials)) config.git.credentials = [];
+
+    if (index >= 0 && index < config.git.credentials.length) {
+        const cred = { host, username, token };
+        if (name) cred.name = name;
+        if (email) cred.email = email;
+        config.git.credentials[index] = cred;
+        storage.saveGlobalConfig(config);
+        showToast('Git credential updated', 'success');
+        setState({ editingListItem: null });
+    }
+}
+
+export function saveGitCredentialEditToProfile(index) {
+    const host = document.getElementById('git-credentials-edit-host')?.value?.trim();
+    const username = document.getElementById('git-credentials-edit-username')?.value?.trim();
+    const token = document.getElementById('git-credentials-edit-token')?.value?.trim();
+    const name = document.getElementById('git-credentials-edit-name')?.value?.trim();
+    const email = document.getElementById('git-credentials-edit-email')?.value?.trim();
+
+    if (!host || !username || !token) {
+        showToast('Host, username, and token are required', 'error');
+        return;
+    }
+
+    const profileId = state.editingProfileId;
+    const profile = storage.getProfile(profileId);
+    if (!profile) return;
+
+    if (!Object.hasOwn(profile.overrides, 'git.credentials')) {
+        const globalConfig = storage.getGlobalConfig();
+        profile.overrides['git.credentials'] = JSON.parse(JSON.stringify(globalConfig.git?.credentials || []));
+    }
+
+    if (index >= 0 && index < profile.overrides['git.credentials'].length) {
+        const cred = { host, username, token };
+        if (name) cred.name = name;
+        if (email) cred.email = email;
+        profile.overrides['git.credentials'][index] = cred;
+        storage.saveProfile(profileId, profile);
+        showToast('Git credential updated', 'success');
+        setState({ editingListItem: null });
+    }
+}
+
+export function saveSSHKeyEdit(index) {
+    const name = document.getElementById('ssh-keys-edit-name')?.value?.trim();
+    const pubKey = document.getElementById('ssh-keys-edit-pubKey')?.value?.trim();
+
+    if (!name || !pubKey) {
+        showToast('Name and public key are required', 'error');
+        return;
+    }
+
+    const config = storage.getGlobalConfig();
+    if (!Array.isArray(config.ssh.keys)) config.ssh.keys = [];
+
+    if (index >= 0 && index < config.ssh.keys.length) {
+        // Check for duplicate name (excluding current)
+        if (config.ssh.keys.some((k, i) => i !== index && k.name === name)) {
+            showToast('A key with this name already exists', 'error');
+            return;
+        }
+        config.ssh.keys[index] = { name, pubKey };
+        storage.saveGlobalConfig(config);
+        showToast('SSH key updated', 'success');
+        setState({ editingListItem: null });
+    }
+}
+
+export function saveSSHKeyEditToProfile(index) {
+    const name = document.getElementById('ssh-keys-edit-name')?.value?.trim();
+    const pubKey = document.getElementById('ssh-keys-edit-pubKey')?.value?.trim();
+
+    if (!name || !pubKey) {
+        showToast('Name and public key are required', 'error');
+        return;
+    }
+
+    const profileId = state.editingProfileId;
+    const profile = storage.getProfile(profileId);
+    if (!profile) return;
+
+    if (!Object.hasOwn(profile.overrides, 'ssh.keys')) {
+        const globalConfig = storage.getGlobalConfig();
+        profile.overrides['ssh.keys'] = JSON.parse(JSON.stringify(globalConfig.ssh?.keys || []));
+    }
+
+    if (index >= 0 && index < profile.overrides['ssh.keys'].length) {
+        // Check for duplicate name (excluding current)
+        if (profile.overrides['ssh.keys'].some((k, i) => i !== index && k.name === name)) {
+            showToast('A key with this name already exists', 'error');
+            return;
+        }
+        profile.overrides['ssh.keys'][index] = { name, pubKey };
+        storage.saveProfile(profileId, profile);
+        showToast('SSH key updated', 'success');
+        setState({ editingListItem: null });
+    }
+}

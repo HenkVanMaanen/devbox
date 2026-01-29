@@ -47,7 +47,7 @@ const config = {
 
 const options = {
     gitCredentials: [{ host: 'github.com', username: 'testuser', token: 'ghp_test123' }],
-    sshPubKey: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAITestKeyHere test@devbox',
+    sshKeys: [{ name: 'test-key', pubKey: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAITestKeyHere test@devbox' }],
     themeColors: THEMES[0].colors
 };
 

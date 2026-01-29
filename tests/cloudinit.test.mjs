@@ -24,7 +24,7 @@ const baseConfig = {
     hetzner: { serverType: 'cpx21', baseImage: 'debian-12', location: 'fsn1' },
     packages: { apt: ['git', 'curl'], mise: [] },
     shell: { default: 'bash', starship: false },
-    ssh: { pubKey: '' },
+    ssh: { keys: [] },
     git: { userName: '', userEmail: '', credentials: [] },
     claude: { apiKey: '', credentialsJson: null, theme: '', settings: '' },
     services: {
@@ -38,7 +38,7 @@ const baseConfig = {
 
 const baseOptions = {
     gitCredentials: [],
-    sshPubKey: '',
+    sshKeys: [],
     themeColors: THEMES[0].colors
 };
 
@@ -87,10 +87,35 @@ describe('cloudinit.js generate()', () => {
         assert.ok(yaml.includes('- zsh'));
     });
 
-    it('includes SSH authorized key when provided', () => {
-        const opts = { ...baseOptions, sshPubKey: 'ssh-ed25519 AAAAC3 test@dev' };
+    it('includes SSH authorized keys when provided', () => {
+        const opts = { ...baseOptions, sshKeys: [{ name: 'test-key', pubKey: 'ssh-ed25519 AAAAC3 test@dev' }] };
         const yaml = generate('test', 'token', baseConfig, opts);
         assert.ok(yaml.includes('ssh-ed25519 AAAAC3 test@dev'));
+    });
+
+    it('includes multiple SSH authorized keys', () => {
+        const opts = {
+            ...baseOptions,
+            sshKeys: [
+                { name: 'key1', pubKey: 'ssh-ed25519 AAAAC3-key1 user1@dev' },
+                { name: 'key2', pubKey: 'ssh-rsa AAAAB3-key2 user2@dev' }
+            ]
+        };
+        const yaml = generate('test', 'token', baseConfig, opts);
+        assert.ok(yaml.includes('ssh-ed25519 AAAAC3-key1 user1@dev'));
+        assert.ok(yaml.includes('ssh-rsa AAAAB3-key2 user2@dev'));
+    });
+
+    it('filters out empty pubKeys in SSH keys array', () => {
+        const opts = {
+            ...baseOptions,
+            sshKeys: [
+                { name: 'valid', pubKey: 'ssh-ed25519 VALID' },
+                { name: 'empty', pubKey: '' }
+            ]
+        };
+        const yaml = generate('test', 'token', baseConfig, opts);
+        assert.ok(yaml.includes('ssh-ed25519 VALID'));
     });
 
     it('includes starship config for bash', () => {

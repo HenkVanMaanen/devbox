@@ -8,7 +8,7 @@ import { shellEscape, buildGitCredentials, buildGitConfig, buildHostGitConfig, b
 export function generate(serverName, hetznerToken, config, options = {}) {
     if (!config) config = getDefaultProfileConfig();
     const gitCreds = options.gitCredentials || config.git?.credentials || [];
-    const sshPubKey = options.sshPubKey || config.ssh?.pubKey || '';
+    const sshKeys = options.sshKeys || config.ssh?.keys || [];
 
     // Resolve theme colors
     let themeColors;
@@ -53,7 +53,7 @@ export function generate(serverName, hetznerToken, config, options = {}) {
                 shell: shell,
                 groups: ['sudo'],
                 sudo: 'ALL=(ALL) NOPASSWD:ALL',
-                ssh_authorized_keys: sshPubKey ? [sshPubKey] : []
+                ssh_authorized_keys: sshKeys.map(k => k.pubKey).filter(Boolean)
             }
         ],
         write_files: [],

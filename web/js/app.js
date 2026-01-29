@@ -13,7 +13,11 @@ import {
     addCustomPackage, addCustomPackageToProfile,
     addListItem, removeListItem, addListItemToProfile, removeListItemFromProfile,
     addGitCredentialToConfig, removeGitCredentialFromConfig,
-    addGitCredentialToProfile, removeGitCredentialFromProfile
+    addGitCredentialToProfile, removeGitCredentialFromProfile,
+    addSSHKey, removeSSHKey, addSSHKeyToProfile, removeSSHKeyFromProfile,
+    startEditListItem, cancelEditListItem,
+    saveGitCredentialEdit, saveGitCredentialEditToProfile,
+    saveSSHKeyEdit, saveSSHKeyEditToProfile
 } from './handlers.js';
 
 // ============================================================================
@@ -84,7 +88,7 @@ async function createServer() {
     const token = storage.getHetznerToken();
     const selectedProfileId = state.selectedProfileId || storage.getDefaultProfileId();
     const config = storage.getConfigForProfile(selectedProfileId);
-    const sshPubKey = config.ssh?.pubKey || '';
+    const sshKeys = config.ssh?.keys || [];
 
     if (!token) {
         showToast('Hetzner token not configured', 'error');
@@ -96,10 +100,16 @@ async function createServer() {
 
     try {
         let sshKeyIds = [];
-        if (sshPubKey) {
-            setState({ createProgress: 'Ensuring SSH key exists...' });
-            const sshKey = await hetzner.ensureSSHKey(token, 'devbox-key', sshPubKey);
-            sshKeyIds = [sshKey.id];
+        if (sshKeys.length > 0) {
+            setState({ createProgress: 'Ensuring SSH keys exist...' });
+            for (const key of sshKeys) {
+                if (key.pubKey) {
+                    // Sanitize key name for Hetzner API (alphanumeric, hyphens, underscores only)
+                    const safeName = key.name.replace(/[^a-zA-Z0-9_-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'key';
+                    const hetznerKey = await hetzner.ensureSSHKey(token, `devbox-${safeName}`, key.pubKey);
+                    sshKeyIds.push(hetznerKey.id);
+                }
+            }
         }
 
         setState({ createProgress: 'Generating cloud-init...' });
@@ -223,7 +233,7 @@ function saveConfig() {
         return document.getElementById(fieldId)?.checked ?? defaultValue;
     };
 
-    config.ssh.pubKey = getFieldValue('ssh.pubKey').trim();
+    // SSH keys are managed via addSSHKey/removeSSHKey handlers, not here
 
     config.git.userName = getFieldValue('git.userName');
     config.git.userEmail = getFieldValue('git.userEmail');
@@ -584,6 +594,16 @@ window.devbox = {
     removeGitCredentialFromConfig,
     addGitCredentialToProfile,
     removeGitCredentialFromProfile,
+    addSSHKey,
+    removeSSHKey,
+    addSSHKeyToProfile,
+    removeSSHKeyFromProfile,
+    startEditListItem,
+    cancelEditListItem,
+    saveGitCredentialEdit,
+    saveGitCredentialEditToProfile,
+    saveSSHKeyEdit,
+    saveSSHKeyEditToProfile,
     clearAll,
     exportConfig,
     importConfig,

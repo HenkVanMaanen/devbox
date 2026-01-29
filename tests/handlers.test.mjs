@@ -36,7 +36,10 @@ const {
     addCustomPackage, addCustomPackageToProfile, toggleComboboxValue,
     addListItem, removeListItem,
     addGitCredentialToConfig, removeGitCredentialFromConfig,
-    addGitCredentialToProfile, removeGitCredentialFromProfile
+    addGitCredentialToProfile, removeGitCredentialFromProfile,
+    addSSHKey, removeSSHKey, addSSHKeyToProfile, removeSSHKeyFromProfile,
+    startEditListItem, cancelEditListItem,
+    saveGitCredentialEdit, saveSSHKeyEdit
 } = await import('../web/js/handlers.js');
 
 describe('handlers.js', () => {
@@ -334,6 +337,238 @@ describe('handlers.js', () => {
                 const profile = storage.getProfile(profileId);
                 assert.equal(profile.overrides['git.credentials'].length, 1);
                 assert.equal(profile.overrides['git.credentials'][0].host, 'b.com');
+            });
+        });
+    });
+
+    describe('SSH key handlers', () => {
+        describe('addSSHKey', () => {
+            it('does nothing with empty fields', () => {
+                mockElements = {
+                    'ssh-keys-name': { value: '' },
+                    'ssh-keys-pubKey': { value: 'ssh-ed25519 AAAA' }
+                };
+                addSSHKey();
+                const config = storage.getGlobalConfig();
+                assert.deepEqual(config.ssh.keys, []);
+            });
+
+            it('adds SSH key to global config', () => {
+                mockElements = {
+                    'ssh-keys-name': { value: 'work-laptop' },
+                    'ssh-keys-pubKey': { value: 'ssh-ed25519 AAAA test@work' }
+                };
+                addSSHKey();
+                const config = storage.getGlobalConfig();
+                assert.equal(config.ssh.keys.length, 1);
+                assert.equal(config.ssh.keys[0].name, 'work-laptop');
+                assert.equal(config.ssh.keys[0].pubKey, 'ssh-ed25519 AAAA test@work');
+            });
+
+            it('rejects duplicate key name', () => {
+                const config = storage.getGlobalConfig();
+                config.ssh.keys = [{ name: 'existing', pubKey: 'ssh-ed25519 OLD' }];
+                storage.saveGlobalConfig(config);
+
+                mockElements = {
+                    'ssh-keys-name': { value: 'existing' },
+                    'ssh-keys-pubKey': { value: 'ssh-ed25519 NEW' }
+                };
+                addSSHKey();
+                const updated = storage.getGlobalConfig();
+                assert.equal(updated.ssh.keys.length, 1);
+                assert.equal(updated.ssh.keys[0].pubKey, 'ssh-ed25519 OLD');
+            });
+        });
+
+        describe('removeSSHKey', () => {
+            it('removes key by index', () => {
+                const config = storage.getGlobalConfig();
+                config.ssh.keys = [
+                    { name: 'key1', pubKey: 'ssh-ed25519 KEY1' },
+                    { name: 'key2', pubKey: 'ssh-ed25519 KEY2' }
+                ];
+                storage.saveGlobalConfig(config);
+
+                removeSSHKey(0);
+                const updated = storage.getGlobalConfig();
+                assert.equal(updated.ssh.keys.length, 1);
+                assert.equal(updated.ssh.keys[0].name, 'key2');
+            });
+
+            it('does nothing for invalid index', () => {
+                const config = storage.getGlobalConfig();
+                config.ssh.keys = [{ name: 'key1', pubKey: 'ssh-ed25519 KEY1' }];
+                storage.saveGlobalConfig(config);
+
+                removeSSHKey(5);
+                const updated = storage.getGlobalConfig();
+                assert.equal(updated.ssh.keys.length, 1);
+            });
+        });
+
+        describe('addSSHKeyToProfile', () => {
+            it('adds key to profile overrides', () => {
+                // Clear any existing global keys
+                const config = storage.getGlobalConfig();
+                config.ssh.keys = [];
+                storage.saveGlobalConfig(config);
+
+                const profileId = storage.createProfile('ssh-test');
+                storage.saveProfile(profileId, { name: 'ssh-test', overrides: {} });
+                Object.assign(state, { editingProfileId: profileId });
+
+                mockElements = {
+                    'profile-ssh-keys-name': { value: 'profile-key' },
+                    'profile-ssh-keys-pubKey': { value: 'ssh-ed25519 PROFILE' }
+                };
+                addSSHKeyToProfile();
+                const profile = storage.getProfile(profileId);
+                assert.ok(Object.hasOwn(profile.overrides, 'ssh.keys'));
+                assert.equal(profile.overrides['ssh.keys'].length, 1);
+                assert.equal(profile.overrides['ssh.keys'][0].name, 'profile-key');
+            });
+
+            it('copies global keys before first override add', () => {
+                const config = storage.getGlobalConfig();
+                config.ssh.keys = [{ name: 'global-key', pubKey: 'ssh-ed25519 GLOBAL' }];
+                storage.saveGlobalConfig(config);
+
+                const profileId = storage.createProfile('copy-ssh-test');
+                storage.saveProfile(profileId, { name: 'copy-ssh-test', overrides: {} });
+                Object.assign(state, { editingProfileId: profileId });
+
+                mockElements = {
+                    'profile-ssh-keys-name': { value: 'new-key' },
+                    'profile-ssh-keys-pubKey': { value: 'ssh-ed25519 NEW' }
+                };
+                addSSHKeyToProfile();
+                const profile = storage.getProfile(profileId);
+                assert.equal(profile.overrides['ssh.keys'].length, 2);
+            });
+        });
+
+        describe('removeSSHKeyFromProfile', () => {
+            it('removes key from profile override', () => {
+                const profileId = storage.createProfile('remove-ssh-test');
+                storage.saveProfile(profileId, {
+                    name: 'remove-ssh-test',
+                    overrides: {
+                        'ssh.keys': [
+                            { name: 'a', pubKey: 'ssh-ed25519 A' },
+                            { name: 'b', pubKey: 'ssh-ed25519 B' }
+                        ]
+                    }
+                });
+                Object.assign(state, { editingProfileId: profileId });
+
+                removeSSHKeyFromProfile(0);
+                const profile = storage.getProfile(profileId);
+                assert.equal(profile.overrides['ssh.keys'].length, 1);
+                assert.equal(profile.overrides['ssh.keys'][0].name, 'b');
+            });
+        });
+    });
+
+    describe('list item editing', () => {
+        describe('startEditListItem / cancelEditListItem', () => {
+            it('sets editingListItem state', () => {
+                startEditListItem('git.credentials', 1, false);
+                assert.deepEqual(state.editingListItem, { field: 'git.credentials', index: 1, isProfile: false });
+            });
+
+            it('clears editingListItem state on cancel', () => {
+                Object.assign(state, { editingListItem: { field: 'test', index: 0, isProfile: false } });
+                cancelEditListItem();
+                assert.equal(state.editingListItem, null);
+            });
+        });
+
+        describe('saveGitCredentialEdit', () => {
+            it('updates credential at index', () => {
+                const config = storage.getGlobalConfig();
+                config.git.credentials = [{ host: 'old.com', username: 'old', token: 'oldtoken' }];
+                storage.saveGlobalConfig(config);
+
+                mockElements = {
+                    'git-credentials-edit-host': { value: 'new.com' },
+                    'git-credentials-edit-username': { value: 'newuser' },
+                    'git-credentials-edit-token': { value: 'newtoken' },
+                    'git-credentials-edit-name': { value: 'New Name' },
+                    'git-credentials-edit-email': { value: 'new@email.com' }
+                };
+                saveGitCredentialEdit(0);
+                const updated = storage.getGlobalConfig();
+                assert.equal(updated.git.credentials[0].host, 'new.com');
+                assert.equal(updated.git.credentials[0].username, 'newuser');
+                assert.equal(updated.git.credentials[0].name, 'New Name');
+                assert.equal(state.editingListItem, null);
+            });
+
+            it('does nothing with empty required fields', () => {
+                const config = storage.getGlobalConfig();
+                config.git.credentials = [{ host: 'old.com', username: 'old', token: 'oldtoken' }];
+                storage.saveGlobalConfig(config);
+
+                mockElements = {
+                    'git-credentials-edit-host': { value: '' },
+                    'git-credentials-edit-username': { value: 'user' },
+                    'git-credentials-edit-token': { value: 'token' }
+                };
+                saveGitCredentialEdit(0);
+                const updated = storage.getGlobalConfig();
+                assert.equal(updated.git.credentials[0].host, 'old.com');
+            });
+        });
+
+        describe('saveSSHKeyEdit', () => {
+            it('updates SSH key at index', () => {
+                const config = storage.getGlobalConfig();
+                config.ssh.keys = [{ name: 'old-key', pubKey: 'ssh-ed25519 OLD' }];
+                storage.saveGlobalConfig(config);
+
+                mockElements = {
+                    'ssh-keys-edit-name': { value: 'new-key' },
+                    'ssh-keys-edit-pubKey': { value: 'ssh-ed25519 NEW' }
+                };
+                saveSSHKeyEdit(0);
+                const updated = storage.getGlobalConfig();
+                assert.equal(updated.ssh.keys[0].name, 'new-key');
+                assert.equal(updated.ssh.keys[0].pubKey, 'ssh-ed25519 NEW');
+                assert.equal(state.editingListItem, null);
+            });
+
+            it('rejects duplicate name on edit (excluding current)', () => {
+                const config = storage.getGlobalConfig();
+                config.ssh.keys = [
+                    { name: 'key1', pubKey: 'ssh-ed25519 KEY1' },
+                    { name: 'key2', pubKey: 'ssh-ed25519 KEY2' }
+                ];
+                storage.saveGlobalConfig(config);
+
+                mockElements = {
+                    'ssh-keys-edit-name': { value: 'key2' },
+                    'ssh-keys-edit-pubKey': { value: 'ssh-ed25519 UPDATED' }
+                };
+                saveSSHKeyEdit(0);
+                const updated = storage.getGlobalConfig();
+                // Should not have changed because name conflict
+                assert.equal(updated.ssh.keys[0].name, 'key1');
+            });
+
+            it('allows keeping same name on edit', () => {
+                const config = storage.getGlobalConfig();
+                config.ssh.keys = [{ name: 'mykey', pubKey: 'ssh-ed25519 OLD' }];
+                storage.saveGlobalConfig(config);
+
+                mockElements = {
+                    'ssh-keys-edit-name': { value: 'mykey' },
+                    'ssh-keys-edit-pubKey': { value: 'ssh-ed25519 NEW' }
+                };
+                saveSSHKeyEdit(0);
+                const updated = storage.getGlobalConfig();
+                assert.equal(updated.ssh.keys[0].name, 'mykey');
+                assert.equal(updated.ssh.keys[0].pubKey, 'ssh-ed25519 NEW');
             });
         });
     });

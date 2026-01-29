@@ -12,7 +12,7 @@ const KEYS = {
 // Default global configuration
 const DEFAULT_GLOBAL_CONFIG = {
     ssh: {
-        pubKey: ''
+        keys: []  // Array of { name: string, pubKey: string }
     },
     git: {
         userName: '',
