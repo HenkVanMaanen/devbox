@@ -2,7 +2,7 @@
 
 import { getDefaultProfileConfig, getTheme as getStoredTheme } from './storage.js';
 import { getTheme, getDefaultTheme, THEMES } from './themes.js';
-import { shellEscape, buildGitCredentials, buildGitConfig, buildHostGitConfig, buildAutodeleteScript, buildCaddyConfig, buildIndexPage } from './cloudinit-builders.js';
+import { shellEscape, buildGitCredentials, buildGitConfig, buildHostGitConfig, buildDaemonScript, buildCaddyConfig, buildIndexPage } from './cloudinit-builders.js';
 
 // Main generate function - creates cloud-init user-data with native modules
 export function generate(serverName, hetznerToken, config, options = {}) {
@@ -193,17 +193,18 @@ export function generate(serverName, hetznerToken, config, options = {}) {
         }
     }
 
-    // Autodelete daemon
-    if (config.autoDelete.enabled) {
+    // Devbox daemon (port scanning, Caddy API, autodelete)
+    // Enable if autodelete OR services are enabled (daemon handles both)
+    if (config.autoDelete.enabled || servicesEnabled) {
         cloudInit.write_files.push({
-            path: '/usr/local/bin/devbox-autodelete',
+            path: '/usr/local/bin/devbox-daemon',
             permissions: '0755',
-            content: buildAutodeleteScript(config, hetznerToken)
+            content: buildDaemonScript(config, hetznerToken)
         });
         cloudInit.write_files.push({
-            path: '/etc/systemd/system/devbox-autodelete.service',
+            path: '/etc/systemd/system/devbox-daemon.service',
             permissions: '0644',
-            content: '[Unit]\nDescription=Autodelete\nAfter=network.target\n[Service]\nType=simple\nExecStart=/usr/bin/env node /usr/local/bin/devbox-autodelete\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\n'
+            content: '[Unit]\nDescription=Devbox Daemon\nAfter=network.target caddy.service\n[Service]\nType=simple\nExecStart=/usr/bin/env node /usr/local/bin/devbox-daemon\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\n'
         });
     }
 
@@ -295,7 +296,7 @@ export function generate(serverName, hetznerToken, config, options = {}) {
 
     // Reload systemd once and enable all services
     const servicesToEnable = [];
-    if (config.autoDelete.enabled) servicesToEnable.push('devbox-autodelete');
+    if (config.autoDelete.enabled || servicesEnabled) servicesToEnable.push('devbox-daemon');
     if (servicesEnabled) {
         if (config.services.codeServer) servicesToEnable.push('code-server');
         if (config.services.claudeTerminal) servicesToEnable.push('ttyd-claude');

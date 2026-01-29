@@ -71,90 +71,112 @@ export function buildHostGitConfig(cred) {
     return content;
 }
 
-// Build autodelete daemon script with config values baked in
-export function buildAutodeleteScript(config, hetznerToken) {
+// Build devbox daemon script with port scanning, Caddy API, and autodelete
+export function buildDaemonScript(config, hetznerToken) {
     const timeout = config.autoDelete.timeoutMinutes;
     const warning = config.autoDelete.warningMinutes;
     const gitUser = config.git.userName || '';
 
     return `#!/usr/bin/env node
-const http=require('http'),fs=require('fs'),{execSync}=require('child_process'),https=require('https');
+const http=require('http'),fs=require('fs'),https=require('https'),{execSync}=require('child_process');
 const TIMEOUT=${timeout},WARNING=${warning},TOKEN='${escapeSingleQuotedJS(hetznerToken)}',USER='${escapeSingleQuotedJS(gitUser)}';
-let last=Date.now(),warn=false;
+const CADDY_API='http://localhost:2019';
+const STATIC_SERVICES=new Map([[65532,{name:'VS Code',subdomain:'code'}],[65533,{name:'Claude',subdomain:'claude'}],[65534,{name:'Terminal',subdomain:'term'}]]);
+const IGNORED_PORTS=new Set([22,80,443,2019,65531]);
+let last=Date.now(),warn=false,discoveredServices=new Map(),config,syncing=false;
 
-function check(){
-  let a=false;
-  try{if(execSync('who',{encoding:'utf8',timeout:5000}).trim())a=true}catch{}
-  try{for(const f of fs.readdirSync('/dev/pts'))if(/^\\d+$/.test(f)&&Date.now()-fs.statSync('/dev/pts/'+f).atimeMs<60000)a=true}catch{}
-  if(a){last=Date.now();warn=false}
+function loadConfig(){
+  const caddyfile=fs.readFileSync('/etc/caddy/Caddyfile','utf8');
+  const domainMatch=caddyfile.match(/^([a-z0-9-]+\\.\\d+-\\d+-\\d+-\\d+\\.[a-z.]+)\\s*\\{/m);
+  const baseDomain=domainMatch?domainMatch[1]:null;
+  const hashMatch=caddyfile.match(/devbox\\s+(\\$2[aby]\\$[^\\s]+)/);
+  const bcryptHash=hashMatch?hashMatch[1]:null;
+  if(!baseDomain||!bcryptHash){console.error('Failed to detect domain or hash');process.exit(1)}
+  return{baseDomain,bcryptHash};
+}
+
+function scanPorts(){
+  try{
+    const output=execSync('ss -tlnp',{encoding:'utf8',timeout:5000});
+    const discovered=new Map();
+    for(const line of output.split('\\n')){
+      const match=line.match(/(?:127\\.0\\.0\\.1|0\\.0\\.0\\.0|\\*|\\[::\\]):(\\d+)\\s/);
+      if(!match)continue;
+      const port=parseInt(match[1]);
+      if(IGNORED_PORTS.has(port)||STATIC_SERVICES.has(port))continue;
+      const procMatch=line.match(/users:\\(\\("([^"]+)"/);
+      discovered.set(port,{port,process:procMatch?procMatch[1]:'unknown'});
+    }
+    return discovered;
+  }catch(e){return new Map()}
+}
+
+function isPortListening(port){
+  try{const out=execSync(\`ss -tln sport = :\${port}\`,{encoding:'utf8',timeout:5000});return out.split('\\n').length>2}catch{return false}
+}
+
+async function addRoute(port,baseDomain,bcryptHash){
+  const route={"@id":\`dynamic-\${port}\`,match:[{host:[\`\${port}.\${baseDomain}\`]}],handle:[{handler:"subroute",routes:[{handle:[{handler:"authentication",providers:{http_basic:{accounts:[{username:"devbox",password:bcryptHash}],hash:{algorithm:"bcrypt"},hash_cache:{}}}},{handler:"reverse_proxy",upstreams:[{dial:\`localhost:\${port}\`}]}]}]}],terminal:true};
+  try{const res=await fetch(\`\${CADDY_API}/config/apps/http/servers/srv0/routes/0\`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(route)});if(!res.ok)console.error(\`Failed to add route for port \${port}: \${res.status}\`);else console.log(\`Added route for port \${port}\`)}catch(e){console.error(\`Failed to add route for port \${port}: \${e.message}\`)}
+}
+
+async function removeRoute(port){
+  try{const res=await fetch(\`\${CADDY_API}/id/dynamic-\${port}\`,{method:'DELETE'});if(res.ok)console.log(\`Removed route for port \${port}\`)}catch(e){console.error(\`Failed to remove route for port \${port}: \${e.message}\`)}
+}
+
+async function cleanupStaleRoutes(currentPorts){
+  try{const res=await fetch(\`\${CADDY_API}/config/apps/http/servers/srv0/routes\`);if(!res.ok)return;const routes=await res.json();for(const route of routes){const id=route['@id'];if(id?.startsWith('dynamic-')){const port=parseInt(id.replace('dynamic-',''));if(!currentPorts.has(port)){console.log(\`Cleaning up stale route for port \${port}\`);await removeRoute(port)}}}}catch(e){console.error(\`Failed to cleanup routes: \${e.message}\`)}
 }
 
 function getServices(){
-  const nameMap={code:'VS Code',claude:'Claude',term:'Terminal',app:'Web App'};
-  try{
-    const cfg=fs.readFileSync('/etc/caddy/Caddyfile','utf8');
-    const lines=cfg.split('\\n');
-    const blocks=[];
-    let cur=null,depth=0;
-    for(const line of lines){
-      const trimmed=line.trim();
-      if(!cur&&/^[a-zA-Z0-9]\\S*\\s*\\{/.test(trimmed)){
-        cur={domain:trimmed.split('{')[0].trim(),auth:false,port:null,hasFileServer:false};
-        depth=1;continue;
-      }
-      if(cur){
-        if(trimmed.includes('{'))depth++;
-        if(trimmed.includes('}'))depth--;
-        if(trimmed.includes('file_server'))cur.hasFileServer=true;
-        if(/@auth\\s+query\\s+token=/.test(trimmed))cur.auth=true;
-        const pm=trimmed.match(/reverse_proxy\\s+localhost:(\\d+)/);
-        if(pm&&!cur.port)cur.port=parseInt(pm[1]);
-        if(depth===0){blocks.push(cur);cur=null;}
-      }
-    }
-    const services=[];
-    for(const b of blocks){
-      const sub=b.domain.split('.')[0];
-      if(!nameMap[sub])continue;
-      const name=nameMap[sub];
-      services.push({name,url:'https://'+b.domain,auth:b.auth,active:false,port:b.port});
-    }
-    let listening=[];
-    try{const ss=execSync('ss -tlnp',{encoding:'utf8',timeout:5000});listening=ss.split('\\n')}catch{}
-    for(const svc of services){
-      if(!svc.port){svc.active=true;continue}
-      const pat=':'+svc.port;
-      svc.active=listening.some(l=>l.includes(pat+' ')||l.includes(pat+'\\t')||l.endsWith(pat));
-    }
-    return services;
-  }catch(e){return[]}
+  const services=[];
+  for(const[port,info]of STATIC_SERVICES)services.push({name:info.name,port,url:\`https://\${info.subdomain}.\${config.baseDomain}\`,active:isPortListening(port)});
+  for(const[port,info]of discoveredServices)services.push({name:info.process,port,url:\`https://\${port}.\${config.baseDomain}\`,active:true});
+  services.sort((a,b)=>{const aS=STATIC_SERVICES.has(a.port),bS=STATIC_SERVICES.has(b.port);if(aS!==bS)return aS?-1:1;return a.port-b.port});
+  return services;
 }
 
-http.createServer((q,r)=>{
-  const p=new URL(q.url,'http://x').pathname,j=(c,d)=>{r.writeHead(c,{'Content-Type':'application/json'});r.end(JSON.stringify(d))};
-  if(p==='/status'){const i=(Date.now()-last)/1000;return j(200,{idle:Math.floor(i),timeout:TIMEOUT,warning:WARNING,remaining:Math.max(0,Math.floor(TIMEOUT*60-i)),warn,last:new Date(last).toISOString()})}
-  if(p==='/keepalive'&&q.method==='POST'){last=Date.now();warn=false;return j(200,{ok:true})}
-  if(p==='/services'){return j(200,getServices())}
-  j(404,{error:'not found'})
-}).listen(65531,'127.0.0.1');
+async function syncServices(){
+  if(syncing)return;syncing=true;
+  try{
+    const discovered=scanPorts();
+    const currentPorts=new Set(discovered.keys());
+    const previousPorts=new Set(discoveredServices.keys());
+    for(const port of currentPorts)if(!previousPorts.has(port)){console.log(\`New service on port \${port} (\${discovered.get(port).process})\`);await addRoute(port,config.baseDomain,config.bcryptHash)}
+    for(const port of previousPorts)if(!currentPorts.has(port)){console.log(\`Service stopped on port \${port}\`);await removeRoute(port)}
+    discoveredServices=discovered;
+  }finally{syncing=false}
+}
+
+function check(){let a=false;try{if(execSync('who',{encoding:'utf8',timeout:5000}).trim())a=true}catch{}try{for(const f of fs.readdirSync('/dev/pts'))if(/^\\d+$/.test(f)&&Date.now()-fs.statSync('/dev/pts/'+f).atimeMs<60000)a=true}catch{}if(a){last=Date.now();warn=false}}
+
+function wip(){try{for(const d of fs.readdirSync('/home/dev')){if(/[^a-zA-Z0-9._-]/.test(d))continue;const p='/home/dev/'+d;if(!fs.statSync(p).isDirectory()||!fs.existsSync(p+'/.git'))continue;try{if(!execSync('git -C '+JSON.stringify(p)+' status --porcelain',{encoding:'utf8'}).trim())continue;const b=(USER?'wip/'+USER.replace(/[^a-zA-Z0-9._-]/g,'_')+'/':'wip/')+new Date().toISOString().replace(/[T:]/g,'-').slice(0,19);execSync('git -C '+JSON.stringify(p)+' checkout -b '+JSON.stringify(b)+' && git -C '+JSON.stringify(p)+' add -A && git -C '+JSON.stringify(p)+' commit -m WIP && git -C '+JSON.stringify(p)+' push -u origin '+JSON.stringify(b),{timeout:60000})}catch{}}}catch{}}
 
 let sid;try{sid=execSync('curl -s -H "Metadata-Flavor:hetzner" http://169.254.169.254/hetzner/v1/metadata/instance-id',{encoding:'utf8',timeout:5000}).trim()}catch{}
-if(!sid)process.exit(0);
 
-function del(){https.request({hostname:'api.hetzner.cloud',path:'/v1/servers/'+sid,method:'DELETE',headers:{Authorization:'Bearer '+TOKEN}},()=>process.exit(0)).end()}
+function del(){if(!sid)return;https.request({hostname:'api.hetzner.cloud',path:'/v1/servers/'+sid,method:'DELETE',headers:{Authorization:'Bearer '+TOKEN}},()=>process.exit(0)).end()}
 
-function wip(){
-  try{for(const d of fs.readdirSync('/home/dev')){
-    if(/[^a-zA-Z0-9._-]/.test(d))continue;
-    const p='/home/dev/'+d;if(!fs.statSync(p).isDirectory()||!fs.existsSync(p+'/.git'))continue;
-    try{if(!execSync('git -C '+JSON.stringify(p)+' status --porcelain',{encoding:'utf8'}).trim())continue;
-      const b=(USER?'wip/'+USER.replace(/[^a-zA-Z0-9._-]/g,'_')+'/':'wip/')+new Date().toISOString().replace(/[T:]/g,'-').slice(0,19);
-      execSync('git -C '+JSON.stringify(p)+' checkout -b '+JSON.stringify(b)+' && git -C '+JSON.stringify(p)+' add -A && git -C '+JSON.stringify(p)+' commit -m WIP && git -C '+JSON.stringify(p)+' push -u origin '+JSON.stringify(b),{timeout:60000})
-    }catch{}}
-  }catch{}
+function checkActivityAndMaybeDelete(){check();const i=(Date.now()-last)/1000;if(TIMEOUT*60-i<=WARNING*60&&!warn)warn=true;if(i>=TIMEOUT*60){wip();del()}}
+
+async function main(){
+  config=loadConfig();console.log(\`Devbox daemon starting with domain: \${config.baseDomain}\`);
+  const initial=scanPorts();await cleanupStaleRoutes(new Set(initial.keys()));
+  for(const[port]of initial)await addRoute(port,config.baseDomain,config.bcryptHash);
+  discoveredServices=initial;
+  setInterval(syncServices,10000);
+  http.createServer((req,res)=>{
+    const url=new URL(req.url,'http://localhost');
+    const json=(code,data)=>{res.writeHead(code,{'Content-Type':'application/json'});res.end(JSON.stringify(data))};
+    if(url.pathname==='/services')return json(200,getServices());
+    if(url.pathname==='/status'){const idle=(Date.now()-last)/1000;return json(200,{idle:Math.floor(idle),timeout:TIMEOUT,warning:WARNING,remaining:Math.max(0,Math.floor(TIMEOUT*60-idle)),warn,last:new Date(last).toISOString()})}
+    if(url.pathname==='/keepalive'&&req.method==='POST'){last=Date.now();warn=false;return json(200,{ok:true})}
+    json(404,{error:'not found'});
+  }).listen(65531,'127.0.0.1');
+  console.log('HTTP server listening on 127.0.0.1:65531');
+  setInterval(checkActivityAndMaybeDelete,30000);
 }
 
-setInterval(()=>{check();const i=(Date.now()-last)/1000;if(TIMEOUT*60-i<=WARNING*60&&!warn)warn=true;if(i>=TIMEOUT*60){wip();del()}},30000);
+main().catch(e=>{console.error('Fatal error:',e);process.exit(1)});
 `;
 }
 
@@ -219,5 +241,5 @@ export function buildCaddyConfig(config, serverName) {
 export function buildIndexPage(config, serverName, themeColors) {
     const colors = themeColors;
 
-    return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="${colors.background}"><title>${serverName}</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:${colors.background};min-height:100vh;color:${colors.foreground};padding:1.5rem;font-size:16px;line-height:1.6}.c{max-width:600px;margin:0 auto}h1{font-size:1.5rem;color:${colors.foreground};margin-bottom:.25rem}.sub{color:${colors.mutedForeground};font-size:1rem;margin-bottom:1.5rem}.card{background:${colors.card};border-radius:.5rem;padding:1.5rem;margin-bottom:1rem;border:2px solid ${colors.border}}.hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}.ttl{font-size:1rem;color:${colors.mutedForeground}}.ind{display:flex;align-items:center;gap:.5rem}.dot{width:10px;height:10px;border-radius:50%;background:${colors.success};animation:p 2s infinite}.dot.w{background:${colors.warning}}.dot.e{background:${colors.destructive};animation:none}@keyframes p{0%,100%{opacity:1}50%{opacity:.5}}#cd{font-size:2rem;font-weight:600;color:${colors.foreground}}.lbl{font-size:1rem;color:${colors.mutedForeground};margin-top:.25rem}.svcs{display:grid;gap:.75rem}.svc{display:flex;align-items:center;gap:1rem;background:${colors.card};border:2px solid ${colors.border};border-radius:.5rem;padding:1rem;min-height:60px;text-decoration:none;color:inherit;transition:background .15s}.svc:hover{background:${colors.muted}}.svc:focus{outline:3px solid ${colors.focus};outline-offset:2px}.svc.inactive{opacity:.5}.ico{width:44px;height:44px;border-radius:.375rem;display:flex;align-items:center;justify-content:center;font-size:1.25rem;background:${colors.muted}}.inf{flex:1}.nm{font-weight:600;font-size:1rem;color:${colors.foreground}}.ds{font-size:1rem;color:${colors.mutedForeground}}.sdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}.sdot.active{background:${colors.success}}.sdot.inactive{background:${colors.destructive}}</style></head><body><div class="c"><h1>${serverName}</h1><p class="sub">Devbox</p><div class="card"><div class="hdr"><span class="ttl">Auto-shutdown</span><div class="ind"><div id="d" class="dot" role="status" aria-label="Server status indicator"></div><span id="s">Active</span></div></div><div id="cd" aria-live="polite">--:--</div><div class="lbl">until idle shutdown</div></div><nav class="svcs" id="svcs" aria-label="Services"></nav></div><script>const token='${escapeSingleQuotedJS(config.services.accessToken)}';const d=document.getElementById('d'),s=document.getElementById('s'),cd=document.getElementById('cd'),svcsEl=document.getElementById('svcs');let r=-1,w=0;function f(x){if(x<0)return'--:--';return String(Math.floor(x/60)).padStart(2,'0')+':'+String(x%60).padStart(2,'0')}function up(){cd.textContent=f(r);d.className=w?'dot w':r<=0?'dot e':'dot';s.textContent=w?'Warning':r<=0?'Shutting down':'Active'}async function getStatus(){try{const x=await(await fetch(location.origin+'/api/status')).json();r=x.remaining||x.remaining_seconds||0;w=x.warn||x.warning_active;up()}catch{d.className='dot e';s.textContent='Error'}}async function getServices(){try{const svcs=await(await fetch(location.origin+'/api/services')).json();renderServices(svcs)}catch{}}function renderServices(svcs){svcsEl.innerHTML='';for(const svc of svcs){const url='https://devbox:'+encodeURIComponent(token)+'@'+new URL(svc.url).host+'/';const a=document.createElement('a');a.href=url;a.className='svc'+(svc.active?'':' inactive');a.innerHTML='<div class="ico" aria-hidden="true">'+getIcon(svc.name)+'</div><div class="inf"><div class="nm">'+esc(svc.name)+'</div><div class="ds">'+(svc.active?'Active':'Inactive')+(svc.port?' &middot; port '+svc.port:'')+'</div></div><div class="sdot '+(svc.active?'active':'inactive')+'"></div>';svcsEl.appendChild(a)}}function getIcon(name){const m={'VS Code':'\\u2328','Claude':'\\ud83e\\udd16','Terminal':'$_','Web App':'\\ud83c\\udf10'};return m[name]||'\\ud83d\\udd17'}function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}function t(){if(r>0){r--;up()}}getStatus();getServices();setInterval(getStatus,10000);setInterval(getServices,30000);setInterval(t,1000)</script></body></html>`;
+    return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="${colors.background}"><title>${serverName}</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:${colors.background};min-height:100vh;color:${colors.foreground};padding:1.5rem;font-size:16px;line-height:1.6}.c{max-width:600px;margin:0 auto}h1{font-size:1.5rem;color:${colors.foreground};margin-bottom:.25rem}.sub{color:${colors.mutedForeground};font-size:1rem;margin-bottom:1.5rem}.card{background:${colors.card};border-radius:.5rem;padding:1.5rem;margin-bottom:1rem;border:2px solid ${colors.border}}.hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}.ttl{font-size:1rem;color:${colors.mutedForeground}}.ind{display:flex;align-items:center;gap:.5rem}.dot{width:10px;height:10px;border-radius:50%;background:${colors.success};animation:p 2s infinite}.dot.w{background:${colors.warning}}.dot.e{background:${colors.destructive};animation:none}@keyframes p{0%,100%{opacity:1}50%{opacity:.5}}#cd{font-size:2rem;font-weight:600;color:${colors.foreground}}.lbl{font-size:1rem;color:${colors.mutedForeground};margin-top:.25rem}.svcs{display:grid;gap:.75rem}.svc{display:flex;align-items:center;gap:1rem;background:${colors.card};border:2px solid ${colors.border};border-radius:.5rem;padding:1rem;min-height:60px;text-decoration:none;color:inherit;transition:background .15s}.svc:hover{background:${colors.muted}}.svc:focus{outline:3px solid ${colors.focus};outline-offset:2px}.svc.inactive{opacity:.5}.ico{width:44px;height:44px;border-radius:.375rem;display:flex;align-items:center;justify-content:center;font-size:1.25rem;background:${colors.muted}}.inf{flex:1}.nm{font-weight:600;font-size:1rem;color:${colors.foreground}}.ds{font-size:1rem;color:${colors.mutedForeground}}.sdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}.sdot.active{background:${colors.success}}.sdot.inactive{background:${colors.destructive}}</style></head><body><div class="c"><h1>${serverName}</h1><p class="sub">Devbox</p><div class="card"><div class="hdr"><span class="ttl">Auto-shutdown</span><div class="ind"><div id="d" class="dot" role="status" aria-label="Server status indicator"></div><span id="s">Active</span></div></div><div id="cd" aria-live="polite">--:--</div><div class="lbl">until idle shutdown</div></div><nav class="svcs" id="svcs" aria-label="Services"></nav></div><script>const token='${escapeSingleQuotedJS(config.services.accessToken)}';const d=document.getElementById('d'),s=document.getElementById('s'),cd=document.getElementById('cd'),svcsEl=document.getElementById('svcs');let r=-1,w=0;function f(x){if(x<0)return'--:--';return String(Math.floor(x/60)).padStart(2,'0')+':'+String(x%60).padStart(2,'0')}function up(){cd.textContent=f(r);d.className=w?'dot w':r<=0?'dot e':'dot';s.textContent=w?'Warning':r<=0?'Shutting down':'Active'}async function getStatus(){try{const x=await(await fetch(location.origin+'/api/status')).json();r=x.remaining||x.remaining_seconds||0;w=x.warn||x.warning_active;up()}catch{d.className='dot e';s.textContent='Error'}}async function getServices(){try{const svcs=await(await fetch(location.origin+'/api/services')).json();renderServices(svcs)}catch{}}function renderServices(svcs){svcsEl.innerHTML='';for(const svc of svcs){const url='https://devbox:'+encodeURIComponent(token)+'@'+new URL(svc.url).host+'/';const a=document.createElement('a');a.href=url;a.className='svc'+(svc.active?'':' inactive');a.innerHTML='<div class="ico" aria-hidden="true">'+getIcon(svc.name)+'</div><div class="inf"><div class="nm">'+esc(svc.name)+'</div><div class="ds">'+(svc.active?'Active':'Inactive')+(svc.port?' &middot; port '+svc.port:'')+'</div></div><div class="sdot '+(svc.active?'active':'inactive')+'"></div>';svcsEl.appendChild(a)}}function getIcon(name){const m={'VS Code':'\\u2328','Claude':'\\ud83e\\udd16','Terminal':'$_'};return m[name]||'\\ud83c\\udf10'}function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}function t(){if(r>0){r--;up()}}getStatus();getServices();setInterval(getStatus,10000);setInterval(getServices,10000);setInterval(t,1000)</script></body></html>`;
 }

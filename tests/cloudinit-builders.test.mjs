@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { shellEscape, escapeGitConfig, toBase64URL, buildGitCredentials, buildGitConfig, buildHostGitConfig, buildAutodeleteScript, buildCaddyConfig, buildIndexPage } from '../web/js/cloudinit-builders.js';
+import { shellEscape, escapeGitConfig, toBase64URL, buildGitCredentials, buildGitConfig, buildHostGitConfig, buildDaemonScript, buildCaddyConfig, buildIndexPage } from '../web/js/cloudinit-builders.js';
 
 describe('cloudinit-builders.js', () => {
     describe('shellEscape', () => {
@@ -232,62 +232,83 @@ describe('cloudinit-builders.js', () => {
         });
     });
 
-    describe('buildAutodeleteScript', () => {
+    describe('buildDaemonScript', () => {
         const config = {
             autoDelete: { timeoutMinutes: 60, warningMinutes: 5 },
             git: { userName: 'Test User' }
         };
 
         it('includes timeout value', () => {
-            const script = buildAutodeleteScript(config, 'token123');
+            const script = buildDaemonScript(config, 'token123');
             assert.ok(script.includes('TIMEOUT=60'));
         });
 
         it('includes warning value', () => {
-            const script = buildAutodeleteScript(config, 'token123');
+            const script = buildDaemonScript(config, 'token123');
             assert.ok(script.includes('WARNING=5'));
         });
 
         it('includes escaped token', () => {
-            const script = buildAutodeleteScript(config, "tok'en");
+            const script = buildDaemonScript(config, "tok'en");
             assert.ok(script.includes("TOKEN='tok\\'en'"));
         });
 
         it('includes git user name', () => {
-            const script = buildAutodeleteScript(config, 'token');
+            const script = buildDaemonScript(config, 'token');
             assert.ok(script.includes("USER='Test User'"));
         });
 
         it('creates HTTP server on port 65531', () => {
-            const script = buildAutodeleteScript(config, 'token');
+            const script = buildDaemonScript(config, 'token');
             assert.ok(script.includes('65531'));
         });
 
         it('has /status endpoint', () => {
-            const script = buildAutodeleteScript(config, 'token');
-            assert.ok(script.includes("p==='/status'"));
+            const script = buildDaemonScript(config, 'token');
+            assert.ok(script.includes("url.pathname==='/status'"));
         });
 
         it('has /keepalive endpoint', () => {
-            const script = buildAutodeleteScript(config, 'token');
-            assert.ok(script.includes("p==='/keepalive'"));
+            const script = buildDaemonScript(config, 'token');
+            assert.ok(script.includes("url.pathname==='/keepalive'"));
         });
 
         it('has /services endpoint', () => {
-            const script = buildAutodeleteScript(config, 'token');
-            assert.ok(script.includes("p==='/services'"));
+            const script = buildDaemonScript(config, 'token');
+            assert.ok(script.includes("url.pathname==='/services'"));
         });
 
         it('includes WIP branch push logic', () => {
-            const script = buildAutodeleteScript(config, 'token');
+            const script = buildDaemonScript(config, 'token');
             assert.ok(script.includes('wip'));
             assert.ok(script.includes('git'));
         });
 
         it('handles empty git user', () => {
             const noUserConfig = { ...config, git: { userName: '' } };
-            const script = buildAutodeleteScript(noUserConfig, 'token');
+            const script = buildDaemonScript(noUserConfig, 'token');
             assert.ok(script.includes("USER=''"));
+        });
+
+        it('includes Caddy Admin API integration', () => {
+            const script = buildDaemonScript(config, 'token');
+            assert.ok(script.includes('CADDY_API'));
+            assert.ok(script.includes('addRoute'));
+            assert.ok(script.includes('removeRoute'));
+        });
+
+        it('includes port scanning', () => {
+            const script = buildDaemonScript(config, 'token');
+            assert.ok(script.includes('scanPorts'));
+            assert.ok(script.includes('ss -tlnp'));
+        });
+
+        it('includes static services map', () => {
+            const script = buildDaemonScript(config, 'token');
+            assert.ok(script.includes('STATIC_SERVICES'));
+            assert.ok(script.includes('VS Code'));
+            assert.ok(script.includes('Claude'));
+            assert.ok(script.includes('Terminal'));
         });
     });
 

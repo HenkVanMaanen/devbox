@@ -175,25 +175,31 @@ describe('cloudinit.js generate()', () => {
         assert.ok(yaml.includes('theme'));
     });
 
-    describe('auto-delete', () => {
-        it('includes autodelete script when enabled', () => {
+    describe('devbox-daemon', () => {
+        it('includes daemon script when autodelete enabled', () => {
             const config = { ...baseConfig, autoDelete: { enabled: true, timeoutMinutes: 60, warningMinutes: 5 } };
             const yaml = generate('test', 'hetzner-tok', config, baseOptions);
-            assert.ok(yaml.includes('devbox-autodelete'));
+            assert.ok(yaml.includes('devbox-daemon'));
             assert.ok(yaml.includes('TIMEOUT=60'));
             assert.ok(yaml.includes('WARNING=5'));
             assert.ok(yaml.includes("TOKEN='hetzner-tok'"));
         });
 
-        it('omits autodelete when disabled', () => {
-            const yaml = generate('test', 'token', baseConfig, baseOptions);
-            assert.ok(!yaml.includes('devbox-autodelete'));
+        it('includes daemon script when services enabled', () => {
+            const config = { ...baseConfig, services: { ...baseConfig.services, codeServer: true } };
+            const yaml = generate('test', 'token', config, baseOptions);
+            assert.ok(yaml.includes('devbox-daemon'));
         });
 
-        it('includes systemd service for autodelete', () => {
+        it('omits daemon when both autodelete and services disabled', () => {
+            const yaml = generate('test', 'token', baseConfig, baseOptions);
+            assert.ok(!yaml.includes('devbox-daemon'));
+        });
+
+        it('includes systemd service for daemon', () => {
             const config = { ...baseConfig, autoDelete: { enabled: true, timeoutMinutes: 30, warningMinutes: 3 } };
             const yaml = generate('test', 'token', config, baseOptions);
-            assert.ok(yaml.includes('devbox-autodelete.service'));
+            assert.ok(yaml.includes('devbox-daemon.service'));
             assert.ok(yaml.includes('systemctl'));
         });
     });
