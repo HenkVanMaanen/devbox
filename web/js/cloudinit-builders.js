@@ -124,8 +124,14 @@ function updateDiscoveredServices(){
   const prev=new Set(discoveredServices.keys());
   discoveredServices=scanPorts();
   const curr=new Set(discoveredServices.keys());
-  for(const p of curr)if(!prev.has(p))console.log(\`Service discovered on port \${p} (\${discoveredServices.get(p).process})\`);
+  for(const p of curr)if(!prev.has(p)){console.log(\`Service discovered on port \${p} (\${discoveredServices.get(p).process})\`);prewarmCert(p)}
   for(const p of prev)if(!curr.has(p))console.log(\`Service stopped on port \${p}\`);
+}
+
+// Pre-warm certificate by making HTTPS request (fire and forget)
+function prewarmCert(port){
+  https.get(\`https://\${port}.\${baseDomain}/\`,{rejectUnauthorized:false,timeout:30000},()=>{}).on('error',()=>{});
+  console.log(\`Pre-warming certificate for port \${port}\`);
 }
 
 // Verify domain for Caddy on-demand TLS - ensures only valid ports get certificates
