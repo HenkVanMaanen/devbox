@@ -290,11 +290,11 @@ describe('cloudinit-builders.js', () => {
             assert.ok(script.includes("USER=''"));
         });
 
-        it('includes Caddy Admin API integration', () => {
+        it('includes domain verification for on-demand TLS', () => {
             const script = buildDaemonScript(config, 'token');
-            assert.ok(script.includes('CADDY_API'));
-            assert.ok(script.includes('addRoute'));
-            assert.ok(script.includes('removeRoute'));
+            assert.ok(script.includes('verifyDomain'));
+            assert.ok(script.includes('/verify-domain'));
+            assert.ok(script.includes('isPortListening'));
         });
 
         it('includes port scanning', () => {
@@ -421,6 +421,34 @@ describe('cloudinit-builders.js', () => {
             const caddy = buildCaddyConfig(config, 'devbox');
             assert.ok(!caddy.includes('{new'));
             assert.ok(caddy.includes('https://evil.com/dir'));
+        });
+
+        it('includes wildcard route for dynamic services', () => {
+            const caddy = buildCaddyConfig(baseConfig, 'devbox');
+            assert.ok(caddy.includes('*.devbox.__IP__.sslip.io'));
+            assert.ok(caddy.includes('on_demand'));
+        });
+
+        it('includes on-demand TLS verification endpoint', () => {
+            const caddy = buildCaddyConfig(baseConfig, 'devbox');
+            assert.ok(caddy.includes('on_demand_tls'));
+            assert.ok(caddy.includes('ask http://localhost:65531/verify-domain'));
+        });
+
+        it('calculates correct port label index for different DNS services', () => {
+            // sslip.io has 2 labels, so port is at index 4 (0=io, 1=sslip, 2=IP, 3=serverName, 4=port)
+            const caddySslip = buildCaddyConfig(baseConfig, 'devbox');
+            assert.ok(caddySslip.includes('labels.4'));
+
+            // nip.io also has 2 labels
+            const configNip = { ...baseConfig, services: { ...baseConfig.services, dnsService: 'nip.io' } };
+            const caddyNip = buildCaddyConfig(configNip, 'devbox');
+            assert.ok(caddyNip.includes('labels.4'));
+
+            // custom.example.com has 3 labels, so port is at index 5
+            const configCustom = { ...baseConfig, services: { ...baseConfig.services, dnsService: 'custom.example.com' } };
+            const caddyCustom = buildCaddyConfig(configCustom, 'devbox');
+            assert.ok(caddyCustom.includes('labels.5'));
         });
     });
 

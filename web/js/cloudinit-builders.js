@@ -71,7 +71,8 @@ export function buildHostGitConfig(cred) {
     return content;
 }
 
-// Build devbox daemon script with port scanning, Caddy API, and autodelete
+// Build devbox daemon script with port scanning and autodelete
+// Uses wildcard Caddy route - no dynamic route management needed (eliminates connection drops)
 export function buildDaemonScript(config, hetznerToken) {
     const timeout = config.autoDelete.timeoutMinutes;
     const warning = config.autoDelete.warningMinutes;
@@ -80,19 +81,15 @@ export function buildDaemonScript(config, hetznerToken) {
     return `#!/usr/bin/env node
 const http=require('http'),fs=require('fs'),https=require('https'),{execSync}=require('child_process');
 const TIMEOUT=${timeout},WARNING=${warning},TOKEN='${escapeSingleQuotedJS(hetznerToken)}',USER='${escapeSingleQuotedJS(gitUser)}';
-const CADDY_API='http://localhost:2019';
 const STATIC_SERVICES=new Map([[65532,{name:'VS Code',subdomain:'code'}],[65533,{name:'Claude',subdomain:'claude'}],[65534,{name:'Terminal',subdomain:'term'}]]);
 const IGNORED_PORTS=new Set([22,80,443,2019,65531]);
-let last=Date.now(),warn=false,discoveredServices=new Map(),config,syncing=false;
+let last=Date.now(),warn=false,discoveredServices=new Map(),baseDomain;
 
 function loadConfig(){
   const caddyfile=fs.readFileSync('/etc/caddy/Caddyfile','utf8');
   const domainMatch=caddyfile.match(/^([a-z0-9-]+\\.\\d+-\\d+-\\d+-\\d+\\.[a-z.]+)\\s*\\{/m);
-  const baseDomain=domainMatch?domainMatch[1]:null;
-  const hashMatch=caddyfile.match(/devbox\\s+(\\$2[aby]\\$[^\\s]+)/);
-  const bcryptHash=hashMatch?hashMatch[1]:null;
-  if(!baseDomain||!bcryptHash){console.error('Failed to detect domain or hash');process.exit(1)}
-  return{baseDomain,bcryptHash};
+  if(!domainMatch){console.error('Failed to detect domain');process.exit(1)}
+  return domainMatch[1];
 }
 
 function scanPorts(){
@@ -115,37 +112,32 @@ function isPortListening(port){
   try{const out=execSync(\`ss -tln sport = :\${port}\`,{encoding:'utf8',timeout:5000});return out.split('\\n').length>2}catch{return false}
 }
 
-async function addRoute(port,baseDomain,bcryptHash){
-  const route={"@id":\`dynamic-\${port}\`,match:[{host:[\`\${port}.\${baseDomain}\`]}],handle:[{handler:"subroute",routes:[{handle:[{handler:"authentication",providers:{http_basic:{accounts:[{username:"devbox",password:bcryptHash}],hash:{algorithm:"bcrypt"},hash_cache:{}}}},{handler:"reverse_proxy",upstreams:[{dial:\`localhost:\${port}\`}]}]}]}],terminal:true};
-  try{const res=await fetch(\`\${CADDY_API}/config/apps/http/servers/srv0/routes/0\`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(route)});if(!res.ok)console.error(\`Failed to add route for port \${port}: \${res.status}\`);else console.log(\`Added route for port \${port}\`)}catch(e){console.error(\`Failed to add route for port \${port}: \${e.message}\`)}
-}
-
-async function removeRoute(port){
-  try{const res=await fetch(\`\${CADDY_API}/id/dynamic-\${port}\`,{method:'DELETE'});if(res.ok)console.log(\`Removed route for port \${port}\`)}catch(e){console.error(\`Failed to remove route for port \${port}: \${e.message}\`)}
-}
-
-async function cleanupStaleRoutes(currentPorts){
-  try{const res=await fetch(\`\${CADDY_API}/config/apps/http/servers/srv0/routes\`);if(!res.ok)return;const routes=await res.json();for(const route of routes){const id=route['@id'];if(id?.startsWith('dynamic-')){const port=parseInt(id.replace('dynamic-',''));if(!currentPorts.has(port)){console.log(\`Cleaning up stale route for port \${port}\`);await removeRoute(port)}}}}catch(e){console.error(\`Failed to cleanup routes: \${e.message}\`)}
-}
-
 function getServices(){
   const services=[];
-  for(const[port,info]of STATIC_SERVICES)services.push({name:info.name,port,url:\`https://\${info.subdomain}.\${config.baseDomain}\`,active:isPortListening(port)});
-  for(const[port,info]of discoveredServices)services.push({name:info.process,port,url:\`https://\${port}.\${config.baseDomain}\`,active:true});
+  for(const[port,info]of STATIC_SERVICES)services.push({name:info.name,port,url:\`https://\${info.subdomain}.\${baseDomain}\`,active:isPortListening(port)});
+  for(const[port,info]of discoveredServices)services.push({name:info.process,port,url:\`https://\${port}.\${baseDomain}\`,active:true});
   services.sort((a,b)=>{const aS=STATIC_SERVICES.has(a.port),bS=STATIC_SERVICES.has(b.port);if(aS!==bS)return aS?-1:1;return a.port-b.port});
   return services;
 }
 
-async function syncServices(){
-  if(syncing)return;syncing=true;
-  try{
-    const discovered=scanPorts();
-    const currentPorts=new Set(discovered.keys());
-    const previousPorts=new Set(discoveredServices.keys());
-    for(const port of currentPorts)if(!previousPorts.has(port)){console.log(\`New service on port \${port} (\${discovered.get(port).process})\`);await addRoute(port,config.baseDomain,config.bcryptHash)}
-    for(const port of previousPorts)if(!currentPorts.has(port)){console.log(\`Service stopped on port \${port}\`);await removeRoute(port)}
-    discoveredServices=discovered;
-  }finally{syncing=false}
+function updateDiscoveredServices(){
+  const prev=new Set(discoveredServices.keys());
+  discoveredServices=scanPorts();
+  const curr=new Set(discoveredServices.keys());
+  for(const p of curr)if(!prev.has(p))console.log(\`Service discovered on port \${p} (\${discoveredServices.get(p).process})\`);
+  for(const p of prev)if(!curr.has(p))console.log(\`Service stopped on port \${p}\`);
+}
+
+// Verify domain for Caddy on-demand TLS - ensures only valid ports get certificates
+function verifyDomain(domain){
+  if(!domain)return false;
+  // Must match pattern: {port}.{baseDomain} where port is numeric
+  const expected=new RegExp(\`^(\\\\d+)\\\\.\${baseDomain.replace(/\\./g,'\\\\.')}\$\`);
+  const match=domain.match(expected);
+  if(!match)return false;
+  const port=parseInt(match[1]);
+  // Only allow if port is actively listening (security: don't issue certs for random ports)
+  return isPortListening(port);
 }
 
 function check(){let a=false;try{if(execSync('who',{encoding:'utf8',timeout:5000}).trim())a=true}catch{}try{for(const f of fs.readdirSync('/dev/pts'))if(/^\\d+$/.test(f)&&Date.now()-fs.statSync('/dev/pts/'+f).atimeMs<60000)a=true}catch{}if(a){last=Date.now();warn=false}}
@@ -158,25 +150,26 @@ function del(){if(!sid)return;https.request({hostname:'api.hetzner.cloud',path:'
 
 function checkActivityAndMaybeDelete(){check();const i=(Date.now()-last)/1000;if(TIMEOUT*60-i<=WARNING*60&&!warn)warn=true;if(i>=TIMEOUT*60){wip();del()}}
 
-async function main(){
-  config=loadConfig();console.log(\`Devbox daemon starting with domain: \${config.baseDomain}\`);
-  const initial=scanPorts();await cleanupStaleRoutes(new Set(initial.keys()));
-  for(const[port]of initial)await addRoute(port,config.baseDomain,config.bcryptHash);
-  discoveredServices=initial;
-  setInterval(syncServices,10000);
+function main(){
+  baseDomain=loadConfig();console.log(\`Devbox daemon starting with domain: \${baseDomain}\`);
+  discoveredServices=scanPorts();
+  console.log(\`Found \${discoveredServices.size} services on startup\`);
+  setInterval(updateDiscoveredServices,10000);
   http.createServer((req,res)=>{
     const url=new URL(req.url,'http://localhost');
     const json=(code,data)=>{res.writeHead(code,{'Content-Type':'application/json'});res.end(JSON.stringify(data))};
     if(url.pathname==='/services')return json(200,getServices());
     if(url.pathname==='/status'){const idle=(Date.now()-last)/1000;return json(200,{idle:Math.floor(idle),timeout:TIMEOUT,warning:WARNING,remaining:Math.max(0,Math.floor(TIMEOUT*60-idle)),warn,last:new Date(last).toISOString()})}
     if(url.pathname==='/keepalive'&&req.method==='POST'){last=Date.now();warn=false;return json(200,{ok:true})}
+    // Caddy on-demand TLS verification endpoint
+    if(url.pathname==='/verify-domain'){const domain=url.searchParams.get('domain');if(verifyDomain(domain)){res.writeHead(200);res.end()}else{res.writeHead(403);res.end()}return}
     json(404,{error:'not found'});
   }).listen(65531,'127.0.0.1');
   console.log('HTTP server listening on 127.0.0.1:65531');
   setInterval(checkActivityAndMaybeDelete,30000);
 }
 
-main().catch(e=>{console.error('Fatal error:',e);process.exit(1)});
+main();
 `;
 }
 
@@ -190,7 +183,19 @@ function sanitizeCaddyValue(s) {
 export function buildCaddyConfig(config, serverName) {
     const dns = config.services.dnsService || 'sslip.io';
     const token = config.services.accessToken;
+
+    // Count labels in dns service (e.g., sslip.io = 2, nip.io = 2)
+    const dnsLabels = dns.split('.').length;
+    // Port is at: total labels - 1 - dnsLabels - 1 (for IP) - 1 (for serverName) = labels from the end
+    // For 1234.devbox.1-2-3-4.sslip.io: labels are [io, sslip, 1-2-3-4, devbox, 1234]
+    // Index 0=io, 1=sslip, 2=IP, 3=serverName, 4=port
+    // So port index = dnsLabels + 2 = 4 for sslip.io
+    const portLabelIndex = dnsLabels + 2;
+
     let caddyfile = '{\n';
+
+    // On-demand TLS for wildcard dynamic services (daemon verifies domain)
+    caddyfile += '  on_demand_tls {\n    ask http://localhost:65531/verify-domain\n  }\n';
 
     switch (config.services.acmeProvider) {
         case 'zerossl':
@@ -234,6 +239,11 @@ export function buildCaddyConfig(config, serverName) {
     if (config.services.shellTerminal) {
         caddyfile += `term.${serverName}.__IP__.${dns} {\n${authBlock}  reverse_proxy localhost:65534\n}\n`;
     }
+
+    // Wildcard route for dynamic services - extracts port from subdomain
+    // No config changes needed when services come/go - eliminates connection drops
+    caddyfile += `*.${serverName}.__IP__.${dns} {\n  tls {\n    on_demand\n  }\n${authBlock}  reverse_proxy localhost:{http.request.host.labels.${portLabelIndex}}\n}\n`;
+
     return caddyfile;
 }
 

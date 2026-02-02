@@ -52,8 +52,8 @@ if (process.argv[2] === 'build') {
         },
     });
     await ctx.watch();
-    await ctx.serve({ servedir: 'web', host: '0.0.0.0', port: 3000 });
-    console.log('Dev server: http://localhost:3000');
+    await ctx.serve({ servedir: 'web', host: '0.0.0.0', port: 8080 });
+    console.log('Dev server: http://localhost:8080');
     process.on('SIGINT', () => { ctx.dispose(); process.exit(); });
     process.on('SIGTERM', () => { ctx.dispose(); process.exit(); });
 }
