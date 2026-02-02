@@ -25,8 +25,8 @@ const DEFAULT_GLOBAL_CONFIG = {
         baseImage: 'debian-12'
     },
     packages: {
-        apt: ['git', 'curl', 'wget', 'build-essential', 'tmux', 'htop', 'jq', 'unzip', 'ca-certificates', 'gnupg', 'mosh', 'python3'],
-        mise: []
+        apt: ['build-essential', 'jq', 'ripgrep', 'fd-find', 'tree', 'unzip', 'sqlite3', 'htop', 'tmux', 'fzf', 'bat'],
+        mise: ['python@latest']
     },
     shell: {
         default: 'fish',

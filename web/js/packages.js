@@ -146,7 +146,7 @@ export const APT_PACKAGES = [
 // Common mise tools
 export const MISE_TOOLS = [
     { name: 'node', versions: ['latest', '22', '20', '18'], description: 'Node.js JavaScript runtime' },
-    { name: 'python', versions: ['3.13', '3.12', '3.11'], description: 'Python programming language' },
+    { name: 'python', versions: ['latest', '3.13', '3.12', '3.11'], description: 'Python programming language' },
     { name: 'go', versions: ['1.23', '1.22'], description: 'Go programming language' },
     { name: 'rust', versions: ['stable', '1.83'], description: 'Rust programming language' },
     { name: 'ruby', versions: ['3.4', '3.3'], description: 'Ruby programming language' },
