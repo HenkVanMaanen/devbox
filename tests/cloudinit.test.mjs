@@ -372,6 +372,40 @@ describe('cloudinit.js generate()', () => {
             assert.ok(yaml.includes("mise use --global node@22' &"));
             assert.ok(yaml.includes("mise use --global python@3.12' &"));
         });
+
+        it('adds mise shims to system PATH when tools configured', () => {
+            const config = { ...baseConfig, packages: { apt: ['git'], mise: ['node@22'] } };
+            const yaml = generate('test', 'token', config, baseOptions);
+            // /etc/profile.d for bash/zsh
+            assert.ok(yaml.includes('/etc/profile.d/mise.sh'));
+            assert.ok(yaml.includes('/home/dev/.local/share/mise/shims'));
+            // /etc/fish/conf.d for fish
+            assert.ok(yaml.includes('/etc/fish/conf.d/mise.fish'));
+        });
+
+        it('skips mise shims PATH when no tools configured', () => {
+            const yaml = generate('test', 'token', baseConfig, baseOptions);
+            assert.ok(!yaml.includes('/etc/profile.d/mise.sh'));
+            assert.ok(!yaml.includes('/etc/fish/conf.d/mise.fish'));
+        });
+
+        it('adds mise shims to daemon service PATH when tools configured', () => {
+            const config = {
+                ...baseConfig,
+                packages: { apt: ['git'], mise: ['node@22'] },
+                autoDelete: { enabled: true, timeoutMinutes: 60, warningMinutes: 5 }
+            };
+            const yaml = generate('test', 'token', config, baseOptions);
+            assert.ok(yaml.includes('devbox-daemon.service'));
+            assert.ok(yaml.includes('Environment="PATH=/home/dev/.local/share/mise/shims'));
+        });
+
+        it('adds mise activation to shell rc files', () => {
+            const config = { ...baseConfig, packages: { apt: ['git'], mise: ['node@22'] } };
+            const yaml = generate('test', 'token', config, baseOptions);
+            assert.ok(yaml.includes('mise activate bash'));
+            assert.ok(yaml.includes('.bashrc'));
+        });
     });
 
     describe('git config', () => {

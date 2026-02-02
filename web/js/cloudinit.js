@@ -84,32 +84,59 @@ export function generate(serverName, hetznerToken, config, options = {}) {
 
     // ========== WRITE_FILES ==========
 
-    // Shell configs (starship only - mise available but not auto-activated)
-    if (config.shell.starship) {
+    // Mise shims PATH (system-wide for all processes, not just interactive shells)
+    const hasMiseTools = config.packages.mise && config.packages.mise.length > 0;
+    const MISE_SHIMS = '/home/dev/.local/share/mise/shims';
+    if (hasMiseTools) {
+        // /etc/profile.d/ for bash/zsh login shells
+        cloudInit.write_files.push({
+            path: '/etc/profile.d/mise.sh',
+            permissions: '0644',
+            content: `export PATH="${MISE_SHIMS}:$PATH"\n`
+        });
+        // fish config for system-wide fish shells
+        cloudInit.write_files.push({
+            path: '/etc/fish/conf.d/mise.fish',
+            permissions: '0644',
+            content: `set -gx PATH ${MISE_SHIMS} $PATH\n`
+        });
+    }
+
+    // Shell configs (starship + mise activation for interactive features like hooks)
+    if (config.shell.starship || hasMiseTools) {
         if (config.shell.default === 'fish') {
+            let content = '';
+            if (hasMiseTools) content += 'test -x /usr/local/bin/mise && /usr/local/bin/mise activate fish | source\n';
+            if (config.shell.starship) content += 'type -q starship && starship init fish | source\n';
             cloudInit.write_files.push({
                 path: '/home/dev/.config/fish/config.fish',
                 owner: 'dev:dev',
                 permissions: '0644',
                 defer: true,
-                content: 'type -q starship && starship init fish | source\n'
+                content
             });
         } else if (config.shell.default === 'zsh') {
+            let content = '';
+            if (hasMiseTools) content += 'test -x /usr/local/bin/mise && eval "$(/usr/local/bin/mise activate zsh)"\n';
+            if (config.shell.starship) content += 'command -v starship >/dev/null && eval "$(starship init zsh)"\n';
             cloudInit.write_files.push({
                 path: '/home/dev/.zshrc',
                 owner: 'dev:dev',
                 permissions: '0644',
                 defer: true,
-                content: 'command -v starship >/dev/null && eval "$(starship init zsh)"\n'
+                content
             });
         } else {
+            let content = '';
+            if (hasMiseTools) content += 'test -x /usr/local/bin/mise && eval "$(/usr/local/bin/mise activate bash)"\n';
+            if (config.shell.starship) content += 'command -v starship >/dev/null && eval "$(starship init bash)"\n';
             cloudInit.write_files.push({
                 path: '/home/dev/.bashrc',
                 owner: 'dev:dev',
                 permissions: '0644',
                 append: true,
                 defer: true,
-                content: 'command -v starship >/dev/null && eval "$(starship init bash)"\n'
+                content
             });
         }
     }
@@ -201,10 +228,14 @@ export function generate(serverName, hetznerToken, config, options = {}) {
             permissions: '0755',
             content: buildDaemonScript(config, hetznerToken)
         });
+        // Include mise shims in PATH so daemon can use mise-installed node
+        const daemonPath = hasMiseTools
+            ? `Environment="PATH=${MISE_SHIMS}:/usr/local/bin:/usr/bin:/bin"\n`
+            : '';
         cloudInit.write_files.push({
             path: '/etc/systemd/system/devbox-daemon.service',
             permissions: '0644',
-            content: '[Unit]\nDescription=Devbox Daemon\nAfter=network.target caddy.service\n[Service]\nType=simple\nExecStart=/usr/bin/env node /usr/local/bin/devbox-daemon\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\n'
+            content: `[Unit]\nDescription=Devbox Daemon\nAfter=network.target caddy.service\n[Service]\nType=simple\n${daemonPath}ExecStart=/usr/bin/env node /usr/local/bin/devbox-daemon\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\n`
         });
     }
 
@@ -217,19 +248,27 @@ export function generate(serverName, hetznerToken, config, options = {}) {
             defer: true,
             content: 'bind-addr: 127.0.0.1:65532\nauth: none\ncert: false\n'
         });
+        // Include mise shims in PATH so code-server tasks/extensions can access mise-installed tools
+        const codeServerPath = hasMiseTools
+            ? `Environment="PATH=${MISE_SHIMS}:/usr/local/bin:/usr/bin:/bin"\n`
+            : '';
         cloudInit.write_files.push({
             path: '/etc/systemd/system/code-server.service',
             permissions: '0644',
-            content: '[Unit]\nDescription=Code Server\nAfter=network.target\n[Service]\nType=simple\nUser=dev\nWorkingDirectory=/home/dev\nExecStart=/usr/bin/code-server\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\n'
+            content: `[Unit]\nDescription=Code Server\nAfter=network.target\n[Service]\nType=simple\nUser=dev\nWorkingDirectory=/home/dev\n${codeServerPath}ExecStart=/usr/bin/code-server\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\n`
         });
     }
 
     // Claude terminal
     if (config.services.claudeTerminal) {
+        // Include mise shims in PATH so claude can access mise-installed tools
+        const claudeTerminalPath = hasMiseTools
+            ? `export PATH="${MISE_SHIMS}:$PATH"\n`
+            : '';
         cloudInit.write_files.push({
             path: '/usr/local/bin/claude-terminal',
             permissions: '0755',
-            content: '#!/bin/bash\nexport HOME=/home/dev\ncd /home/dev\nexec dtach -A /tmp/devbox-claude -z claude --dangerously-skip-permissions\n'
+            content: `#!/bin/bash\nexport HOME=/home/dev\n${claudeTerminalPath}cd /home/dev\nexec dtach -A /tmp/devbox-claude -z claude --dangerously-skip-permissions\n`
         });
         cloudInit.write_files.push({
             path: '/etc/systemd/system/ttyd-claude.service',
