@@ -38,15 +38,10 @@ export function generate(serverName, hetznerToken, config, options = {}) {
                     source: 'deb [signed-by=$KEY_FILE] https://cli.github.com/packages stable main',
                     keyid: '23F3D4EA75716059',
                     keyserver: 'keyserver.ubuntu.com'
-                },
-                'nodesource': {
-                    source: 'deb [signed-by=$KEY_FILE] https://deb.nodesource.com/node_24.x nodistro main',
-                    keyid: '2F59B5F99B1BE0B4',
-                    keyserver: 'keyserver.ubuntu.com'
                 }
             }
         },
-        packages: [...new Set([...config.packages.apt, 'gh', 'nodejs', 'ufw'])],
+        packages: [...new Set([...config.packages.apt, 'gh', 'ufw'])],
         users: [
             {
                 name: 'dev',
@@ -85,60 +80,53 @@ export function generate(serverName, hetznerToken, config, options = {}) {
     // ========== WRITE_FILES ==========
 
     // Mise shims PATH (system-wide for all processes, not just interactive shells)
-    const hasMiseTools = config.packages.mise && config.packages.mise.length > 0;
+    // Always enabled since daemon requires node
     const MISE_SHIMS = '/home/dev/.local/share/mise/shims';
-    if (hasMiseTools) {
-        // /etc/profile.d/ for bash/zsh login shells
-        cloudInit.write_files.push({
-            path: '/etc/profile.d/mise.sh',
-            permissions: '0644',
-            content: `export PATH="${MISE_SHIMS}:$PATH"\n`
-        });
-        // fish config for system-wide fish shells
-        cloudInit.write_files.push({
-            path: '/etc/fish/conf.d/mise.fish',
-            permissions: '0644',
-            content: `set -gx PATH ${MISE_SHIMS} $PATH\n`
-        });
-    }
+    // /etc/profile.d/ for bash/zsh login shells
+    cloudInit.write_files.push({
+        path: '/etc/profile.d/mise.sh',
+        permissions: '0644',
+        content: `export PATH="${MISE_SHIMS}:$PATH"\n`
+    });
+    // fish config for system-wide fish shells
+    cloudInit.write_files.push({
+        path: '/etc/fish/conf.d/mise.fish',
+        permissions: '0644',
+        content: `set -gx PATH ${MISE_SHIMS} $PATH\n`
+    });
 
-    // Shell configs (starship + mise activation for interactive features like hooks)
-    if (config.shell.starship || hasMiseTools) {
-        if (config.shell.default === 'fish') {
-            let content = '';
-            if (hasMiseTools) content += 'test -x /usr/local/bin/mise && /usr/local/bin/mise activate fish | source\n';
-            if (config.shell.starship) content += 'type -q starship && starship init fish | source\n';
-            cloudInit.write_files.push({
-                path: '/home/dev/.config/fish/config.fish',
-                owner: 'dev:dev',
-                permissions: '0644',
-                defer: true,
-                content
-            });
-        } else if (config.shell.default === 'zsh') {
-            let content = '';
-            if (hasMiseTools) content += 'test -x /usr/local/bin/mise && eval "$(/usr/local/bin/mise activate zsh)"\n';
-            if (config.shell.starship) content += 'command -v starship >/dev/null && eval "$(starship init zsh)"\n';
-            cloudInit.write_files.push({
-                path: '/home/dev/.zshrc',
-                owner: 'dev:dev',
-                permissions: '0644',
-                defer: true,
-                content
-            });
-        } else {
-            let content = '';
-            if (hasMiseTools) content += 'test -x /usr/local/bin/mise && eval "$(/usr/local/bin/mise activate bash)"\n';
-            if (config.shell.starship) content += 'command -v starship >/dev/null && eval "$(starship init bash)"\n';
-            cloudInit.write_files.push({
-                path: '/home/dev/.bashrc',
-                owner: 'dev:dev',
-                permissions: '0644',
-                append: true,
-                defer: true,
-                content
-            });
-        }
+    // Shell configs (mise activation for interactive features + starship)
+    if (config.shell.default === 'fish') {
+        let content = 'test -x /usr/local/bin/mise && /usr/local/bin/mise activate fish | source\n';
+        if (config.shell.starship) content += 'type -q starship && starship init fish | source\n';
+        cloudInit.write_files.push({
+            path: '/home/dev/.config/fish/config.fish',
+            owner: 'dev:dev',
+            permissions: '0644',
+            defer: true,
+            content
+        });
+    } else if (config.shell.default === 'zsh') {
+        let content = 'test -x /usr/local/bin/mise && eval "$(/usr/local/bin/mise activate zsh)"\n';
+        if (config.shell.starship) content += 'command -v starship >/dev/null && eval "$(starship init zsh)"\n';
+        cloudInit.write_files.push({
+            path: '/home/dev/.zshrc',
+            owner: 'dev:dev',
+            permissions: '0644',
+            defer: true,
+            content
+        });
+    } else {
+        let content = 'test -x /usr/local/bin/mise && eval "$(/usr/local/bin/mise activate bash)"\n';
+        if (config.shell.starship) content += 'command -v starship >/dev/null && eval "$(starship init bash)"\n';
+        cloudInit.write_files.push({
+            path: '/home/dev/.bashrc',
+            owner: 'dev:dev',
+            permissions: '0644',
+            append: true,
+            defer: true,
+            content
+        });
     }
 
     // Git credentials
@@ -229,13 +217,10 @@ export function generate(serverName, hetznerToken, config, options = {}) {
             content: buildDaemonScript(config, hetznerToken)
         });
         // Include mise shims in PATH so daemon can use mise-installed node
-        const daemonPath = hasMiseTools
-            ? `Environment="PATH=${MISE_SHIMS}:/usr/local/bin:/usr/bin:/bin"\n`
-            : '';
         cloudInit.write_files.push({
             path: '/etc/systemd/system/devbox-daemon.service',
             permissions: '0644',
-            content: `[Unit]\nDescription=Devbox Daemon\nAfter=network.target caddy.service\n[Service]\nType=simple\n${daemonPath}ExecStart=/usr/bin/env node /usr/local/bin/devbox-daemon\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\n`
+            content: `[Unit]\nDescription=Devbox Daemon\nAfter=network.target caddy.service\n[Service]\nType=simple\nEnvironment="PATH=${MISE_SHIMS}:/usr/local/bin:/usr/bin:/bin"\nExecStart=/usr/bin/env node /usr/local/bin/devbox-daemon\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\n`
         });
     }
 
@@ -249,26 +234,20 @@ export function generate(serverName, hetznerToken, config, options = {}) {
             content: 'bind-addr: 127.0.0.1:65532\nauth: none\ncert: false\n'
         });
         // Include mise shims in PATH so code-server tasks/extensions can access mise-installed tools
-        const codeServerPath = hasMiseTools
-            ? `Environment="PATH=${MISE_SHIMS}:/usr/local/bin:/usr/bin:/bin"\n`
-            : '';
         cloudInit.write_files.push({
             path: '/etc/systemd/system/code-server.service',
             permissions: '0644',
-            content: `[Unit]\nDescription=Code Server\nAfter=network.target\n[Service]\nType=simple\nUser=dev\nWorkingDirectory=/home/dev\n${codeServerPath}ExecStart=/usr/bin/code-server\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\n`
+            content: `[Unit]\nDescription=Code Server\nAfter=network.target\n[Service]\nType=simple\nUser=dev\nWorkingDirectory=/home/dev\nEnvironment="PATH=${MISE_SHIMS}:/usr/local/bin:/usr/bin:/bin"\nExecStart=/usr/bin/code-server\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\n`
         });
     }
 
     // Claude terminal
     if (config.services.claudeTerminal) {
         // Include mise shims in PATH so claude can access mise-installed tools
-        const claudeTerminalPath = hasMiseTools
-            ? `export PATH="${MISE_SHIMS}:$PATH"\n`
-            : '';
         cloudInit.write_files.push({
             path: '/usr/local/bin/claude-terminal',
             permissions: '0755',
-            content: `#!/bin/bash\nexport HOME=/home/dev\n${claudeTerminalPath}cd /home/dev\nexec dtach -A /tmp/devbox-claude -z claude --dangerously-skip-permissions\n`
+            content: `#!/bin/bash\nexport HOME=/home/dev\nexport PATH="${MISE_SHIMS}:$PATH"\ncd /home/dev\nexec dtach -A /tmp/devbox-claude -z claude --dangerously-skip-permissions\n`
         });
         cloudInit.write_files.push({
             path: '/etc/systemd/system/ttyd-claude.service',
@@ -306,17 +285,19 @@ export function generate(serverName, hetznerToken, config, options = {}) {
     // Configure firewall (default deny, allow SSH/HTTP/HTTPS only)
     runcmd.push('ufw default deny incoming && ufw default allow outgoing && ufw allow 22 && ufw allow 80 && ufw allow 443 && ufw --force enable');
 
-    // Mise installation (only if user has mise packages configured)
-    if (config.packages.mise && config.packages.mise.length > 0) {
-        runcmd.push('curl -fsSL https://mise.run | MISE_INSTALL_PATH=/usr/local/bin/mise sh || true');
-        const miseInstalls = config.packages.mise.map(tool =>
-            `su - dev -c '/usr/local/bin/mise use --global ${shellEscape(tool)}' &`
-        ).join('\n');
-        runcmd.push(['bash', '-c', `${miseInstalls}\nwait`]);
-    }
+    // Mise installation (always required - daemon needs node)
+    runcmd.push('curl -fsSL https://mise.run | MISE_INSTALL_PATH=/usr/local/bin/mise sh || true');
+    // Install node (required for daemon) plus any user-selected tools
+    const userTools = config.packages.mise || [];
+    const hasNode = userTools.some(t => t.startsWith('node@'));
+    const miseTools = hasNode ? userTools : ['node@latest', ...userTools];
+    const miseInstalls = miseTools.map(tool =>
+        `su - dev -c '/usr/local/bin/mise use --global ${shellEscape(tool)}' &`
+    ).join('\n');
+    runcmd.push(['bash', '-c', `${miseInstalls}\nwait`]);
 
-    // claude-code (npm fallback since GCS bucket is geo-restricted in some datacenters)
-    runcmd.push('npm install -g @anthropic-ai/claude-code || true');
+    // claude-code (uses mise-installed node)
+    runcmd.push(`su - dev -c 'PATH=${MISE_SHIMS}:$PATH npm install -g @anthropic-ai/claude-code' || true`);
 
     // Starship
     if (config.shell.starship) {

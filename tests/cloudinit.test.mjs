@@ -60,10 +60,9 @@ describe('cloudinit.js generate()', () => {
         assert.ok(yaml.includes('- curl'));
     });
 
-    it('adds gh, nodejs, and ufw packages always', () => {
+    it('adds gh and ufw packages always', () => {
         const yaml = generate('test', 'token', baseConfig, baseOptions);
         assert.ok(yaml.includes('- gh'));
-        assert.ok(yaml.includes('- nodejs'));
         assert.ok(yaml.includes('- ufw'));
     });
 
@@ -353,29 +352,29 @@ describe('cloudinit.js generate()', () => {
     });
 
     describe('mise tools', () => {
-        it('installs mise when tools configured', () => {
-            const config = { ...baseConfig, packages: { apt: ['git'], mise: ['node@22'] } };
-            const yaml = generate('test', 'token', config, baseOptions);
+        it('always installs mise with node@latest for daemon', () => {
+            const yaml = generate('test', 'token', baseConfig, baseOptions);
             assert.ok(yaml.includes('mise.run'));
-            assert.ok(yaml.includes('mise use --global node@22'));
+            assert.ok(yaml.includes('mise use --global node@latest'));
         });
 
-        it('skips mise when no tools configured', () => {
-            const yaml = generate('test', 'token', baseConfig, baseOptions);
-            assert.ok(!yaml.includes('mise.run'));
+        it('uses user-selected node version instead of node@latest', () => {
+            const config = { ...baseConfig, packages: { apt: ['git'], mise: ['node@22'] } };
+            const yaml = generate('test', 'token', config, baseOptions);
+            assert.ok(yaml.includes('mise use --global node@22'));
+            assert.ok(!yaml.includes('node@latest'));
         });
 
         it('runs mise installs in parallel', () => {
-            const config = { ...baseConfig, packages: { apt: ['git'], mise: ['node@22', 'python@3.12'] } };
+            const config = { ...baseConfig, packages: { apt: ['git'], mise: ['python@3.12'] } };
             const yaml = generate('test', 'token', config, baseOptions);
             // Should background with &
-            assert.ok(yaml.includes("mise use --global node@22' &"));
+            assert.ok(yaml.includes("mise use --global node@latest' &"));
             assert.ok(yaml.includes("mise use --global python@3.12' &"));
         });
 
-        it('adds mise shims to system PATH when tools configured', () => {
-            const config = { ...baseConfig, packages: { apt: ['git'], mise: ['node@22'] } };
-            const yaml = generate('test', 'token', config, baseOptions);
+        it('adds mise shims to system PATH always', () => {
+            const yaml = generate('test', 'token', baseConfig, baseOptions);
             // /etc/profile.d for bash/zsh
             assert.ok(yaml.includes('/etc/profile.d/mise.sh'));
             assert.ok(yaml.includes('/home/dev/.local/share/mise/shims'));
@@ -383,16 +382,9 @@ describe('cloudinit.js generate()', () => {
             assert.ok(yaml.includes('/etc/fish/conf.d/mise.fish'));
         });
 
-        it('skips mise shims PATH when no tools configured', () => {
-            const yaml = generate('test', 'token', baseConfig, baseOptions);
-            assert.ok(!yaml.includes('/etc/profile.d/mise.sh'));
-            assert.ok(!yaml.includes('/etc/fish/conf.d/mise.fish'));
-        });
-
-        it('adds mise shims to daemon service PATH when tools configured', () => {
+        it('adds mise shims to daemon service PATH', () => {
             const config = {
                 ...baseConfig,
-                packages: { apt: ['git'], mise: ['node@22'] },
                 autoDelete: { enabled: true, timeoutMinutes: 60, warningMinutes: 5 }
             };
             const yaml = generate('test', 'token', config, baseOptions);
@@ -401,8 +393,7 @@ describe('cloudinit.js generate()', () => {
         });
 
         it('adds mise activation to shell rc files', () => {
-            const config = { ...baseConfig, packages: { apt: ['git'], mise: ['node@22'] } };
-            const yaml = generate('test', 'token', config, baseOptions);
+            const yaml = generate('test', 'token', baseConfig, baseOptions);
             assert.ok(yaml.includes('mise activate bash'));
             assert.ok(yaml.includes('.bashrc'));
         });
