@@ -22,7 +22,7 @@ const DEFAULT_GLOBAL_CONFIG = {
     hetzner: {
         location: 'fsn1',
         serverType: 'cpx21',
-        baseImage: 'debian-12'
+        baseImage: 'ubuntu-24.04'
     },
     packages: {
         apt: ['build-essential', 'jq', 'ripgrep', 'fd-find', 'tree', 'unzip', 'sqlite3', 'htop', 'tmux', 'fzf', 'bat'],
