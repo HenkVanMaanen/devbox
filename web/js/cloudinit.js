@@ -217,10 +217,11 @@ export function generate(serverName, hetznerToken, config, options = {}) {
             content: buildDaemonScript(config, hetznerToken)
         });
         // Include mise shims in PATH so daemon can use mise-installed node
+        // Run as dev user so mise trusts the config
         cloudInit.write_files.push({
             path: '/etc/systemd/system/devbox-daemon.service',
             permissions: '0644',
-            content: `[Unit]\nDescription=Devbox Daemon\nAfter=network.target caddy.service\n[Service]\nType=simple\nEnvironment="PATH=${MISE_SHIMS}:/usr/local/bin:/usr/bin:/bin"\nExecStart=/usr/bin/env node /usr/local/bin/devbox-daemon\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\n`
+            content: `[Unit]\nDescription=Devbox Daemon\nAfter=network.target caddy.service\n[Service]\nType=simple\nUser=dev\nEnvironment="PATH=${MISE_SHIMS}:/usr/local/bin:/usr/bin:/bin"\nExecStart=/usr/bin/env node /usr/local/bin/devbox-daemon\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\n`
         });
     }
 
