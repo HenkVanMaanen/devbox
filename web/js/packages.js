@@ -147,16 +147,16 @@ export const APT_PACKAGES = [
 export const MISE_TOOLS = [
     { name: 'node', versions: ['latest', '22', '20', '18'], description: 'Node.js JavaScript runtime' },
     { name: 'python', versions: ['latest', '3.13', '3.12', '3.11'], description: 'Python programming language' },
-    { name: 'go', versions: ['1.23', '1.22'], description: 'Go programming language' },
-    { name: 'rust', versions: ['stable', '1.83'], description: 'Rust programming language' },
-    { name: 'ruby', versions: ['3.4', '3.3'], description: 'Ruby programming language' },
-    { name: 'java', versions: ['23', '21', '17'], description: 'Java Development Kit' },
-    { name: 'deno', versions: ['2.1', '2.0'], description: 'Deno JavaScript/TypeScript runtime' },
-    { name: 'bun', versions: ['1.2', '1.1'], description: 'Bun JavaScript runtime' },
-    { name: 'zig', versions: ['0.14', '0.13'], description: 'Zig programming language' },
-    { name: 'terraform', versions: ['1.10', '1.9'], description: 'Infrastructure as code tool' },
-    { name: 'kubectl', versions: ['1.32', '1.31'], description: 'Kubernetes CLI' },
-    { name: 'helm', versions: ['3.16', '3.15'], description: 'Kubernetes package manager' }
+    { name: 'go', versions: ['latest', '1.23', '1.22'], description: 'Go programming language' },
+    { name: 'rust', versions: ['latest', 'stable', '1.83'], description: 'Rust programming language' },
+    { name: 'ruby', versions: ['latest', '3.4', '3.3'], description: 'Ruby programming language' },
+    { name: 'java', versions: ['latest', '23', '21', '17'], description: 'Java Development Kit' },
+    { name: 'deno', versions: ['latest', '2.1', '2.0'], description: 'Deno JavaScript/TypeScript runtime' },
+    { name: 'bun', versions: ['latest', '1.2', '1.1'], description: 'Bun JavaScript runtime' },
+    { name: 'zig', versions: ['latest', '0.14', '0.13'], description: 'Zig programming language' },
+    { name: 'terraform', versions: ['latest', '1.10', '1.9'], description: 'Infrastructure as code tool' },
+    { name: 'kubectl', versions: ['latest', '1.32', '1.31'], description: 'Kubernetes CLI' },
+    { name: 'helm', versions: ['latest', '3.16', '3.15'], description: 'Kubernetes package manager' }
 ];
 
 // Get packages grouped by category
