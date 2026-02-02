@@ -81,13 +81,15 @@ export function buildDaemonScript(config, hetznerToken) {
     return `#!/usr/bin/env node
 const http=require('http'),fs=require('fs'),https=require('https'),{execSync}=require('child_process');
 const TIMEOUT=${timeout},WARNING=${warning},TOKEN='${escapeSingleQuotedJS(hetznerToken)}',USER='${escapeSingleQuotedJS(gitUser)}';
-const STATIC_SERVICES=new Map([[65532,{name:'VS Code',subdomain:'code'}],[65533,{name:'Claude',subdomain:'claude'}],[65534,{name:'Terminal',subdomain:'term'}]]);
+// Friendly names for well-known ports
+const PORT_NAMES={65532:'VS Code',65533:'Claude',65534:'Terminal'};
 const IGNORED_PORTS=new Set([22,80,443,2019,65531]);
-let last=Date.now(),warn=false,discoveredServices=new Map(),baseDomain;
+let last=Date.now(),warn=false,services=new Map(),baseDomain;
 
 function loadConfig(){
   const caddyfile=fs.readFileSync('/etc/caddy/Caddyfile','utf8');
-  const domainMatch=caddyfile.match(/^([a-z0-9-]+\\.\\d+-\\d+-\\d+-\\d+\\.[a-z.]+)\\s*\\{/m);
+  // Match base domain: ip.dns (e.g., 1-2-3-4.sslip.io)
+  const domainMatch=caddyfile.match(/^(\\d+-\\d+-\\d+-\\d+\\.[a-z.]+)\\s*\\{/m);
   if(!domainMatch){console.error('Failed to detect domain');process.exit(1)}
   return domainMatch[1];
 }
@@ -100,9 +102,10 @@ function scanPorts(){
       const match=line.match(/(?:127\\.0\\.0\\.1|0\\.0\\.0\\.0|\\*|\\[::\\]):(\\d+)\\s/);
       if(!match)continue;
       const port=parseInt(match[1]);
-      if(IGNORED_PORTS.has(port)||STATIC_SERVICES.has(port))continue;
+      if(IGNORED_PORTS.has(port))continue;
       const procMatch=line.match(/users:\\(\\("([^"]+)"/);
-      discovered.set(port,{port,process:procMatch?procMatch[1]:'unknown'});
+      const proc=procMatch?procMatch[1]:'unknown';
+      discovered.set(port,{port,process:proc,name:PORT_NAMES[port]||proc});
     }
     return discovered;
   }catch(e){return new Map()}
@@ -113,18 +116,14 @@ function isPortListening(port){
 }
 
 function getServices(){
-  const services=[];
-  for(const[port,info]of STATIC_SERVICES)services.push({name:info.name,port,url:\`https://\${info.subdomain}.\${baseDomain}\`,active:isPortListening(port)});
-  for(const[port,info]of discoveredServices)services.push({name:info.process,port,url:\`https://\${port}.\${baseDomain}\`,active:true});
-  services.sort((a,b)=>{const aS=STATIC_SERVICES.has(a.port),bS=STATIC_SERVICES.has(b.port);if(aS!==bS)return aS?-1:1;return a.port-b.port});
-  return services;
+  return Array.from(services.values()).map(s=>({name:s.name,port:s.port,url:\`https://\${s.port}.\${baseDomain}\`,active:true})).sort((a,b)=>a.port-b.port);
 }
 
-function updateDiscoveredServices(){
-  const prev=new Set(discoveredServices.keys());
-  discoveredServices=scanPorts();
-  const curr=new Set(discoveredServices.keys());
-  for(const p of curr)if(!prev.has(p)){console.log(\`Service discovered on port \${p} (\${discoveredServices.get(p).process})\`);prewarmCert(p)}
+function updateServices(){
+  const prev=new Set(services.keys());
+  services=scanPorts();
+  const curr=new Set(services.keys());
+  for(const p of curr)if(!prev.has(p)){console.log(\`Service discovered: \${services.get(p).name} on port \${p}\`);prewarmCert(p)}
   for(const p of prev)if(!curr.has(p))console.log(\`Service stopped on port \${p}\`);
 }
 
@@ -158,9 +157,10 @@ function checkActivityAndMaybeDelete(){check();const i=(Date.now()-last)/1000;if
 
 function main(){
   baseDomain=loadConfig();console.log(\`Devbox daemon starting with domain: \${baseDomain}\`);
-  discoveredServices=scanPorts();
-  console.log(\`Found \${discoveredServices.size} services on startup\`);
-  setInterval(updateDiscoveredServices,10000);
+  services=scanPorts();
+  console.log(\`Found \${services.size} services on startup\`);
+  for(const[p,s]of services)prewarmCert(p);
+  setInterval(updateServices,10000);
   http.createServer((req,res)=>{
     const url=new URL(req.url,'http://localhost');
     const json=(code,data)=>{res.writeHead(code,{'Content-Type':'application/json'});res.end(JSON.stringify(data))};
@@ -186,17 +186,15 @@ function sanitizeCaddyValue(s) {
 }
 
 // Build Caddyfile for services
-export function buildCaddyConfig(config, serverName) {
+// Domain format: {port}.{ip}.{dns} (e.g., 8080.1-2-3-4.sslip.io)
+export function buildCaddyConfig(config) {
     const dns = config.services.dnsService || 'sslip.io';
-    const token = config.services.accessToken;
 
     // Count labels in dns service (e.g., sslip.io = 2, nip.io = 2)
     const dnsLabels = dns.split('.').length;
-    // Port is at: total labels - 1 - dnsLabels - 1 (for IP) - 1 (for serverName) = labels from the end
-    // For 1234.devbox.1-2-3-4.sslip.io: labels are [io, sslip, 1-2-3-4, devbox, 1234]
-    // Index 0=io, 1=sslip, 2=IP, 3=serverName, 4=port
-    // So port index = dnsLabels + 2 = 4 for sslip.io
-    const portLabelIndex = dnsLabels + 2;
+    // For 8080.1-2-3-4.sslip.io: labels are [io=0, sslip=1, 1-2-3-4=2, 8080=3]
+    // So port index = dnsLabels + 1 = 3 for sslip.io
+    const portLabelIndex = dnsLabels + 1;
 
     let caddyfile = '{\n';
 
@@ -233,22 +231,12 @@ export function buildCaddyConfig(config, serverName) {
 
     const authBlock = '  basic_auth {\n    devbox __HASH__\n  }\n';
 
-    // Index page
-    caddyfile += `${serverName}.__IP__.${dns} {\n${authBlock}  route /api/* {\n    uri strip_prefix /api\n    reverse_proxy localhost:65531\n  }\n  root * /var/www/devbox-index\n  file_server\n}\n`;
+    // Index page at base domain (ip.dns)
+    caddyfile += `__IP__.${dns} {\n${authBlock}  route /api/* {\n    uri strip_prefix /api\n    reverse_proxy localhost:65531\n  }\n  root * /var/www/devbox-index\n  file_server\n}\n`;
 
-    if (config.services.codeServer) {
-        caddyfile += `code.${serverName}.__IP__.${dns} {\n${authBlock}  reverse_proxy localhost:65532\n}\n`;
-    }
-    if (config.services.claudeTerminal) {
-        caddyfile += `claude.${serverName}.__IP__.${dns} {\n${authBlock}  reverse_proxy localhost:65533\n}\n`;
-    }
-    if (config.services.shellTerminal) {
-        caddyfile += `term.${serverName}.__IP__.${dns} {\n${authBlock}  reverse_proxy localhost:65534\n}\n`;
-    }
-
-    // Wildcard route for dynamic services - extracts port from subdomain
-    // No config changes needed when services come/go - eliminates connection drops
-    caddyfile += `*.${serverName}.__IP__.${dns} {\n  tls {\n    on_demand\n  }\n${authBlock}  reverse_proxy localhost:{http.request.host.labels.${portLabelIndex}}\n}\n`;
+    // Wildcard route for all services - extracts port from subdomain
+    // All services (code-server, claude, terminal, user services) use port-based URLs
+    caddyfile += `*.__IP__.${dns} {\n  tls {\n    on_demand\n  }\n${authBlock}  reverse_proxy localhost:{http.request.host.labels.${portLabelIndex}}\n}\n`;
 
     return caddyfile;
 }

@@ -185,23 +185,24 @@ export function formatIPForDNS(ip) {
 }
 
 // Get service URLs for a server
+// Domain format: {port}.{ip}.{dns} (e.g., 65532.1-2-3-4.sslip.io)
 export function getServiceURLs(serverName, ip, config, accessToken) {
     if (!config?.services) return { index: null, code: null, claude: null, terminal: null };
     const ipFormatted = formatIPForDNS(ip);
     const dns = config.services.dnsService || 'sslip.io';
     const token = accessToken || config.services.accessToken;
 
-    const buildURL = (subdomain) => {
-        const host = subdomain
-            ? `${subdomain}.${serverName}.${ipFormatted}.${dns}`
-            : `${serverName}.${ipFormatted}.${dns}`;
+    const buildURL = (port) => {
+        const host = port
+            ? `${port}.${ipFormatted}.${dns}`
+            : `${ipFormatted}.${dns}`;
         return `https://devbox:${encodeURIComponent(token)}@${host}/`;
     };
 
     return {
         index: buildURL(),
-        code: config.services.codeServer ? buildURL('code') : null,
-        claude: config.services.claudeTerminal ? buildURL('claude') : null,
-        terminal: config.services.shellTerminal ? buildURL('term') : null
+        code: config.services.codeServer ? buildURL(65532) : null,
+        claude: config.services.claudeTerminal ? buildURL(65533) : null,
+        terminal: config.services.shellTerminal ? buildURL(65534) : null
     };
 }

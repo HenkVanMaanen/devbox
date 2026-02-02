@@ -311,12 +311,12 @@ describe('hetzner.js', () => {
             }
         };
 
-        it('generates correct URLs', () => {
+        it('generates correct URLs with port-based format', () => {
             const urls = hetzner.getServiceURLs('dev1', '1.2.3.4', config, 'tok123');
-            assert.equal(urls.index, 'https://devbox:tok123@dev1.1-2-3-4.sslip.io/');
-            assert.equal(urls.code, 'https://devbox:tok123@code.dev1.1-2-3-4.sslip.io/');
-            assert.equal(urls.claude, 'https://devbox:tok123@claude.dev1.1-2-3-4.sslip.io/');
-            assert.equal(urls.terminal, 'https://devbox:tok123@term.dev1.1-2-3-4.sslip.io/');
+            assert.equal(urls.index, 'https://devbox:tok123@1-2-3-4.sslip.io/');
+            assert.equal(urls.code, 'https://devbox:tok123@65532.1-2-3-4.sslip.io/');
+            assert.equal(urls.claude, 'https://devbox:tok123@65533.1-2-3-4.sslip.io/');
+            assert.equal(urls.terminal, 'https://devbox:tok123@65534.1-2-3-4.sslip.io/');
         });
 
         it('returns null for disabled services', () => {

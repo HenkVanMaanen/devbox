@@ -303,9 +303,9 @@ describe('cloudinit-builders.js', () => {
             assert.ok(script.includes('ss -tlnp'));
         });
 
-        it('includes static services map', () => {
+        it('includes port names for well-known services', () => {
             const script = buildDaemonScript(config, 'token');
-            assert.ok(script.includes('STATIC_SERVICES'));
+            assert.ok(script.includes('PORT_NAMES'));
             assert.ok(script.includes('VS Code'));
             assert.ok(script.includes('Claude'));
             assert.ok(script.includes('Terminal'));
@@ -325,46 +325,30 @@ describe('cloudinit-builders.js', () => {
             }
         };
 
-        it('includes server block for index', () => {
-            const caddy = buildCaddyConfig(baseConfig, 'devbox');
-            assert.ok(caddy.includes('devbox.__IP__.sslip.io'));
+        it('includes server block for index at base domain', () => {
+            const caddy = buildCaddyConfig(baseConfig);
+            assert.ok(caddy.includes('__IP__.sslip.io {'));
+            assert.ok(caddy.includes('file_server'));
         });
 
-        it('includes code-server block when enabled', () => {
-            const caddy = buildCaddyConfig(baseConfig, 'devbox');
-            assert.ok(caddy.includes('code.devbox.__IP__.sslip.io'));
-            assert.ok(caddy.includes('localhost:65532'));
-        });
-
-        it('includes claude block when enabled', () => {
-            const caddy = buildCaddyConfig(baseConfig, 'devbox');
-            assert.ok(caddy.includes('claude.devbox.__IP__.sslip.io'));
-            assert.ok(caddy.includes('localhost:65533'));
-        });
-
-        it('includes terminal block when enabled', () => {
-            const caddy = buildCaddyConfig(baseConfig, 'devbox');
-            assert.ok(caddy.includes('term.devbox.__IP__.sslip.io'));
-            assert.ok(caddy.includes('localhost:65534'));
-        });
-
-        it('omits disabled services', () => {
-            const config = { ...baseConfig, services: { ...baseConfig.services, codeServer: false, claudeTerminal: false, shellTerminal: false } };
-            const caddy = buildCaddyConfig(config, 'devbox');
-            assert.ok(!caddy.includes('code.devbox'));
-            assert.ok(!caddy.includes('claude.devbox'));
-            assert.ok(!caddy.includes('term.devbox'));
+        it('uses wildcard route for all services', () => {
+            const caddy = buildCaddyConfig(baseConfig);
+            // All services (including code-server, claude, terminal) use wildcard route
+            assert.ok(caddy.includes('*.__IP__.sslip.io'));
+            assert.ok(!caddy.includes('code.'));
+            assert.ok(!caddy.includes('claude.'));
+            assert.ok(!caddy.includes('term.'));
         });
 
         it('includes basic_auth with hash placeholder', () => {
-            const caddy = buildCaddyConfig(baseConfig, 'devbox');
+            const caddy = buildCaddyConfig(baseConfig);
             assert.ok(caddy.includes('basic_auth'));
             assert.ok(caddy.includes('devbox __HASH__'));
         });
 
         it('configures ZeroSSL ACME', () => {
             const config = { ...baseConfig, services: { ...baseConfig.services, acmeProvider: 'zerossl', zerosslEabKeyId: 'kid', zerosslEabKey: 'mac' } };
-            const caddy = buildCaddyConfig(config, 'devbox');
+            const caddy = buildCaddyConfig(config);
             assert.ok(caddy.includes('acme.zerossl.com'));
             assert.ok(caddy.includes('key_id kid'));
             assert.ok(caddy.includes('mac_key mac'));
@@ -372,44 +356,44 @@ describe('cloudinit-builders.js', () => {
 
         it('configures Buypass ACME', () => {
             const config = { ...baseConfig, services: { ...baseConfig.services, acmeProvider: 'buypass' } };
-            const caddy = buildCaddyConfig(config, 'devbox');
+            const caddy = buildCaddyConfig(config);
             assert.ok(caddy.includes('api.buypass.com'));
         });
 
         it('configures Actalis with base64url conversion', () => {
             const config = { ...baseConfig, services: { ...baseConfig.services, acmeProvider: 'actalis', actalisEabKeyId: 'kid', actalisEabKey: 'abc+/==' } };
-            const caddy = buildCaddyConfig(config, 'devbox');
+            const caddy = buildCaddyConfig(config);
             assert.ok(caddy.includes('actalis'));
             assert.ok(caddy.includes('abc-_'));
         });
 
         it('configures custom ACME', () => {
             const config = { ...baseConfig, services: { ...baseConfig.services, acmeProvider: 'custom', customAcmeUrl: 'https://ca.example.com/dir', customEabKeyId: 'ck', customEabKey: 'cv' } };
-            const caddy = buildCaddyConfig(config, 'devbox');
+            const caddy = buildCaddyConfig(config);
             assert.ok(caddy.includes('https://ca.example.com/dir'));
         });
 
         it('includes ACME email when set', () => {
             const config = { ...baseConfig, services: { ...baseConfig.services, acmeEmail: 'admin@test.com' } };
-            const caddy = buildCaddyConfig(config, 'devbox');
+            const caddy = buildCaddyConfig(config);
             assert.ok(caddy.includes('email admin@test.com'));
         });
 
         it('rejects ACME email with spaces', () => {
             const config = { ...baseConfig, services: { ...baseConfig.services, acmeEmail: 'bad email' } };
-            const caddy = buildCaddyConfig(config, 'devbox');
+            const caddy = buildCaddyConfig(config);
             assert.ok(!caddy.includes('email'));
         });
 
         it('uses custom DNS service', () => {
             const config = { ...baseConfig, services: { ...baseConfig.services, dnsService: 'nip.io' } };
-            const caddy = buildCaddyConfig(config, 'devbox');
+            const caddy = buildCaddyConfig(config);
             assert.ok(caddy.includes('nip.io'));
         });
 
         it('sanitizes EAB keys with whitespace/braces', () => {
             const config = { ...baseConfig, services: { ...baseConfig.services, acmeProvider: 'zerossl', zerosslEabKeyId: 'key id{evil}', zerosslEabKey: 'mac{inject}key' } };
-            const caddy = buildCaddyConfig(config, 'devbox');
+            const caddy = buildCaddyConfig(config);
             assert.ok(!caddy.includes('{evil}'));
             assert.ok(!caddy.includes('{inject}'));
             assert.ok(caddy.includes('key_id keyidevil'));
@@ -418,37 +402,37 @@ describe('cloudinit-builders.js', () => {
 
         it('sanitizes custom ACME URL', () => {
             const config = { ...baseConfig, services: { ...baseConfig.services, acmeProvider: 'custom', customAcmeUrl: 'https://evil.com/dir}\n{new block' } };
-            const caddy = buildCaddyConfig(config, 'devbox');
+            const caddy = buildCaddyConfig(config);
             assert.ok(!caddy.includes('{new'));
             assert.ok(caddy.includes('https://evil.com/dir'));
         });
 
-        it('includes wildcard route for dynamic services', () => {
-            const caddy = buildCaddyConfig(baseConfig, 'devbox');
-            assert.ok(caddy.includes('*.devbox.__IP__.sslip.io'));
+        it('includes wildcard route for all services', () => {
+            const caddy = buildCaddyConfig(baseConfig);
+            assert.ok(caddy.includes('*.__IP__.sslip.io'));
             assert.ok(caddy.includes('on_demand'));
         });
 
         it('includes on-demand TLS verification endpoint', () => {
-            const caddy = buildCaddyConfig(baseConfig, 'devbox');
+            const caddy = buildCaddyConfig(baseConfig);
             assert.ok(caddy.includes('on_demand_tls'));
             assert.ok(caddy.includes('ask http://localhost:65531/verify-domain'));
         });
 
         it('calculates correct port label index for different DNS services', () => {
-            // sslip.io has 2 labels, so port is at index 4 (0=io, 1=sslip, 2=IP, 3=serverName, 4=port)
-            const caddySslip = buildCaddyConfig(baseConfig, 'devbox');
-            assert.ok(caddySslip.includes('labels.4'));
+            // sslip.io has 2 labels, so port is at index 3 (0=io, 1=sslip, 2=IP, 3=port)
+            const caddySslip = buildCaddyConfig(baseConfig);
+            assert.ok(caddySslip.includes('labels.3'));
 
             // nip.io also has 2 labels
             const configNip = { ...baseConfig, services: { ...baseConfig.services, dnsService: 'nip.io' } };
-            const caddyNip = buildCaddyConfig(configNip, 'devbox');
-            assert.ok(caddyNip.includes('labels.4'));
+            const caddyNip = buildCaddyConfig(configNip);
+            assert.ok(caddyNip.includes('labels.3'));
 
-            // custom.example.com has 3 labels, so port is at index 5
+            // custom.example.com has 3 labels, so port is at index 4
             const configCustom = { ...baseConfig, services: { ...baseConfig.services, dnsService: 'custom.example.com' } };
-            const caddyCustom = buildCaddyConfig(configCustom, 'devbox');
-            assert.ok(caddyCustom.includes('labels.5'));
+            const caddyCustom = buildCaddyConfig(configCustom);
+            assert.ok(caddyCustom.includes('labels.4'));
         });
     });
 

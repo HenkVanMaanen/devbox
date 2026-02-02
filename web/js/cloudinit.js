@@ -271,7 +271,7 @@ export function generate(serverName, hetznerToken, config, options = {}) {
         cloudInit.write_files.push({
             path: '/etc/caddy/Caddyfile.template',
             permissions: '0644',
-            content: buildCaddyConfig(config, serverName)
+            content: buildCaddyConfig(config)
         });
         cloudInit.write_files.push({
             path: '/var/www/devbox-index/index.html.template',
