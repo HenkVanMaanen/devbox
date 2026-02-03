@@ -35,7 +35,6 @@ const DEFAULT_GLOBAL_CONFIG = {
     services: {
         dnsService: 'sslip.io',
         codeServer: true,
-        claudeTerminal: true,
         shellTerminal: true,
         acmeProvider: 'zerossl',
         acmeEmail: '',

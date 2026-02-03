@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { shellEscape, escapeGitConfig, toBase64URL, buildGitCredentials, buildGitConfig, buildHostGitConfig, buildDaemonScript, buildCaddyConfig, buildIndexPage } from '../web/js/cloudinit-builders.js';
+import { shellEscape, escapeGitConfig, toBase64URL, buildGitCredentials, buildGitConfig, buildHostGitConfig, buildDaemonScript, buildCaddyConfig, buildOverviewPage } from '../web/js/cloudinit-builders.js';
 
 describe('cloudinit-builders.js', () => {
     describe('shellEscape', () => {
@@ -318,7 +318,6 @@ describe('cloudinit-builders.js', () => {
                 dnsService: 'sslip.io',
                 accessToken: 'mytoken',
                 codeServer: true,
-                claudeTerminal: true,
                 shellTerminal: true,
                 acmeProvider: 'letsencrypt',
                 acmeEmail: ''
@@ -436,9 +435,9 @@ describe('cloudinit-builders.js', () => {
         });
     });
 
-    describe('buildIndexPage', () => {
+    describe('buildOverviewPage', () => {
         const config = {
-            services: { codeServer: true, claudeTerminal: true, shellTerminal: true, accessToken: 'tok' }
+            services: { codeServer: true, shellTerminal: true, accessToken: 'tok' }
         };
         const colors = {
             background: '#000', foreground: '#fff', card: '#111',
@@ -448,29 +447,29 @@ describe('cloudinit-builders.js', () => {
         };
 
         it('returns valid HTML', () => {
-            const html = buildIndexPage(config, 'devbox', colors);
+            const html = buildOverviewPage(config, 'devbox', colors);
             assert.ok(html.startsWith('<!DOCTYPE html>'));
             assert.ok(html.includes('</html>'));
         });
 
         it('includes server name', () => {
-            const html = buildIndexPage(config, 'my-server', colors);
+            const html = buildOverviewPage(config, 'my-server', colors);
             assert.ok(html.includes('my-server'));
         });
 
         it('uses theme colors', () => {
-            const html = buildIndexPage(config, 'devbox', colors);
+            const html = buildOverviewPage(config, 'devbox', colors);
             assert.ok(html.includes('#000'));
             assert.ok(html.includes('#fff'));
         });
 
         it('includes auto-shutdown countdown', () => {
-            const html = buildIndexPage(config, 'devbox', colors);
+            const html = buildOverviewPage(config, 'devbox', colors);
             assert.ok(html.includes('Auto-shutdown'));
         });
 
         it('includes status API polling', () => {
-            const html = buildIndexPage(config, 'devbox', colors);
+            const html = buildOverviewPage(config, 'devbox', colors);
             assert.ok(html.includes('/api/status'));
             assert.ok(html.includes('/api/services'));
         });

@@ -187,7 +187,7 @@ export function formatIPForDNS(ip) {
 // Get service URLs for a server
 // Domain format: {port}.{ip}.{dns} (e.g., 65532.1-2-3-4.sslip.io)
 export function getServiceURLs(serverName, ip, config, accessToken) {
-    if (!config?.services) return { index: null, code: null, claude: null, terminal: null };
+    if (!config?.services) return { overview: null, code: null, terminal: null };
     const ipFormatted = formatIPForDNS(ip);
     const dns = config.services.dnsService || 'sslip.io';
     const token = accessToken || config.services.accessToken;
@@ -200,9 +200,8 @@ export function getServiceURLs(serverName, ip, config, accessToken) {
     };
 
     return {
-        index: buildURL(),
+        overview: buildURL(),
         code: config.services.codeServer ? buildURL(65532) : null,
-        claude: config.services.claudeTerminal ? buildURL(65533) : null,
         terminal: config.services.shellTerminal ? buildURL(65534) : null
     };
 }

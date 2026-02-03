@@ -103,14 +103,13 @@ function renderServerServices(urls, config) {
         <div class="pt-4 border-t border-border">
             <p class="text-xs text-muted-foreground mb-2">Services</p>
             <div class="${UI.row} flex-wrap">
-                ${urls.index ? `<a href="${urls.index}" target="_blank" class="${cn(UI.btn, UI.btnOutline, UI.btnSm)}">Index</a>` : ''}
+                ${urls.overview ? `<a href="${urls.overview}" target="_blank" class="${cn(UI.btn, UI.btnOutline, UI.btnSm)}">Overview</a>` : ''}
                 ${urls.code ? `<a href="${urls.code}" target="_blank" class="${cn(UI.btn, UI.btnOutline, UI.btnSm)}">VS Code</a>` : ''}
-                ${urls.claude ? `<a href="${urls.claude}" target="_blank" class="${cn(UI.btn, UI.btnOutline, UI.btnSm)}">Claude</a>` : ''}
                 ${urls.terminal ? `<a href="${urls.terminal}" target="_blank" class="${cn(UI.btn, UI.btnOutline, UI.btnSm)}">Terminal</a>` : ''}
             </div>
-            ${urls.index ? `
+            ${urls.overview ? `
             <div class="mt-3 pt-3 border-t border-border flex justify-center">
-                <div style="width:128px;height:128px;background:#fff;padding:8px;border-radius:8px">${safeGenerateQR(urls.index).replace(/<svg /, '<svg style="width:100%;height:100%;display:block" ')}</div>
+                <div style="width:128px;height:128px;background:#fff;padding:8px;border-radius:8px">${safeGenerateQR(urls.overview).replace(/<svg /, '<svg style="width:100%;height:100%;display:block" ')}</div>
             </div>
             ` : ''}
         </div>

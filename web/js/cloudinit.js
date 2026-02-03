@@ -2,7 +2,7 @@
 
 import { getDefaultProfileConfig, getTheme as getStoredTheme } from './storage.js';
 import { getTheme, getDefaultTheme, THEMES } from './themes.js';
-import { shellEscape, buildGitCredentials, buildGitConfig, buildHostGitConfig, buildDaemonScript, buildCaddyConfig, buildIndexPage } from './cloudinit-builders.js';
+import { shellEscape, buildGitCredentials, buildGitConfig, buildHostGitConfig, buildDaemonScript, buildCaddyConfig, buildOverviewPage } from './cloudinit-builders.js';
 
 // Main generate function - creates cloud-init user-data with native modules
 export function generate(serverName, hetznerToken, config, options = {}) {
@@ -21,7 +21,7 @@ export function generate(serverName, hetznerToken, config, options = {}) {
         themeColors = theme.colors;
     }
 
-    const servicesEnabled = config.services.codeServer || config.services.claudeTerminal || config.services.shellTerminal;
+    const servicesEnabled = config.services.codeServer || config.services.shellTerminal;
     const repos = config.repos || [];
 
     // Determine shell path
@@ -73,9 +73,6 @@ export function generate(serverName, hetznerToken, config, options = {}) {
     // Add shell package if not bash (avoid duplicates with user packages)
     if (config.shell.default === 'fish' && !pkgSet.has('fish')) cloudInit.packages.push('fish');
     else if (config.shell.default === 'zsh' && !pkgSet.has('zsh')) cloudInit.packages.push('zsh');
-
-    // dtach for persistent terminal sessions without tmux UI overhead
-    if (!pkgSet.has('dtach')) cloudInit.packages.push('dtach');
 
     // ========== WRITE_FILES ==========
 
@@ -245,28 +242,12 @@ export function generate(serverName, hetznerToken, config, options = {}) {
         });
     }
 
-    // Claude terminal
-    if (config.services.claudeTerminal) {
-        // Include mise shims in PATH so claude can access mise-installed tools
-        const claudeCmd = config.claude.skipPermissions ? 'claude --dangerously-skip-permissions' : 'claude';
-        cloudInit.write_files.push({
-            path: '/usr/local/bin/claude-terminal',
-            permissions: '0755',
-            content: `#!/bin/bash\nexport HOME=/home/dev\nexport PATH="${MISE_SHIMS}:$PATH"\ncd /home/dev\nexec dtach -A /tmp/devbox-claude -z ${claudeCmd}\n`
-        });
-        cloudInit.write_files.push({
-            path: '/etc/systemd/system/ttyd-claude.service',
-            permissions: '0644',
-            content: '[Unit]\nDescription=Claude\nAfter=network.target\n[Service]\nType=simple\nUser=dev\nWorkingDirectory=/home/dev\nExecStart=/usr/local/bin/ttyd -p 65533 -t fontSize=14 -t theme={"background":"#1a1a2e"} -W /usr/local/bin/claude-terminal\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\n'
-        });
-    }
-
-    // Shell terminal
+    // Shell terminal (each connection gets independent shell - users can start tmux/zellij manually)
     if (config.services.shellTerminal) {
         cloudInit.write_files.push({
             path: '/etc/systemd/system/ttyd-term.service',
             permissions: '0644',
-            content: `[Unit]\nDescription=Terminal\nAfter=network.target\n[Service]\nType=simple\nUser=dev\nWorkingDirectory=/home/dev\nEnvironment=HOME=/home/dev\nExecStart=/usr/local/bin/ttyd -p 65534 -t fontSize=14 -t theme={"background":"#1a1a2e"} -W dtach -A /tmp/devbox-shell -z ${config.shell.default || 'bash'}\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\n`
+            content: `[Unit]\nDescription=Terminal\nAfter=network.target\n[Service]\nType=simple\nUser=dev\nWorkingDirectory=/home/dev\nEnvironment=HOME=/home/dev\nExecStart=/usr/local/bin/ttyd -p 65534 -t fontSize=14 -t theme={"background":"#1a1a2e"} -W ${config.shell.default || 'bash'}\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\n`
         });
     }
 
@@ -278,9 +259,9 @@ export function generate(serverName, hetznerToken, config, options = {}) {
             content: buildCaddyConfig(config)
         });
         cloudInit.write_files.push({
-            path: '/var/www/devbox-index/index.html.template',
+            path: '/var/www/devbox-overview/index.html.template',
             permissions: '0644',
-            content: buildIndexPage(config, serverName, themeColors)
+            content: buildOverviewPage(config, serverName, themeColors)
         });
     }
 
@@ -311,7 +292,7 @@ export function generate(serverName, hetznerToken, config, options = {}) {
 
     // Services - install binaries
     if (servicesEnabled) {
-        if (config.services.claudeTerminal || config.services.shellTerminal) {
+        if (config.services.shellTerminal) {
             runcmd.push('TTYD_ARCH=$(uname -m | sed "s/aarch64/aarch64/;s/x86_64/x86_64/") && curl -fsSL "https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.${TTYD_ARCH}" -o /usr/local/bin/ttyd && chmod +x /usr/local/bin/ttyd || true');
         }
         if (config.services.codeServer) {
@@ -324,7 +305,6 @@ export function generate(serverName, hetznerToken, config, options = {}) {
     if (config.autoDelete.enabled || servicesEnabled) servicesToEnable.push('devbox-daemon');
     if (servicesEnabled) {
         if (config.services.codeServer) servicesToEnable.push('code-server');
-        if (config.services.claudeTerminal) servicesToEnable.push('ttyd-claude');
         if (config.services.shellTerminal) servicesToEnable.push('ttyd-term');
     }
     if (servicesToEnable.length > 0) {
@@ -333,11 +313,11 @@ export function generate(serverName, hetznerToken, config, options = {}) {
 
     // IP/hash substitution and Caddy restart
     if (servicesEnabled) {
-        runcmd.push('mkdir -p /var/www/devbox-index');
+        runcmd.push('mkdir -p /var/www/devbox-overview');
         runcmd.push('IP=$(curl -4 -s ifconfig.me | tr "." "-")');
         runcmd.push(`HASH=$(caddy hash-password --plaintext "${shellEscape(config.services.accessToken)}")`);
         runcmd.push('sed -e "s/__IP__/$IP/g" -e "s|__HASH__|$HASH|g" /etc/caddy/Caddyfile.template > /etc/caddy/Caddyfile');
-        runcmd.push('sed "s/__IP__/$IP/g" /var/www/devbox-index/index.html.template > /var/www/devbox-index/index.html');
+        runcmd.push('sed "s/__IP__/$IP/g" /var/www/devbox-overview/index.html.template > /var/www/devbox-overview/index.html');
         runcmd.push('systemctl restart caddy || true');
     }
 

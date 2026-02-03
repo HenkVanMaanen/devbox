@@ -66,7 +66,6 @@ export const SETTINGS_SECTIONS = [
         title: 'Services',
         fields: [
             { path: 'services.codeServer', label: 'VS Code Server', type: 'checkbox', checkboxLabel: 'Enable VS Code Server' },
-            { path: 'services.claudeTerminal', label: 'Claude Terminal', type: 'checkbox', checkboxLabel: 'Enable Claude Terminal' },
             { path: 'services.shellTerminal', label: 'Shell Terminal', type: 'checkbox', checkboxLabel: 'Enable Shell Terminal' },
             {
                 path: 'services.dnsService', label: 'DNS Service', type: 'select',

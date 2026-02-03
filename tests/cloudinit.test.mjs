@@ -28,7 +28,7 @@ const baseConfig = {
     git: { userName: '', userEmail: '', credentials: [] },
     claude: { apiKey: '', credentialsJson: null, theme: '', settings: '' },
     services: {
-        codeServer: false, claudeTerminal: false, shellTerminal: false,
+        codeServer: false, shellTerminal: false,
         dnsService: 'sslip.io', accessToken: 'testtoken123',
         acmeProvider: 'letsencrypt', acmeEmail: ''
     },
@@ -243,14 +243,6 @@ describe('cloudinit.js generate()', () => {
             assert.ok(yaml.includes('65532'));
         });
 
-        it('includes claude terminal config', () => {
-            const config = { ...baseConfig, services: { ...baseConfig.services, claudeTerminal: true } };
-            const yaml = generate('test', 'token', config, baseOptions);
-            assert.ok(yaml.includes('ttyd-claude'));
-            assert.ok(yaml.includes('65533'));
-            assert.ok(yaml.includes('claude-terminal'));
-        });
-
         it('includes shell terminal config', () => {
             const config = { ...baseConfig, services: { ...baseConfig.services, shellTerminal: true } };
             const yaml = generate('test', 'token', config, baseOptions);
@@ -265,13 +257,13 @@ describe('cloudinit.js generate()', () => {
                 services: { ...baseConfig.services, shellTerminal: true }
             };
             const yaml = generate('test', 'token', config, baseOptions);
-            assert.ok(yaml.includes('dtach -A /tmp/devbox-shell -z fish'));
+            assert.ok(yaml.includes('-W fish'));
         });
 
-        it('includes index page template', () => {
+        it('includes overview page template', () => {
             const config = { ...baseConfig, services: { ...baseConfig.services, codeServer: true } };
             const yaml = generate('test', 'token', config, baseOptions);
-            assert.ok(yaml.includes('devbox-index/index.html.template'));
+            assert.ok(yaml.includes('devbox-overview/index.html.template'));
         });
 
         it('includes IP and hash substitution commands', () => {

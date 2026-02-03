@@ -304,7 +304,6 @@ describe('hetzner.js', () => {
         const config = {
             services: {
                 codeServer: true,
-                claudeTerminal: true,
                 shellTerminal: true,
                 dnsService: 'sslip.io',
                 accessToken: 'tok123'
@@ -313,31 +312,29 @@ describe('hetzner.js', () => {
 
         it('generates correct URLs with port-based format', () => {
             const urls = hetzner.getServiceURLs('dev1', '1.2.3.4', config, 'tok123');
-            assert.equal(urls.index, 'https://devbox:tok123@1-2-3-4.sslip.io/');
+            assert.equal(urls.overview, 'https://devbox:tok123@1-2-3-4.sslip.io/');
             assert.equal(urls.code, 'https://devbox:tok123@65532.1-2-3-4.sslip.io/');
-            assert.equal(urls.claude, 'https://devbox:tok123@65533.1-2-3-4.sslip.io/');
             assert.equal(urls.terminal, 'https://devbox:tok123@65534.1-2-3-4.sslip.io/');
         });
 
         it('returns null for disabled services', () => {
             const disabledConfig = {
-                services: { codeServer: false, claudeTerminal: false, shellTerminal: false, dnsService: 'sslip.io' }
+                services: { codeServer: false, shellTerminal: false, dnsService: 'sslip.io' }
             };
             const urls = hetzner.getServiceURLs('dev1', '1.2.3.4', disabledConfig, 'tok');
             assert.equal(urls.code, null);
-            assert.equal(urls.claude, null);
             assert.equal(urls.terminal, null);
         });
 
         it('uses config accessToken as fallback', () => {
             const urls = hetzner.getServiceURLs('dev1', '1.2.3.4', config);
-            assert.ok(urls.index.includes('tok123'));
+            assert.ok(urls.overview.includes('tok123'));
         });
 
         it('uses custom DNS service', () => {
             const nipConfig = { services: { ...config.services, dnsService: 'nip.io' } };
             const urls = hetzner.getServiceURLs('dev1', '1.2.3.4', nipConfig, 'tok');
-            assert.ok(urls.index.includes('nip.io'));
+            assert.ok(urls.overview.includes('nip.io'));
         });
     });
 });
