@@ -12,13 +12,16 @@ export function generate(serverName, hetznerToken, config, options = {}) {
 
     // Resolve theme colors
     let themeColors;
+    let terminalColors;
     if (options.themeColors) {
         themeColors = options.themeColors;
+        terminalColors = options.terminalColors || {};
     } else {
         const storedTheme = getStoredTheme();
         const themeId = (storedTheme === 'system' || !storedTheme) ? getDefaultTheme() : storedTheme;
         const theme = getTheme(themeId) || THEMES[0];
         themeColors = theme.colors;
+        terminalColors = theme.terminal || {};
     }
 
     const servicesEnabled = config.services.codeServer || config.services.shellTerminal;
@@ -312,7 +315,23 @@ copy_on_select true
             foreground: themeColors.foreground,
             cursor: themeColors.primary,
             cursorAccent: themeColors.background,
-            selectionBackground: themeColors.muted
+            selectionBackground: themeColors.muted,
+            black: terminalColors.black,
+            red: terminalColors.red,
+            green: terminalColors.green,
+            yellow: terminalColors.yellow,
+            blue: terminalColors.blue,
+            magenta: terminalColors.magenta,
+            cyan: terminalColors.cyan,
+            white: terminalColors.white,
+            brightBlack: terminalColors.brightBlack,
+            brightRed: terminalColors.brightRed,
+            brightGreen: terminalColors.brightGreen,
+            brightYellow: terminalColors.brightYellow,
+            brightBlue: terminalColors.brightBlue,
+            brightMagenta: terminalColors.brightMagenta,
+            brightCyan: terminalColors.brightCyan,
+            brightWhite: terminalColors.brightWhite
         });
         cloudInit.write_files.push({
             path: '/etc/systemd/system/ttyd-term.service',

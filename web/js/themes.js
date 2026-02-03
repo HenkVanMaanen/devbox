@@ -28,6 +28,24 @@ export const THEMES = [
             warning: '#fbbf24',
             warningForeground: '#713f12',
             placeholder: '#9ca3af'
+        },
+        terminal: {
+            black: '#1a1a1a',
+            red: '#f87171',
+            green: '#4ade80',
+            yellow: '#fbbf24',
+            blue: '#60a5fa',
+            magenta: '#c084fc',
+            cyan: '#22d3ee',
+            white: '#e5e5e5',
+            brightBlack: '#525252',
+            brightRed: '#fca5a5',
+            brightGreen: '#86efac',
+            brightYellow: '#fcd34d',
+            brightBlue: '#93c5fd',
+            brightMagenta: '#d8b4fe',
+            brightCyan: '#67e8f9',
+            brightWhite: '#ffffff'
         }
     },
     // Default Light
@@ -57,6 +75,24 @@ export const THEMES = [
             warning: '#854d0e',
             warningForeground: '#ffffff',
             placeholder: '#6b7280'
+        },
+        terminal: {
+            black: '#171717',
+            red: '#dc2626',
+            green: '#16a34a',
+            yellow: '#ca8a04',
+            blue: '#2563eb',
+            magenta: '#9333ea',
+            cyan: '#0891b2',
+            white: '#e5e5e5',
+            brightBlack: '#525252',
+            brightRed: '#ef4444',
+            brightGreen: '#22c55e',
+            brightYellow: '#eab308',
+            brightBlue: '#3b82f6',
+            brightMagenta: '#a855f7',
+            brightCyan: '#06b6d4',
+            brightWhite: '#fafafa'
         }
     },
     // Nord Dark
@@ -86,6 +122,24 @@ export const THEMES = [
             warning: '#ebcb8b',
             warningForeground: '#2e3440',
             placeholder: '#a5adb8'
+        },
+        terminal: {
+            black: '#3b4252',
+            red: '#bf616a',
+            green: '#a3be8c',
+            yellow: '#ebcb8b',
+            blue: '#81a1c1',
+            magenta: '#b48ead',
+            cyan: '#88c0d0',
+            white: '#e5e9f0',
+            brightBlack: '#4c566a',
+            brightRed: '#bf616a',
+            brightGreen: '#a3be8c',
+            brightYellow: '#ebcb8b',
+            brightBlue: '#81a1c1',
+            brightMagenta: '#b48ead',
+            brightCyan: '#8fbcbb',
+            brightWhite: '#eceff4'
         }
     },
     // Nord Light
@@ -115,6 +169,24 @@ export const THEMES = [
             warning: '#7a5a0f',
             warningForeground: '#eceff4',
             placeholder: '#4c566a'
+        },
+        terminal: {
+            black: '#3b4252',
+            red: '#bf616a',
+            green: '#a3be8c',
+            yellow: '#d08770',
+            blue: '#5e81ac',
+            magenta: '#b48ead',
+            cyan: '#88c0d0',
+            white: '#e5e9f0',
+            brightBlack: '#4c566a',
+            brightRed: '#bf616a',
+            brightGreen: '#a3be8c',
+            brightYellow: '#ebcb8b',
+            brightBlue: '#81a1c1',
+            brightMagenta: '#b48ead',
+            brightCyan: '#8fbcbb',
+            brightWhite: '#eceff4'
         }
     },
     // Dracula Dark
@@ -144,6 +216,24 @@ export const THEMES = [
             warning: '#f1fa8c',
             warningForeground: '#282a36',
             placeholder: '#a3a6b8'
+        },
+        terminal: {
+            black: '#21222c',
+            red: '#ff5555',
+            green: '#50fa7b',
+            yellow: '#f1fa8c',
+            blue: '#bd93f9',
+            magenta: '#ff79c6',
+            cyan: '#8be9fd',
+            white: '#f8f8f2',
+            brightBlack: '#6272a4',
+            brightRed: '#ff6e6e',
+            brightGreen: '#69ff94',
+            brightYellow: '#ffffa5',
+            brightBlue: '#d6acff',
+            brightMagenta: '#ff92df',
+            brightCyan: '#a4ffff',
+            brightWhite: '#ffffff'
         }
     },
     // Dracula Light
@@ -173,6 +263,24 @@ export const THEMES = [
             warning: '#7a6600',
             warningForeground: '#f8f8f2',
             placeholder: '#5a5c6a'
+        },
+        terminal: {
+            black: '#282a36',
+            red: '#e13838',
+            green: '#2a9f4a',
+            yellow: '#d5a212',
+            blue: '#8b5fc7',
+            magenta: '#d65495',
+            cyan: '#2aafc7',
+            white: '#f8f8f2',
+            brightBlack: '#6272a4',
+            brightRed: '#ff5555',
+            brightGreen: '#50fa7b',
+            brightYellow: '#f1fa8c',
+            brightBlue: '#bd93f9',
+            brightMagenta: '#ff79c6',
+            brightCyan: '#8be9fd',
+            brightWhite: '#ffffff'
         }
     },
     // Solarized Dark
@@ -202,6 +310,24 @@ export const THEMES = [
             warning: '#eee8d5',
             warningForeground: '#002b36',
             placeholder: '#839496'
+        },
+        terminal: {
+            black: '#073642',
+            red: '#dc322f',
+            green: '#859900',
+            yellow: '#b58900',
+            blue: '#268bd2',
+            magenta: '#d33682',
+            cyan: '#2aa198',
+            white: '#eee8d5',
+            brightBlack: '#586e75',
+            brightRed: '#cb4b16',
+            brightGreen: '#859900',
+            brightYellow: '#b58900',
+            brightBlue: '#268bd2',
+            brightMagenta: '#6c71c4',
+            brightCyan: '#2aa198',
+            brightWhite: '#fdf6e3'
         }
     },
     // Solarized Light
@@ -231,6 +357,24 @@ export const THEMES = [
             warning: '#7a5d00',
             warningForeground: '#fdf6e3',
             placeholder: '#586e75'
+        },
+        terminal: {
+            black: '#073642',
+            red: '#dc322f',
+            green: '#859900',
+            yellow: '#b58900',
+            blue: '#268bd2',
+            magenta: '#d33682',
+            cyan: '#2aa198',
+            white: '#eee8d5',
+            brightBlack: '#586e75',
+            brightRed: '#cb4b16',
+            brightGreen: '#859900',
+            brightYellow: '#b58900',
+            brightBlue: '#268bd2',
+            brightMagenta: '#6c71c4',
+            brightCyan: '#2aa198',
+            brightWhite: '#fdf6e3'
         }
     },
     // One Dark
@@ -260,6 +404,24 @@ export const THEMES = [
             warning: '#e5c07b',
             warningForeground: '#282c34',
             placeholder: '#9da5b4'
+        },
+        terminal: {
+            black: '#3f4451',
+            red: '#e06c75',
+            green: '#98c379',
+            yellow: '#e5c07b',
+            blue: '#61afef',
+            magenta: '#c678dd',
+            cyan: '#56b6c2',
+            white: '#abb2bf',
+            brightBlack: '#4f5666',
+            brightRed: '#be5046',
+            brightGreen: '#98c379',
+            brightYellow: '#d19a66',
+            brightBlue: '#61afef',
+            brightMagenta: '#c678dd',
+            brightCyan: '#56b6c2',
+            brightWhite: '#e6e6e6'
         }
     },
     // One Light
@@ -289,6 +451,24 @@ export const THEMES = [
             warning: '#8a5d0b',
             warningForeground: '#fafafa',
             placeholder: '#5a5a5a'
+        },
+        terminal: {
+            black: '#383a42',
+            red: '#e45649',
+            green: '#50a14f',
+            yellow: '#c18401',
+            blue: '#4078f2',
+            magenta: '#a626a4',
+            cyan: '#0184bc',
+            white: '#a0a1a7',
+            brightBlack: '#696c77',
+            brightRed: '#ca1243',
+            brightGreen: '#50a14f',
+            brightYellow: '#c18401',
+            brightBlue: '#4078f2',
+            brightMagenta: '#a626a4',
+            brightCyan: '#0184bc',
+            brightWhite: '#fafafa'
         }
     }
 ];
