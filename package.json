@@ -7,7 +7,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",
-    "test": "vitest run",
+    "test": "node --test 'tests/*.test.mjs'",
     "old:dev": "node esbuild.js",
     "old:build": "rm -rf dist && node esbuild.js build",
     "old:test": "node --test 'tests/*.test.mjs'"
