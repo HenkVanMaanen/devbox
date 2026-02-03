@@ -240,7 +240,8 @@ function handleFormInput(e) {
     // Check if form is dirty
     const isDirty = isFormDirty(formContainer);
     if (isDirty !== state.formDirty) {
-        setState({ formDirty: isDirty });
+        // Update state directly without triggering re-render (would lose input focus)
+        state.formDirty = isDirty;
         updateFloatingActionsBar(isDirty);
     }
 }
