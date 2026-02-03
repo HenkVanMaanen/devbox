@@ -313,6 +313,7 @@
       defaultProfileId: profilesStore.defaultProfileId,
       hetznerToken: credentialsStore.token,
       theme: themeStore.themeId,
+      serverTokens: serversStore.serverTokens,
       // Old format (for backwards compatibility)
       globalConfig: configStore.value,
       defaultProfile: profilesStore.defaultProfileId,
@@ -382,6 +383,13 @@
         // Import theme if present
         if (data.theme) {
           themeStore.setTheme(data.theme);
+        }
+
+        // Import server tokens if present
+        if (data.serverTokens) {
+          for (const [name, token] of Object.entries(data.serverTokens)) {
+            serversStore.saveServerToken(name, token as string);
+          }
         }
 
         toast.success('Configuration imported successfully');

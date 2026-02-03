@@ -11,6 +11,7 @@
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'config', label: 'Global' },
     { id: 'profiles', label: 'Profiles' },
+    { id: 'cloudinit', label: 'Cloud-Init' },
     { id: 'credentials', label: 'API Token' },
   ];
 

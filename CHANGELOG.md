@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.0.10] - 2026-02-03
+
+### Added
+- Cloud-Init preview page with copy/download functionality
+- Size indicator showing proximity to Hetzner's 32KB limit
+- Import/export now includes server access tokens
+
+### Fixed
+- Server card now shows Overview link when access token is available
+
 ## [2.0.9] - 2026-02-03
 
 ### Added

@@ -5,6 +5,7 @@
   import Config from '$pages/Config.svelte';
   import Profiles from '$pages/Profiles.svelte';
   import Credentials from '$pages/Credentials.svelte';
+  import CloudInit from '$pages/CloudInit.svelte';
 
   // Simple hash-based routing
   let currentPage = $state(window.location.hash.slice(1) || 'dashboard');
@@ -31,6 +32,8 @@
       <Profiles />
     {:else if currentPage === 'credentials'}
       <Credentials />
+    {:else if currentPage === 'cloudinit'}
+      <CloudInit />
     {:else}
       <Dashboard />
     {/if}

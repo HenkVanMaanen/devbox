@@ -48,6 +48,11 @@ function createServersStore() {
       return servers.filter((s) => s.name.startsWith('devbox'));
     },
 
+    // Get all server tokens (for export)
+    get serverTokens() {
+      return serverTokens;
+    },
+
     // Get server access token
     getServerToken(serverName: string): string | undefined {
       return serverTokens[serverName];
