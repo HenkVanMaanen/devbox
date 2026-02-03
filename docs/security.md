@@ -21,15 +21,14 @@ Devbox does NOT protect against:
 
 ### Zero-Backend Design
 
-```
-┌─────────────────┐         HTTPS          ┌─────────────────┐
-│     Browser     │◄──────────────────────►│  Hetzner Cloud  │
-│                 │                        │      API        │
-│  ┌───────────┐  │                        └─────────────────┘
-│  │localStorage│  │
-│  │ (secrets) │  │
-│  └───────────┘  │
-└─────────────────┘
+```mermaid
+flowchart LR
+    subgraph Browser
+        App["Devbox SPA"]
+        LS["localStorage<br/>(secrets)"]
+    end
+
+    App <-->|HTTPS| API["Hetzner Cloud<br/>API"]
 ```
 
 **Security benefit**: No central server holding user credentials. Each user's secrets stay on their machine.
@@ -248,12 +247,10 @@ let id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
 Services on provisioned servers use HTTP Basic Auth:
 
-```
-Caddy (reverse proxy)
-    │
-    ├── basic_auth { devbox BCRYPT_HASH }
-    │
-    └── reverse_proxy localhost:7681 (ttyd)
+```mermaid
+flowchart TD
+    Caddy["Caddy (reverse proxy)"]
+    Caddy -->|"basic_auth { devbox BCRYPT_HASH }"| ttyd["reverse_proxy localhost:7681 (ttyd)"]
 ```
 
 - Access tokens generated with `crypto.getRandomValues()` (CSPRNG)
@@ -286,20 +283,11 @@ This prevents certificate issuance for arbitrary subdomains.
 
 ### Clickjacking
 
-**Current**: No protection
-
-**Recommendation**: Add to server response headers:
-```
-X-Frame-Options: DENY
-Content-Security-Policy: frame-ancestors 'none';
-```
+Protected via CSP `frame-ancestors 'none'` directive.
 
 ### MIME Sniffing
 
-**Recommendation**: Add header:
-```
-X-Content-Type-Options: nosniff
-```
+Protected via `X-Content-Type-Options: nosniff` header.
 
 ### Browser Extensions
 

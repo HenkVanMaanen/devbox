@@ -57,6 +57,7 @@ ADRs document the significant architectural decisions made in this project:
 | [010](./adr/0010-mise-runtime-manager.md) | mise for Runtime Version Management | Accepted |
 | [011](./adr/0011-claude-code-primary-use-case.md) | Claude Code as Primary Use Case | Accepted |
 | [012](./adr/0012-security-model.md) | Security Model and Threat Assumptions | Accepted |
+| [013](./adr/0013-mermaid-diagrams.md) | Mermaid for Documentation Diagrams | Accepted |
 
 ## Project Structure
 

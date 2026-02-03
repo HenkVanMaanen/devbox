@@ -70,6 +70,7 @@ pnpm run dev
 | [010](./docs/adr/0010-mise-runtime-manager.md) | mise for runtimes |
 | [011](./docs/adr/0011-claude-code-primary-use-case.md) | Claude Code as primary use case |
 | [012](./docs/adr/0012-security-model.md) | Security model and threat assumptions |
+| [013](./docs/adr/0013-mermaid-diagrams.md) | Mermaid for documentation diagrams |
 
 ## Tech Stack
 

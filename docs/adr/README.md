@@ -26,6 +26,7 @@ ADRs capture important architectural decisions along with their context and cons
 | [010](./0010-mise-runtime-manager.md) | mise for Runtime Version Management | Accepted | Fast, easy setup, single tool for all languages |
 | [011](./0011-claude-code-primary-use-case.md) | Claude Code as Primary Use Case | Accepted | Optimized for AI-assisted coding workflow |
 | [012](./0012-security-model.md) | Security Model and Threat Assumptions | Accepted | Trusted user, trusted machine, untrusted network |
+| [013](./0013-mermaid-diagrams.md) | Mermaid for Documentation Diagrams | Accepted | Text-based diagrams with native GitHub rendering |
 
 ## ADR Template
 
