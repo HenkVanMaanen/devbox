@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-02-03
+
+### Changed
+- Complete rewrite using Svelte 5 + TypeScript
+- Replaced manual state management with reactive stores
+- Replaced event delegation with Svelte event handlers
+- Replaced JSON.parse/stringify with structuredClone
+
+### Added
+- Full TypeScript support with strictest settings
+- Typed Hetzner API client
+- Component library (Button, Input, Card, Modal, Toast)
+- Vite for fast development and optimized builds
+
+### Fixed
+- All re-render loop issues (Svelte's fine-grained reactivity)
+- All form focus issues (native Svelte binding)
+- All accessibility warnings (proper label associations)
+
 ## [1.0.11] - 2026-02-03
 
 ### Fixed
