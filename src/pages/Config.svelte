@@ -3,11 +3,12 @@
   import { profilesStore } from '$lib/stores/profiles.svelte';
   import { serversStore } from '$lib/stores/servers.svelte';
   import { credentialsStore } from '$lib/stores/credentials.svelte';
+  import { themeStore } from '$lib/stores/theme.svelte';
   import { toast } from '$lib/stores/toast.svelte';
   import { clone } from '$lib/utils/storage';
   import { validateSSHKey, extractSSHKeyName } from '$lib/utils/validation';
   import { getMiseToolOptions, getAptPackageOptions, APT_CATEGORY_LABELS } from '$lib/data/packages';
-  import type { GlobalConfig, Profiles } from '$lib/types';
+  import type { GlobalConfig, Profiles, SSHKey, GitCredential } from '$lib/types';
   import Input from '$components/ui/Input.svelte';
   import Button from '$components/ui/Button.svelte';
   import Card from '$components/ui/Card.svelte';
@@ -83,6 +84,56 @@
     configStore.value.ssh.keys = configStore.value.ssh.keys.filter((_, i) => i !== index);
   }
 
+  // SSH Key editing
+  let editingSSHKeyIndex = $state<number | null>(null);
+  let editSSHKeyName = $state('');
+  let editSSHKeyPubKey = $state('');
+  let editSSHKeyError = $state('');
+
+  function startEditSSHKey(index: number) {
+    const key = configStore.value.ssh.keys[index];
+    if (!key) return;
+    editingSSHKeyIndex = index;
+    editSSHKeyName = key.name;
+    editSSHKeyPubKey = key.pubKey;
+    editSSHKeyError = '';
+  }
+
+  function cancelEditSSHKey() {
+    editingSSHKeyIndex = null;
+    editSSHKeyName = '';
+    editSSHKeyPubKey = '';
+    editSSHKeyError = '';
+  }
+
+  function saveEditSSHKey() {
+    if (editingSSHKeyIndex === null) return;
+
+    const validation = validateSSHKey(editSSHKeyPubKey);
+    if (!validation.valid) {
+      editSSHKeyError = validation.error ?? 'Invalid SSH key';
+      return;
+    }
+
+    let name = editSSHKeyName.trim();
+    if (!name) {
+      name = extractSSHKeyName(editSSHKeyPubKey) ?? `key-${editingSSHKeyIndex + 1}`;
+    }
+
+    configStore.value.ssh.keys[editingSSHKeyIndex] = { name, pubKey: editSSHKeyPubKey.trim() };
+    configStore.value.ssh.keys = [...configStore.value.ssh.keys]; // Trigger reactivity
+    cancelEditSSHKey();
+    toast.success('SSH key updated');
+  }
+
+  // Validate SSH key on edit
+  $effect(() => {
+    if (editingSSHKeyIndex !== null && editSSHKeyPubKey.trim()) {
+      const result = validateSSHKey(editSSHKeyPubKey);
+      editSSHKeyError = result.error ?? '';
+    }
+  });
+
   // Git credential management
   let newGitHost = $state('');
   let newGitUsername = $state('');
@@ -107,6 +158,45 @@
     configStore.value.git.credentials = configStore.value.git.credentials.filter((_, i) => i !== index);
   }
 
+  // Git credential editing
+  let editingGitCredIndex = $state<number | null>(null);
+  let editGitHost = $state('');
+  let editGitUsername = $state('');
+  let editGitToken = $state('');
+
+  function startEditGitCredential(index: number) {
+    const cred = configStore.value.git.credentials[index];
+    if (!cred) return;
+    editingGitCredIndex = index;
+    editGitHost = cred.host;
+    editGitUsername = cred.username;
+    editGitToken = cred.token;
+  }
+
+  function cancelEditGitCredential() {
+    editingGitCredIndex = null;
+    editGitHost = '';
+    editGitUsername = '';
+    editGitToken = '';
+  }
+
+  function saveEditGitCredential() {
+    if (editingGitCredIndex === null) return;
+    if (!editGitHost.trim() || !editGitUsername.trim() || !editGitToken.trim()) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+
+    configStore.value.git.credentials[editingGitCredIndex] = {
+      host: editGitHost.trim(),
+      username: editGitUsername.trim(),
+      token: editGitToken.trim(),
+    };
+    configStore.value.git.credentials = [...configStore.value.git.credentials];
+    cancelEditGitCredential();
+    toast.success('Git credential updated');
+  }
+
   // Repository management
   let newRepo = $state('');
 
@@ -121,6 +211,35 @@
 
   function removeRepo(index: number) {
     configStore.value.repos = configStore.value.repos.filter((_, i) => i !== index);
+  }
+
+  // Repo editing
+  let editingRepoIndex = $state<number | null>(null);
+  let editRepoUrl = $state('');
+
+  function startEditRepo(index: number) {
+    const repo = configStore.value.repos[index];
+    if (!repo) return;
+    editingRepoIndex = index;
+    editRepoUrl = repo;
+  }
+
+  function cancelEditRepo() {
+    editingRepoIndex = null;
+    editRepoUrl = '';
+  }
+
+  function saveEditRepo() {
+    if (editingRepoIndex === null) return;
+    if (!editRepoUrl.trim()) {
+      toast.error('Please enter a repository URL');
+      return;
+    }
+
+    configStore.value.repos[editingRepoIndex] = editRepoUrl.trim();
+    configStore.value.repos = [...configStore.value.repos];
+    cancelEditRepo();
+    toast.success('Repository updated');
   }
 
   // Package management
@@ -192,6 +311,8 @@
       config: configStore.value,
       profiles: profilesStore.profiles,
       defaultProfileId: profilesStore.defaultProfileId,
+      hetznerToken: credentialsStore.token,
+      theme: themeStore.themeId,
       // Old format (for backwards compatibility)
       globalConfig: configStore.value,
       defaultProfile: profilesStore.defaultProfileId,
@@ -252,6 +373,17 @@
           profilesStore.setDefault(defaultProfileId);
         }
 
+        // Import Hetzner token if present
+        if (data.hetznerToken) {
+          credentialsStore.token = data.hetznerToken;
+          credentialsStore.save();
+        }
+
+        // Import theme if present
+        if (data.theme) {
+          themeStore.setTheme(data.theme);
+        }
+
         toast.success('Configuration imported successfully');
       } catch (err) {
         toast.error('Failed to parse config file');
@@ -307,13 +439,41 @@
     {#if configStore.value.ssh.keys.length > 0}
       <div class="space-y-2 mb-4">
         {#each configStore.value.ssh.keys as key, i}
-          <div class="flex items-center justify-between p-3 bg-muted rounded-md">
-            <div>
-              <p class="font-medium">{key.name}</p>
-              <p class="text-sm text-muted-foreground font-mono truncate max-w-md">{key.pubKey.slice(0, 50)}...</p>
+          {#if editingSSHKeyIndex === i}
+            <div class="p-3 bg-muted rounded-md space-y-3">
+              <Input label="Name" bind:value={editSSHKeyName} placeholder="my-key" />
+              <div class="field">
+                <label for="edit-ssh-pubkey" class="block text-sm font-medium mb-1.5">Public Key</label>
+                <textarea
+                  id="edit-ssh-pubkey"
+                  bind:value={editSSHKeyPubKey}
+                  class="w-full min-h-[88px] px-3 py-2 text-base bg-background border-2 rounded-md
+                         focus:outline-none focus:ring-3 focus:ring-focus focus:border-primary
+                         placeholder:text-placeholder resize-y font-mono text-sm
+                         {editSSHKeyError ? 'border-destructive' : 'border-border'}"
+                  placeholder="ssh-ed25519 AAAA..."
+                ></textarea>
+                {#if editSSHKeyError}
+                  <p class="text-sm text-destructive mt-1">{editSSHKeyError}</p>
+                {/if}
+              </div>
+              <div class="flex gap-2">
+                <Button variant="secondary" size="sm" onclick={saveEditSSHKey}>Save</Button>
+                <Button variant="ghost" size="sm" onclick={cancelEditSSHKey}>Cancel</Button>
+              </div>
             </div>
-            <Button variant="ghost" size="sm" onclick={() => removeSSHKey(i)}>Remove</Button>
-          </div>
+          {:else}
+            <div class="flex items-center justify-between p-3 bg-muted rounded-md">
+              <div>
+                <p class="font-medium">{key.name}</p>
+                <p class="text-sm text-muted-foreground font-mono truncate max-w-md">{key.pubKey.slice(0, 50)}...</p>
+              </div>
+              <div class="flex gap-2">
+                <Button variant="ghost" size="sm" onclick={() => startEditSSHKey(i)}>Edit</Button>
+                <Button variant="ghost" size="sm" onclick={() => removeSSHKey(i)}>Remove</Button>
+              </div>
+            </div>
+          {/if}
         {/each}
       </div>
     {/if}
@@ -344,13 +504,28 @@
     {#if configStore.value.git.credentials.length > 0}
       <div class="space-y-2 mb-4">
         {#each configStore.value.git.credentials as cred, i}
-          <div class="flex items-center justify-between p-3 bg-muted rounded-md">
-            <div>
-              <p class="font-medium">{cred.host}</p>
-              <p class="text-sm text-muted-foreground">{cred.username}</p>
+          {#if editingGitCredIndex === i}
+            <div class="p-3 bg-muted rounded-md space-y-3">
+              <Input label="Host" bind:value={editGitHost} placeholder="github.com" />
+              <Input label="Username" bind:value={editGitUsername} placeholder="username" />
+              <Input label="Token" type="password" bind:value={editGitToken} placeholder="ghp_..." />
+              <div class="flex gap-2">
+                <Button variant="secondary" size="sm" onclick={saveEditGitCredential}>Save</Button>
+                <Button variant="ghost" size="sm" onclick={cancelEditGitCredential}>Cancel</Button>
+              </div>
             </div>
-            <Button variant="ghost" size="sm" onclick={() => removeGitCredential(i)}>Remove</Button>
-          </div>
+          {:else}
+            <div class="flex items-center justify-between p-3 bg-muted rounded-md">
+              <div>
+                <p class="font-medium">{cred.host}</p>
+                <p class="text-sm text-muted-foreground">{cred.username}</p>
+              </div>
+              <div class="flex gap-2">
+                <Button variant="ghost" size="sm" onclick={() => startEditGitCredential(i)}>Edit</Button>
+                <Button variant="ghost" size="sm" onclick={() => removeGitCredential(i)}>Remove</Button>
+              </div>
+            </div>
+          {/if}
         {/each}
       </div>
     {/if}
@@ -368,10 +543,29 @@
     {#if configStore.value.repos.length > 0}
       <div class="space-y-2 mb-4">
         {#each configStore.value.repos as repo, i}
-          <div class="flex items-center justify-between p-3 bg-muted rounded-md">
-            <p class="text-sm font-mono truncate flex-1">{repo}</p>
-            <Button variant="ghost" size="sm" onclick={() => removeRepo(i)}>Remove</Button>
-          </div>
+          {#if editingRepoIndex === i}
+            <div class="p-3 bg-muted rounded-md space-y-3">
+              <input
+                type="text"
+                bind:value={editRepoUrl}
+                placeholder="https://github.com/user/repo.git"
+                class="w-full min-h-[44px] px-3 py-2 text-base bg-background border-2 border-border rounded-md
+                       focus:outline-none focus:ring-3 focus:ring-focus focus:border-primary font-mono text-sm"
+              />
+              <div class="flex gap-2">
+                <Button variant="secondary" size="sm" onclick={saveEditRepo}>Save</Button>
+                <Button variant="ghost" size="sm" onclick={cancelEditRepo}>Cancel</Button>
+              </div>
+            </div>
+          {:else}
+            <div class="flex items-center justify-between p-3 bg-muted rounded-md">
+              <p class="text-sm font-mono truncate flex-1">{repo}</p>
+              <div class="flex gap-2">
+                <Button variant="ghost" size="sm" onclick={() => startEditRepo(i)}>Edit</Button>
+                <Button variant="ghost" size="sm" onclick={() => removeRepo(i)}>Remove</Button>
+              </div>
+            </div>
+          {/if}
         {/each}
       </div>
     {/if}

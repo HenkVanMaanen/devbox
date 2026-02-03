@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.0.9] - 2026-02-03
+
+### Added
+- Edit functionality for SSH keys, Git credentials, and Repositories
+- Import/export now includes Hetzner API token and theme
+
+### Fixed
+- Config import now supports both old (globalConfig) and new (config) formats
+- Export includes both formats for backwards compatibility
+
 ## [2.0.8] - 2026-02-03
 
 ### Fixed
