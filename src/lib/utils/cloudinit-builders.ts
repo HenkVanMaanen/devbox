@@ -68,7 +68,7 @@ export function buildHostGitConfig(cred: GitCredential): string | null {
   return content;
 }
 
-interface ThemeColors {
+export interface ThemeColors {
   background: string;
   foreground: string;
   card: string;
@@ -80,9 +80,10 @@ interface ThemeColors {
   warning: string;
   destructive: string;
   focus: string;
+  [key: string]: string; // Allow extra properties from theme store
 }
 
-interface TerminalColors {
+export interface TerminalColors {
   black?: string;
   red?: string;
   green?: string;

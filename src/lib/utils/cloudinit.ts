@@ -11,6 +11,8 @@ import {
   buildOverviewPage,
   defaultThemeColors,
   defaultTerminalColors,
+  type ThemeColors,
+  type TerminalColors,
 } from './cloudinit-builders';
 
 interface CloudInitConfig {
@@ -46,14 +48,16 @@ export function generateCloudInit(
   options: {
     sshKeys?: SSHKey[];
     gitCredentials?: GitCredential[];
+    themeColors?: ThemeColors;
+    terminalColors?: TerminalColors;
   } = {}
 ): string {
   const gitCreds = options.gitCredentials ?? config.git?.credentials ?? [];
   const sshKeys = options.sshKeys ?? config.ssh?.keys ?? [];
 
-  // Use default theme colors
-  const themeColors = defaultThemeColors;
-  const terminalColors = defaultTerminalColors;
+  // Use provided theme colors or defaults
+  const themeColors = options.themeColors ?? defaultThemeColors;
+  const terminalColors = options.terminalColors ?? defaultTerminalColors;
 
   const servicesEnabled = config.services.codeServer || config.services.shellTerminal;
   const MISE_SHIMS = '/home/dev/.local/share/mise/shims';

@@ -2,6 +2,7 @@
   import { serversStore } from '$lib/stores/servers.svelte';
   import { credentialsStore } from '$lib/stores/credentials.svelte';
   import { profilesStore } from '$lib/stores/profiles.svelte';
+  import { themeStore } from '$lib/stores/theme.svelte';
   import { toast } from '$lib/stores/toast.svelte';
   import { generateCloudInit } from '$lib/utils/cloudinit';
   import { generateServerName } from '$lib/utils/names';
@@ -71,8 +72,11 @@
         }
       }
 
-      // Generate cloud-init
-      const userData = generateCloudInit(serverName, credentialsStore.token, config);
+      // Generate cloud-init with current theme
+      const userData = generateCloudInit(serverName, credentialsStore.token, config, {
+        themeColors: themeStore.theme.colors,
+        terminalColors: themeStore.theme.terminal,
+      });
 
       // Create server
       await serversStore.create(

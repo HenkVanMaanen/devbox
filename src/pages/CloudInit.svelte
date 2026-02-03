@@ -1,6 +1,7 @@
 <script lang="ts">
   import { credentialsStore } from '$lib/stores/credentials.svelte';
   import { profilesStore } from '$lib/stores/profiles.svelte';
+  import { themeStore } from '$lib/stores/theme.svelte';
   import { generateCloudInit } from '$lib/utils/cloudinit';
   import { toast } from '$lib/stores/toast.svelte';
   import Button from '$components/ui/Button.svelte';
@@ -15,7 +16,10 @@
     void refreshCounter;
     if (!credentialsStore.hasToken) return '';
     const config = profilesStore.getConfigForProfile(selectedProfileId);
-    return generateCloudInit('devbox-preview', credentialsStore.token, config);
+    return generateCloudInit('devbox-preview', credentialsStore.token, config, {
+      themeColors: themeStore.theme.colors,
+      terminalColors: themeStore.theme.terminal,
+    });
   });
 
   function refresh() {
