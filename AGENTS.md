@@ -188,6 +188,34 @@ Examples:
 - `fix: Escape HTML in server names`
 - `docs: Update architecture diagram`
 
+## Release Process
+
+When creating a release:
+
+1. **Update CHANGELOG.md first** - Add entry under `[Unreleased]` or new version section
+2. **Commit the changelog** - Before tagging
+3. **Create version tag** - `git tag -a vX.Y.Z -m "vX.Y.Z - Description"`
+4. **Push tag** - `git push origin vX.Y.Z`
+
+GitHub Actions automatically creates a release when a `v*` tag is pushed.
+
+**Changelog format** (Keep a Changelog):
+```markdown
+## [X.Y.Z] - YYYY-MM-DD
+
+### Added
+- New features
+
+### Changed
+- Changes to existing functionality
+
+### Fixed
+- Bug fixes
+
+### Security
+- Security fixes
+```
+
 ## Useful Commands
 
 ```bash
