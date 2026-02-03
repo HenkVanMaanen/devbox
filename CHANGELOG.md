@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.0.3] - 2026-02-03
+
+### Fixed
+- Fix Svelte 5 proxy cloning error (structuredClone incompatible with reactive proxies)
+
 ## [2.0.2] - 2026-02-03
 
 ### Fixed
