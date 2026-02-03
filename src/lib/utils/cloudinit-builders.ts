@@ -206,7 +206,7 @@ const ACME_PROVIDERS: Record<string, { ca: string; requiresEab?: boolean }> = {
   letsencrypt: { ca: 'https://acme-v02.api.letsencrypt.org/directory' },
   zerossl: { ca: 'https://acme.zerossl.com/v2/DV90', requiresEab: true },
   buypass: { ca: 'https://api.buypass.com/acme/directory' },
-  actalis: { ca: 'https://acme.actalis.it/directory', requiresEab: true },
+  actalis: { ca: 'https://acme-api.actalis.com/acme/directory', requiresEab: true },
 };
 
 // Build Caddyfile for services
