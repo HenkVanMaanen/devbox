@@ -6,36 +6,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-### Added
-- Comprehensive documentation with architecture overview, security guide, and user guide
-- 13 Architecture Decision Records (ADRs) documenting major decisions
-- AGENTS.md with AI assistant guidelines
-- CONTRIBUTING.md with contribution guidelines
-- GitHub issue and PR templates
-- Mermaid diagrams for all architecture documentation
-
-### Changed
-- Converted ASCII diagrams to Mermaid format
-- Improved README with quick start and documentation links
-
-### Security
-- Removed `unsafe-inline` from script-src CSP directive
-- Added `frame-ancestors 'none'` to prevent clickjacking
-- Added `X-Content-Type-Options: nosniff` header
-
-## [1.0.0] - 2025
+## [1.0.0] - 2026-02-03
 
 ### Added
-- Initial release
 - Hetzner Cloud integration (list, create, rebuild, delete servers)
 - Cloud-init generator with configurable profiles
 - Profile management system with global config + overrides
 - QR code export for cloud-init scripts
 - 7 themes with WCAG AAA accessibility (7:1 contrast)
 - Zero-backend architecture (browser-only, localStorage)
-- ttyd terminal integration
+- ttyd terminal integration with theme-matched colors
 - Caddy reverse proxy with automatic HTTPS
 - mise runtime version management
 - Claude Code configuration support
 - Funny alliterative server name generator
 - Auto-delete functionality for ephemeral servers
+- Copy to clipboard buttons for server IPs and service URLs
+- SSH key validation with auto-name extraction from key comments
+- Floating save/discard bar for unsaved form changes
+- Unsaved changes warning on page navigation
+- Tooltips with help text for settings fields
+- Comprehensive documentation (architecture, security, user guide)
+- 13 Architecture Decision Records (ADRs)
+- AGENTS.md with AI assistant guidelines
+- CONTRIBUTING.md with contribution guidelines
+
+### Security
+- Content Security Policy without unsafe-inline
+- frame-ancestors 'none' to prevent clickjacking
+- X-Content-Type-Options: nosniff header
+- Input validation and HTML escaping throughout
