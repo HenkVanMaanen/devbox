@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.0.8] - 2026-02-03
+
+### Fixed
+- Input fields no longer lose focus while typing (dirty tracking fix)
+
 ## [1.0.7] - 2026-02-03
 
 ### Fixed
