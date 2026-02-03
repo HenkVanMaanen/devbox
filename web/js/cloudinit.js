@@ -95,10 +95,11 @@ export function generate(serverName, hetznerToken, config, options = {}) {
         content: `set -gx PATH ${MISE_SHIMS} $PATH\n`
     });
 
-    // Shell configs (mise activation for interactive features + starship)
+    // Shell configs (mise activation for interactive features + starship + claude alias)
     if (config.shell.default === 'fish') {
         let content = 'test -x /usr/local/bin/mise && /usr/local/bin/mise activate fish | source\n';
         if (config.shell.starship) content += 'type -q starship && starship init fish | source\n';
+        if (config.claude.skipPermissions) content += 'alias claude="claude --dangerously-skip-permissions"\n';
         cloudInit.write_files.push({
             path: '/home/dev/.config/fish/config.fish',
             owner: 'dev:dev',
@@ -109,6 +110,7 @@ export function generate(serverName, hetznerToken, config, options = {}) {
     } else if (config.shell.default === 'zsh') {
         let content = 'test -x /usr/local/bin/mise && eval "$(/usr/local/bin/mise activate zsh)"\n';
         if (config.shell.starship) content += 'command -v starship >/dev/null && eval "$(starship init zsh)"\n';
+        if (config.claude.skipPermissions) content += 'alias claude="claude --dangerously-skip-permissions"\n';
         cloudInit.write_files.push({
             path: '/home/dev/.zshrc',
             owner: 'dev:dev',
@@ -119,6 +121,7 @@ export function generate(serverName, hetznerToken, config, options = {}) {
     } else {
         let content = 'test -x /usr/local/bin/mise && eval "$(/usr/local/bin/mise activate bash)"\n';
         if (config.shell.starship) content += 'command -v starship >/dev/null && eval "$(starship init bash)"\n';
+        if (config.claude.skipPermissions) content += 'alias claude="claude --dangerously-skip-permissions"\n';
         cloudInit.write_files.push({
             path: '/home/dev/.bashrc',
             owner: 'dev:dev',
@@ -245,10 +248,11 @@ export function generate(serverName, hetznerToken, config, options = {}) {
     // Claude terminal
     if (config.services.claudeTerminal) {
         // Include mise shims in PATH so claude can access mise-installed tools
+        const claudeCmd = config.claude.skipPermissions ? 'claude --dangerously-skip-permissions' : 'claude';
         cloudInit.write_files.push({
             path: '/usr/local/bin/claude-terminal',
             permissions: '0755',
-            content: `#!/bin/bash\nexport HOME=/home/dev\nexport PATH="${MISE_SHIMS}:$PATH"\ncd /home/dev\nexec dtach -A /tmp/devbox-claude -z claude --dangerously-skip-permissions\n`
+            content: `#!/bin/bash\nexport HOME=/home/dev\nexport PATH="${MISE_SHIMS}:$PATH"\ncd /home/dev\nexec dtach -A /tmp/devbox-claude -z ${claudeCmd}\n`
         });
         cloudInit.write_files.push({
             path: '/etc/systemd/system/ttyd-claude.service',

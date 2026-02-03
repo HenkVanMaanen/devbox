@@ -134,6 +134,7 @@ export const SETTINGS_SECTIONS = [
                     { value: 'light-daltonized', label: 'Light (Daltonized)', description: 'Color blind friendly light' }
                 ]
             },
+            { path: 'claude.skipPermissions', label: 'Skip Permissions', type: 'checkbox', checkboxLabel: 'Enable --dangerously-skip-permissions flag' },
             { path: 'claude.settings', label: 'Custom Settings (JSON)', type: 'textarea', placeholder: '{"key": "value"}', hint: 'Raw JSON to merge into Claude Code settings.json' }
         ]
     },

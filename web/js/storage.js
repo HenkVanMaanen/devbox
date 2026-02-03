@@ -56,7 +56,8 @@ const DEFAULT_GLOBAL_CONFIG = {
         apiKey: '',
         credentialsJson: null,
         theme: '',
-        settings: ''
+        settings: '',
+        skipPermissions: true
     },
     repos: []
 };
