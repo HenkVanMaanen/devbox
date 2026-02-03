@@ -3,22 +3,28 @@
   "type": "module",
   "packageManager": "pnpm@10.28.2",
   "scripts": {
-    "build": "rm -rf dist && node esbuild.js build",
-    "dev": "node esbuild.js",
-    "test": "node --test 'tests/*.test.mjs'"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "test": "vitest run",
+    "old:dev": "node esbuild.js",
+    "old:build": "rm -rf dist && node esbuild.js build",
+    "old:test": "node --test 'tests/*.test.mjs'"
   },
   "dependencies": {
     "playwright": "^1.58.0"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.1.18",
-    "esbuild": "^0.25.0",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.0"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ]
+    "@sveltejs/vite-plugin-svelte": "^5.0.0",
+    "@tailwindcss/vite": "^4.1.0",
+    "@tsconfig/svelte": "^5.0.4",
+    "@types/node": "^25.2.0",
+    "svelte": "^5.0.0",
+    "svelte-check": "^4.0.0",
+    "tailwindcss": "^4.1.0",
+    "typescript": "^5.6.0",
+    "vite": "^6.0.0",
+    "vitest": "^2.0.0"
   }
 }
