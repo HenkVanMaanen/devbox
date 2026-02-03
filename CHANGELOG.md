@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.0.13] - 2026-02-03
+
+### Fixed
+- Corrected Actalis ACME directory URL to https://acme-api.actalis.com/acme/directory
+
 ## [2.0.12] - 2026-02-03
 
 ### Added
