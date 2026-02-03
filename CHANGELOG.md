@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.0.6] - 2026-02-03
+
+### Added
+- Theme selector with 6 themes (Default Dark/Light, Nord Dark, Dracula, Solarized Dark, One Dark)
+- SSH key validation with real-time feedback
+- Detects private keys and invalid key formats
+- Auto-extract SSH key name from comment
+- Help text for form fields
+
 ## [2.0.5] - 2026-02-03
 
 ### Added
