@@ -59,6 +59,15 @@ export function buildGitConfig(config: GlobalConfig, gitCreds: GitCredential[]):
   return content;
 }
 
+// Build per-host gitconfig for credentials with custom identity
+export function buildHostGitConfig(cred: GitCredential): string | null {
+  if (!cred.name && !cred.email) return null;
+  let content = '[user]\n';
+  if (cred.name) content += `    name = "${escapeGitConfig(cred.name)}"\n`;
+  if (cred.email) content += `    email = "${escapeGitConfig(cred.email)}"\n`;
+  return content;
+}
+
 interface ThemeColors {
   background: string;
   foreground: string;

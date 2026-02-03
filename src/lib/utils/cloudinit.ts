@@ -5,6 +5,7 @@ import {
   shellEscape,
   buildGitCredentials,
   buildGitConfig,
+  buildHostGitConfig,
   buildDaemonScript,
   buildCaddyConfig,
   buildOverviewPage,
@@ -164,6 +165,9 @@ export function generateCloudInit(
     if (config.shell.starship) {
       zshContent += 'command -v starship >/dev/null && eval "$(starship init zsh)"\n';
     }
+    if (config.claude.skipPermissions) {
+      zshContent += 'alias claude="claude --dangerously-skip-permissions"\n';
+    }
     cloudInit.write_files.push({
       path: '/home/dev/.zshrc',
       owner: 'dev:dev',
@@ -185,12 +189,27 @@ end
 end
 `;
     }
+    if (config.claude.skipPermissions) {
+      fishContent += 'alias claude="claude --dangerously-skip-permissions"\n';
+    }
     cloudInit.write_files.push({
       path: '/home/dev/.config/fish/config.fish',
       owner: 'dev:dev',
       permissions: '0644',
       defer: true,
       content: fishContent,
+    });
+  }
+
+  // Bash - also add alias if skip permissions
+  if (defaultShell === 'bash' && config.claude.skipPermissions) {
+    cloudInit.write_files.push({
+      path: '/home/dev/.bashrc',
+      owner: 'dev:dev',
+      permissions: '0644',
+      defer: true,
+      append: true,
+      content: 'alias claude="claude --dangerously-skip-permissions"\n',
     });
   }
 
@@ -223,6 +242,38 @@ set -s escape-time 0
 `,
   });
 
+  // Zellij config with theme colors
+  cloudInit.write_files.push({
+    path: '/home/dev/.config/zellij/config.kdl',
+    owner: 'dev:dev',
+    permissions: '0644',
+    defer: true,
+    content: `// Theme colors (auto-generated from devbox theme)
+theme "devbox"
+themes {
+    devbox {
+        fg "${themeColors.foreground}"
+        bg "${themeColors.background}"
+        black "${themeColors.background}"
+        red "${themeColors.destructive}"
+        green "${themeColors.success}"
+        yellow "${themeColors.warning}"
+        blue "${themeColors.primary}"
+        magenta "${themeColors.primary}"
+        cyan "${themeColors.primary}"
+        white "${themeColors.foreground}"
+        orange "${themeColors.warning}"
+    }
+}
+
+// Sensible defaults
+pane_frames false
+default_layout "compact"
+mouse_mode true
+copy_on_select true
+`,
+  });
+
   // Git credentials
   if (gitCreds.length > 0) {
     cloudInit.write_files.push({
@@ -242,6 +293,21 @@ set -s escape-time 0
     defer: true,
     content: buildGitConfig(config, gitCreds),
   });
+
+  // Per-host gitconfigs for credentials with custom identity
+  for (const cred of gitCreds) {
+    const hostConfig = buildHostGitConfig(cred);
+    if (hostConfig) {
+      const safeHost = cred.host.replace(/[^a-zA-Z0-9._-]/g, '');
+      cloudInit.write_files.push({
+        path: `/home/dev/.gitconfig-${safeHost}`,
+        owner: 'dev:dev',
+        permissions: '0644',
+        defer: true,
+        content: hostConfig,
+      });
+    }
+  }
 
   // Claude config
   cloudInit.write_files.push({
@@ -270,20 +336,24 @@ set -s escape-time 0
     });
   }
 
-  if (config.claude.settings) {
-    try {
-      const settings = JSON.parse(config.claude.settings);
-      if (Object.keys(settings).length > 0) {
-        cloudInit.write_files.push({
-          path: '/home/dev/.claude/settings.json',
-          owner: 'dev:dev',
-          permissions: '0644',
-          defer: true,
-          content: JSON.stringify(settings),
-        });
+  if (config.claude.theme || config.claude.settings) {
+    const settings: Record<string, unknown> = {};
+    if (config.claude.theme) settings.theme = config.claude.theme;
+    if (config.claude.settings) {
+      try {
+        Object.assign(settings, JSON.parse(config.claude.settings));
+      } catch {
+        // Invalid JSON, skip
       }
-    } catch {
-      // Invalid JSON, skip
+    }
+    if (Object.keys(settings).length > 0) {
+      cloudInit.write_files.push({
+        path: '/home/dev/.claude/settings.json',
+        owner: 'dev:dev',
+        permissions: '0644',
+        defer: true,
+        content: JSON.stringify(settings),
+      });
     }
   }
 
@@ -345,7 +415,7 @@ set -s escape-time 0
     cloudInit.write_files.push({
       path: '/etc/systemd/system/ttyd-term.service',
       permissions: '0644',
-      content: `[Unit]\nDescription=Terminal\nAfter=network.target\n[Service]\nType=simple\nUser=dev\nWorkingDirectory=/home/dev\nEnvironment=HOME=/home/dev\nExecStart=/usr/local/bin/ttyd -p 65534 -t fontSize=14 -t smoothScrollDuration=50 -t 'theme=${ttydTheme}' -W bash\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\n`,
+      content: `[Unit]\nDescription=Terminal\nAfter=network.target\n[Service]\nType=simple\nUser=dev\nWorkingDirectory=/home/dev\nEnvironment=HOME=/home/dev\nExecStart=/usr/local/bin/ttyd -p 65534 -t fontSize=14 -t smoothScrollDuration=50 -t 'theme=${ttydTheme}' -W ${defaultShell}\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\n`,
     });
   }
 
@@ -374,16 +444,15 @@ set -s escape-time 0
   // Mise installation
   runcmd.push('curl -fsSL https://mise.run | MISE_INSTALL_PATH=/usr/local/bin/mise sh || true');
 
-  // Install node (required for daemon) via mise - always needed for devbox-daemon
-  const miseTools = config.packages?.mise ?? [];
-  const hasNode = miseTools.some((t) => t.startsWith('node@'));
-  if (!hasNode) {
-    runcmd.push("su - dev -c '/usr/local/bin/mise use --global node@latest' || true");
-  }
-
-  // Install user-selected mise tools
-  if (miseTools.length > 0) {
-    runcmd.push(`su - dev -c '/usr/local/bin/mise use --global ${miseTools.map(shellEscape).join(' ')}' || true`);
+  // Install node (required for daemon) plus any user-selected tools - parallel for speed
+  const userTools = config.packages?.mise ?? [];
+  const hasNode = userTools.some((t) => t.startsWith('node@'));
+  const allMiseTools = hasNode ? userTools : ['node@latest', ...userTools];
+  if (allMiseTools.length > 0) {
+    const miseInstalls = allMiseTools
+      .map((tool) => `su - dev -c '/usr/local/bin/mise use --global ${shellEscape(tool)}' &`)
+      .join('\n');
+    runcmd.push(['bash', '-c', `${miseInstalls}\nwait`]);
   }
 
   // claude-code
@@ -427,10 +496,16 @@ set -s escape-time 0
     runcmd.push('systemctl restart caddy || true');
   }
 
-  // Clone repositories
+  // Clone repositories (shallow clones for speed)
   if (config.repos?.length > 0) {
     for (const repo of config.repos) {
-      runcmd.push(`su - dev -c 'cd /home/dev && git clone ${shellEscape(repo)}' || true`);
+      // Only valid URLs matching the input validation pattern
+      if (!/^(https?:\/\/|git@)[\w.@:/~-]+$/.test(repo)) continue;
+      const name = repo.split('/').pop()?.replace(/\.git$/, '') ?? 'repo';
+      // Convert git@ SSH URLs to HTTPS for consistent authentication
+      const sshMatch = repo.match(/^git@([^:]+):(.+)$/);
+      const httpsURL = sshMatch ? `https://${sshMatch[1]}/${sshMatch[2]}` : repo;
+      runcmd.push(`su - dev -c 'git clone --depth 1 "${shellEscape(httpsURL)}" ~/${shellEscape(name)}' || true`);
     }
   }
 

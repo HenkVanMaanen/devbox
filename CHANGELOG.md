@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.0.11] - 2026-02-03
+
+### Fixed
+- Cloud-init now matches original vanilla JS output size
+- Shell terminal (ttyd) uses configured shell instead of hardcoded bash
+- Repository clones use shallow `--depth 1` for faster provisioning
+- Mise tool installs now run in parallel for speed
+- Claude theme setting now included in settings.json
+- Per-host gitconfigs restored for credentials with custom identity
+- Repository URLs validated and SSH URLs converted to HTTPS
+
 ## [2.0.10] - 2026-02-03
 
 ### Added
