@@ -153,6 +153,10 @@ function handleGlobalClick(e) {
         toggle.setAttribute('aria-expanded', 'false');
     }
 
+    // Skip if clicking on form inputs - let them handle focus normally
+    const tag = e.target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
     // Find the closest element with data-action attribute
     const actionEl = e.target.closest('[data-action]');
     if (!actionEl) return;
