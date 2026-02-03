@@ -6,6 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.0.7] - 2026-02-03
+
+### Added
+- Shell selection (Fish, Zsh, Bash) with proper shell config files
+- DNS service selection (sslip.io, nip.io)
+- ACME provider selection (ZeroSSL, Let's Encrypt, Buypass, Actalis, Custom)
+- Conditional EAB credentials for ZeroSSL, Actalis, and Custom ACME
+- Package management with mise tools (Node, Python, Go, Rust, etc.)
+- Package management with APT packages (categorized: Build Tools, Editors, etc.)
+- Custom package input for both mise and apt
+- Repositories list to clone on server creation
+- Claude Code theme selection
+- Claude Code skip-permissions flag
+- Copy buttons for service URLs (Overview, Terminal, VS Code)
+- URL copy buttons use configured DNS service
+- QR code for quick mobile access to server overview
+
+### Changed
+- Cloud-init now uses configured shell (fish/zsh/bash) as default
+- Cloud-init installs user-selected apt packages
+- Cloud-init installs user-selected mise tools
+- Cloud-init clones specified repositories
+- Caddyfile uses configured DNS service and ACME provider
+
 ## [2.0.6] - 2026-02-03
 
 ### Added

@@ -192,9 +192,17 @@ main();
 `;
 }
 
+// ACME provider configurations
+const ACME_PROVIDERS: Record<string, { ca: string; requiresEab?: boolean }> = {
+  letsencrypt: { ca: 'https://acme-v02.api.letsencrypt.org/directory' },
+  zerossl: { ca: 'https://acme.zerossl.com/v2/DV90', requiresEab: true },
+  buypass: { ca: 'https://api.buypass.com/acme/directory' },
+  actalis: { ca: 'https://acme.actalis.it/directory', requiresEab: true },
+};
+
 // Build Caddyfile for services
 export function buildCaddyConfig(config: GlobalConfig): string {
-  const dns = 'sslip.io';
+  const dns = config.services.dnsService || 'sslip.io';
   const dnsLabels = dns.split('.').length;
   const portLabelIndex = dnsLabels + 1;
 
@@ -204,6 +212,29 @@ export function buildCaddyConfig(config: GlobalConfig): string {
   if (config.services.acmeEmail && /^[^\s{}]+$/.test(config.services.acmeEmail)) {
     caddyfile += `  email ${config.services.acmeEmail}\n`;
   }
+
+  // ACME provider configuration
+  const acmeProvider = config.services.acmeProvider || 'zerossl';
+  if (acmeProvider === 'custom' && config.services.customAcmeUrl) {
+    caddyfile += '  acme_ca ' + config.services.customAcmeUrl + '\n';
+    if (config.services.customEabKeyId && config.services.customEabKey) {
+      caddyfile += `  acme_eab {\n    key_id ${config.services.customEabKeyId}\n    mac_key ${config.services.customEabKey}\n  }\n`;
+    }
+  } else if (acmeProvider !== 'letsencrypt') {
+    const providerConfig = ACME_PROVIDERS[acmeProvider];
+    if (providerConfig) {
+      caddyfile += '  acme_ca ' + providerConfig.ca + '\n';
+    }
+    // EAB for zerossl
+    if (acmeProvider === 'zerossl' && config.services.zerosslEabKeyId && config.services.zerosslEabKey) {
+      caddyfile += `  acme_eab {\n    key_id ${config.services.zerosslEabKeyId}\n    mac_key ${config.services.zerosslEabKey}\n  }\n`;
+    }
+    // EAB for actalis
+    if (acmeProvider === 'actalis' && config.services.actalisEabKeyId && config.services.actalisEabKey) {
+      caddyfile += `  acme_eab {\n    key_id ${config.services.actalisEabKeyId}\n    mac_key ${toBase64URL(config.services.actalisEabKey)}\n  }\n`;
+    }
+  }
+
   caddyfile += '}\n';
 
   const authBlock = '  basic_auth {\n    devbox __HASH__\n  }\n';

@@ -13,6 +13,7 @@ const DEFAULT_CONFIG: GlobalConfig = {
     credentials: [],
   },
   shell: {
+    default: 'fish',
     starship: true,
   },
   services: {
@@ -20,6 +21,8 @@ const DEFAULT_CONFIG: GlobalConfig = {
     claudeTerminal: true,
     shellTerminal: true,
     accessToken: uuid().slice(0, 8),
+    dnsService: 'sslip.io',
+    acmeProvider: 'zerossl',
     acmeEmail: '',
     zerosslEabKeyId: '',
     zerosslEabKey: '',
@@ -43,7 +46,14 @@ const DEFAULT_CONFIG: GlobalConfig = {
     apiKey: '',
     settings: '',
     credentialsJson: null,
+    theme: '',
+    skipPermissions: false,
   },
+  packages: {
+    mise: [],
+    apt: [],
+  },
+  repos: [],
 };
 
 function createConfigStore() {

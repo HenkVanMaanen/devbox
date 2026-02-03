@@ -57,6 +57,13 @@ export function generateCloudInit(
   const servicesEnabled = config.services.codeServer || config.services.shellTerminal;
   const MISE_SHIMS = '/home/dev/.local/share/mise/shims';
 
+  // DNS service (sslip.io or nip.io)
+  const dnsService = config.services.dnsService || 'sslip.io';
+
+  // Shell (fish, zsh, or bash)
+  const defaultShell = config.shell.default || 'fish';
+  const shellBin = defaultShell === 'fish' ? '/usr/bin/fish' : defaultShell === 'zsh' ? '/usr/bin/zsh' : '/bin/bash';
+
   // Build cloud-init object
   const cloudInit: CloudInitConfig = {
     package_update: true,
@@ -74,7 +81,7 @@ export function generateCloudInit(
     users: [
       {
         name: 'dev',
-        shell: '/bin/bash',
+        shell: shellBin,
         groups: ['sudo'],
         sudo: 'ALL=(ALL) NOPASSWD:ALL',
         ssh_authorized_keys: sshKeys.map((k) => k.pubKey).filter(Boolean),
@@ -86,6 +93,25 @@ export function generateCloudInit(
 
   // Track existing packages to avoid duplicates
   const pkgSet = new Set(cloudInit.packages);
+
+  // Add shell package if not bash
+  if (defaultShell === 'fish' && !pkgSet.has('fish')) {
+    cloudInit.packages.push('fish');
+    pkgSet.add('fish');
+  } else if (defaultShell === 'zsh' && !pkgSet.has('zsh')) {
+    cloudInit.packages.push('zsh');
+    pkgSet.add('zsh');
+  }
+
+  // Add user-selected APT packages
+  if (config.packages?.apt?.length > 0) {
+    for (const pkg of config.packages.apt) {
+      if (!pkgSet.has(pkg)) {
+        cloudInit.packages.push(pkg);
+        pkgSet.add(pkg);
+      }
+    }
+  }
 
   // Add Caddy repo if services enabled
   if (servicesEnabled) {
@@ -131,6 +157,42 @@ export function generateCloudInit(
     append: true,
     content: bashContent,
   });
+
+  // Zsh config
+  if (defaultShell === 'zsh') {
+    let zshContent = 'test -x /usr/local/bin/mise && eval "$(/usr/local/bin/mise activate zsh)"\n';
+    if (config.shell.starship) {
+      zshContent += 'command -v starship >/dev/null && eval "$(starship init zsh)"\n';
+    }
+    cloudInit.write_files.push({
+      path: '/home/dev/.zshrc',
+      owner: 'dev:dev',
+      permissions: '0644',
+      defer: true,
+      content: zshContent,
+    });
+  }
+
+  // Fish config
+  if (defaultShell === 'fish') {
+    let fishContent = `if test -x /usr/local/bin/mise
+    /usr/local/bin/mise activate fish | source
+end
+`;
+    if (config.shell.starship) {
+      fishContent += `if command -v starship >/dev/null
+    starship init fish | source
+end
+`;
+    }
+    cloudInit.write_files.push({
+      path: '/home/dev/.config/fish/config.fish',
+      owner: 'dev:dev',
+      permissions: '0644',
+      defer: true,
+      content: fishContent,
+    });
+  }
 
   // Tmux config with theme colors
   cloudInit.write_files.push({
@@ -312,8 +374,17 @@ set -s escape-time 0
   // Mise installation
   runcmd.push('curl -fsSL https://mise.run | MISE_INSTALL_PATH=/usr/local/bin/mise sh || true');
 
-  // Install node (required for daemon) via mise
-  runcmd.push("su - dev -c '/usr/local/bin/mise use --global node@latest' || true");
+  // Install node (required for daemon) via mise - always needed for devbox-daemon
+  const miseTools = config.packages?.mise ?? [];
+  const hasNode = miseTools.some((t) => t.startsWith('node@'));
+  if (!hasNode) {
+    runcmd.push("su - dev -c '/usr/local/bin/mise use --global node@latest' || true");
+  }
+
+  // Install user-selected mise tools
+  if (miseTools.length > 0) {
+    runcmd.push(`su - dev -c '/usr/local/bin/mise use --global ${miseTools.map(shellEscape).join(' ')}' || true`);
+  }
 
   // claude-code
   runcmd.push(`su - dev -c 'PATH=${MISE_SHIMS}:$PATH npm install -g @anthropic-ai/claude-code' || true`);
@@ -354,6 +425,13 @@ set -s escape-time 0
     runcmd.push('sed -e "s/__IP__/$IP/g" -e "s|__HASH__|$HASH|g" /etc/caddy/Caddyfile.template > /etc/caddy/Caddyfile');
     runcmd.push('sed "s/__IP__/$IP/g" /var/www/devbox-overview/index.html.template > /var/www/devbox-overview/index.html');
     runcmd.push('systemctl restart caddy || true');
+  }
+
+  // Clone repositories
+  if (config.repos?.length > 0) {
+    for (const repo of config.repos) {
+      runcmd.push(`su - dev -c 'cd /home/dev && git clone ${shellEscape(repo)}' || true`);
+    }
   }
 
   // Cleanup and fix ownership

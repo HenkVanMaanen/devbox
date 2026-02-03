@@ -22,6 +22,8 @@ export interface ServicesConfig {
   claudeTerminal: boolean;
   shellTerminal: boolean;
   accessToken: string;
+  dnsService: 'sslip.io' | 'nip.io';
+  acmeProvider: 'zerossl' | 'letsencrypt' | 'buypass' | 'actalis' | 'custom';
   acmeEmail: string;
   zerosslEabKeyId: string;
   zerosslEabKey: string;
@@ -30,6 +32,11 @@ export interface ServicesConfig {
   customAcmeUrl: string;
   customEabKeyId: string;
   customEabKey: string;
+}
+
+export interface PackagesConfig {
+  mise: string[];
+  apt: string[];
 }
 
 export interface AutoDeleteConfig {
@@ -42,6 +49,13 @@ export interface ClaudeConfig {
   apiKey: string;
   settings: string;
   credentialsJson: Record<string, unknown> | null;
+  theme: '' | 'dark' | 'light' | 'dark-daltonized' | 'light-daltonized';
+  skipPermissions: boolean;
+}
+
+export interface ShellConfig {
+  default: 'fish' | 'zsh' | 'bash';
+  starship: boolean;
 }
 
 export interface GlobalConfig {
@@ -53,13 +67,13 @@ export interface GlobalConfig {
     userEmail: string;
     credentials: GitCredential[];
   };
-  shell: {
-    starship: boolean;
-  };
+  shell: ShellConfig;
   services: ServicesConfig;
   hetzner: HetznerConfig;
   autoDelete: AutoDeleteConfig;
   claude: ClaudeConfig;
+  packages: PackagesConfig;
+  repos: string[];
 }
 
 export interface Profile {

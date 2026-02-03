@@ -1,6 +1,8 @@
 <script lang="ts">
   import type { Server } from '$lib/types';
   import { serversStore } from '$lib/stores/servers.svelte';
+  import { configStore } from '$lib/stores/config.svelte';
+  import { generateQR } from '$lib/utils/qrcode';
   import Button from './ui/Button.svelte';
   import Card from './ui/Card.svelte';
   import { toast } from '$lib/stores/toast.svelte';
@@ -13,7 +15,20 @@
   let { server, onDelete }: Props = $props();
 
   const accessToken = $derived(serversStore.getServerToken(server.name));
-  const baseUrl = $derived(`https://${server.public_net.ipv4.ip}.nip.io`);
+  const dnsService = $derived(configStore.value.services.dnsService || 'sslip.io');
+  const ipDashed = $derived(server.public_net.ipv4.ip.replace(/\./g, '-'));
+  const baseUrl = $derived(`https://${ipDashed}.${dnsService}`);
+
+  // Generate QR code for easy mobile access
+  const qrCodeSvg = $derived.by(() => {
+    if (!accessToken || server.status !== 'running') return '';
+    try {
+      const url = `https://devbox:${encodeURIComponent(accessToken)}@${ipDashed}.${dnsService}/`;
+      return generateQR(url);
+    } catch {
+      return '';
+    }
+  });
 
   const statusColors: Record<string, string> = {
     running: 'bg-success/30 text-success',
@@ -81,31 +96,84 @@
       </div>
 
       {#if accessToken}
-        <div class="flex flex-wrap gap-2">
-          <a
-            href="{baseUrl}/?tkn={accessToken}"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="text-sm text-primary hover:underline"
-          >
-            Overview
-          </a>
-          <a
-            href="{baseUrl}/terminal/?tkn={accessToken}"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="text-sm text-primary hover:underline"
-          >
-            Terminal
-          </a>
-          <a
-            href="{baseUrl}/code/?tkn={accessToken}"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="text-sm text-primary hover:underline"
-          >
-            VS Code
-          </a>
+        {@const overviewUrl = `${baseUrl}/`}
+        {@const terminalUrl = `https://65534.${ipDashed}.${dnsService}/`}
+        {@const codeUrl = `https://65532.${ipDashed}.${dnsService}/`}
+
+        <div class="space-y-2">
+          <div class="flex items-center gap-2">
+            <a
+              href="https://devbox:{accessToken}@{ipDashed}.{dnsService}/"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-sm text-primary hover:underline"
+            >
+              Overview
+            </a>
+            <button
+              class="text-muted-foreground hover:text-foreground"
+              onclick={() => copyToClipboard(overviewUrl, 'Overview URL')}
+              aria-label="Copy Overview URL"
+            >
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </button>
+          </div>
+
+          {#if configStore.value.services.shellTerminal}
+            <div class="flex items-center gap-2">
+              <a
+                href="https://devbox:{accessToken}@65534.{ipDashed}.{dnsService}/"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-sm text-primary hover:underline"
+              >
+                Terminal
+              </a>
+              <button
+                class="text-muted-foreground hover:text-foreground"
+                onclick={() => copyToClipboard(terminalUrl, 'Terminal URL')}
+                aria-label="Copy Terminal URL"
+              >
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </button>
+            </div>
+          {/if}
+
+          {#if configStore.value.services.codeServer}
+            <div class="flex items-center gap-2">
+              <a
+                href="https://devbox:{accessToken}@65532.{ipDashed}.{dnsService}/"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-sm text-primary hover:underline"
+              >
+                VS Code
+              </a>
+              <button
+                class="text-muted-foreground hover:text-foreground"
+                onclick={() => copyToClipboard(codeUrl, 'VS Code URL')}
+                aria-label="Copy VS Code URL"
+              >
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </button>
+            </div>
+          {/if}
+
+          {#if qrCodeSvg}
+            <div class="mt-3 pt-3 border-t border-border">
+              <p class="text-xs text-muted-foreground mb-2">Scan to access on mobile</p>
+              <div class="flex justify-center">
+                <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+                <div class="bg-white p-2 rounded-md" style="width: 144px; height: 144px;">{@html qrCodeSvg}</div>
+              </div>
+            </div>
+          {/if}
         </div>
       {/if}
     </div>
