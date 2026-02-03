@@ -34,9 +34,9 @@ export function clearAll(): void {
   Object.values(STORAGE_KEYS).forEach(key => localStorage.removeItem(key));
 }
 
-// Deep clone utility using structuredClone
+// Deep clone utility - uses JSON for compatibility with Svelte 5 reactive proxies
 export function clone<T>(value: T): T {
-  return structuredClone(value);
+  return JSON.parse(JSON.stringify(value));
 }
 
 // Get nested value from object by dot-notation path
