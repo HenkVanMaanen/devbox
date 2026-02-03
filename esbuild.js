@@ -1,7 +1,7 @@
 import * as esbuild from 'esbuild';
 import postcss from 'postcss';
 import tailwindcss from '@tailwindcss/postcss';
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, writeFile, copyFile } from 'node:fs/promises';
 
 // Version from environment variable (set by CI), or 'dev' for local development
 const version = process.env.APP_VERSION || 'dev';
@@ -42,6 +42,9 @@ if (process.argv[2] === 'build') {
     html = html.replace('href="src/style.css"', `href="${css}"`);
     html = html.replace('src="js/app.js"', `src="${js}"`);
     await writeFile('dist/index.html', html);
+
+    // Copy static assets
+    await copyFile('web/favicon.svg', 'dist/favicon.svg');
 } else {
     const ctx = await esbuild.context({
         entryPoints,

@@ -83,7 +83,20 @@ export async function copyToClipboard(text, successMsg = 'Copied to clipboard') 
     const { showToast } = await import('./state.js');
 
     try {
-        await navigator.clipboard.writeText(text);
+        // Modern clipboard API (requires HTTPS or localhost)
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(text);
+        } else {
+            // Fallback for HTTP contexts
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+        }
         showToast(successMsg, 'success');
         return true;
     } catch (err) {

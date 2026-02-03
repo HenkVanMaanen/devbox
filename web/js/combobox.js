@@ -202,6 +202,7 @@ function filterDropdown(input, isSingle) {
 
 function handleInput(e) {
     const target = e.target;
+    if (!target.matches) return;
 
     if (target.matches('[data-search]')) {
         filterDropdown(target, false);
@@ -212,6 +213,7 @@ function handleInput(e) {
 
 function handleFocus(e) {
     const target = e.target;
+    if (!target.matches) return;
 
     if (target.matches('[data-search]')) {
         const id = target.dataset.combobox;
@@ -233,6 +235,7 @@ function handleFocus(e) {
 
 function handleBlur(e) {
     const target = e.target;
+    if (!target.matches) return;
 
     if (target.matches('[data-search-single]')) {
         setTimeout(() => {
