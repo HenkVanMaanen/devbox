@@ -336,7 +336,7 @@ copy_on_select true
         cloudInit.write_files.push({
             path: '/etc/systemd/system/ttyd-term.service',
             permissions: '0644',
-            content: `[Unit]\nDescription=Terminal\nAfter=network.target\n[Service]\nType=simple\nUser=dev\nWorkingDirectory=/home/dev\nEnvironment=HOME=/home/dev\nExecStart=/usr/local/bin/ttyd -p 65534 -t fontSize=14 -t 'theme=${ttydTheme}' -W ${config.shell.default || 'bash'}\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\n`
+            content: `[Unit]\nDescription=Terminal\nAfter=network.target\n[Service]\nType=simple\nUser=dev\nWorkingDirectory=/home/dev\nEnvironment=HOME=/home/dev\nExecStart=/usr/local/bin/ttyd -p 65534 -t fontSize=14 -t smoothScrollDuration=50 -t 'theme=${ttydTheme}' -W ${config.shell.default || 'bash'}\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\n`
         });
     }
 
