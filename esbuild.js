@@ -3,9 +3,9 @@ import postcss from 'postcss';
 import tailwindcss from '@tailwindcss/postcss';
 import { readFile, writeFile } from 'node:fs/promises';
 
-// Read version from package.json
-const pkg = JSON.parse(await readFile('package.json', 'utf8'));
-const define = { '__APP_VERSION__': JSON.stringify(pkg.version) };
+// Version from environment variable (set by CI), or 'dev' for local development
+const version = process.env.APP_VERSION || 'dev';
+const define = { '__APP_VERSION__': JSON.stringify(version) };
 
 const tailwindPlugin = {
     name: 'tailwindcss',

@@ -28,8 +28,7 @@ jobs:
           # Extract version from tag (v1.0.3 -> 1.0.3)
           VERSION=${GITHUB_REF#refs/tags/v}
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          # Update package.json with the tag version
-          npm pkg set version="$VERSION"
+          echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Install dependencies
         run: pnpm install
