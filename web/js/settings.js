@@ -1,7 +1,7 @@
 // Settings field definitions and rendering
 // Single source of truth for both Global Config and Profile Edit pages
 
-import { UI, cn, escapeHtml } from './ui.js';
+import { UI, cn, escapeHtml, renderTooltip, renderValidationMessage } from './ui.js';
 import { renderSelectCombobox, renderCombobox } from './combobox.js';
 import { getNestedValue } from './storage.js';
 import { state } from './state.js';
@@ -33,7 +33,8 @@ export const SETTINGS_SECTIONS = [
         title: 'SSH',
         fields: [
             { path: 'ssh.keys', label: 'SSH Public Keys (Optional)', type: 'sshKeys',
-              hint: 'Add SSH public keys for SSH access. Web service access works without this.' }
+              hint: 'Add SSH public keys for SSH access. Web service access works without this.',
+              help: 'SSH keys allow you to connect to your devbox via SSH. Paste the contents of your ~/.ssh/id_ed25519.pub or ~/.ssh/id_rsa.pub file. The key comment (usually your email) will be used as the name if you leave the name field empty.' }
         ]
     },
     {
@@ -43,7 +44,8 @@ export const SETTINGS_SECTIONS = [
             { path: 'git.userName', label: 'User Name', type: 'text', placeholder: 'Your Name' },
             { path: 'git.userEmail', label: 'User Email', type: 'email', placeholder: 'you@example.com' },
             { path: 'git.credentials', label: 'Git Credentials', type: 'gitCredentials',
-              hint: 'Only add tokens that cannot delete repositories. Use scoped tokens or a machine user with write-only access.' }
+              hint: 'Only add tokens that cannot delete repositories. Use scoped tokens or a machine user with write-only access.',
+              help: 'Git credentials are used to clone private repositories and push changes. Create a Personal Access Token with limited scope (only repo read/write) from your Git hosting provider. Avoid tokens with admin or delete permissions.' }
         ]
     },
     {
@@ -85,8 +87,10 @@ export const SETTINGS_SECTIONS = [
                 ]
             },
             { path: 'services.acmeEmail', label: 'ACME Email (optional)', type: 'email', placeholder: 'you@example.com' },
-            { path: 'services.zerosslEabKeyId', label: 'ZeroSSL EAB Key ID', type: 'text', placeholder: 'From zerossl.com/acme', showWhen: { path: 'services.acmeProvider', value: 'zerossl' } },
-            { path: 'services.zerosslEabKey', label: 'ZeroSSL EAB HMAC Key', type: 'password', placeholder: 'From zerossl.com/acme', showWhen: { path: 'services.acmeProvider', value: 'zerossl' } },
+            { path: 'services.zerosslEabKeyId', label: 'ZeroSSL EAB Key ID', type: 'text', placeholder: 'From zerossl.com/acme', showWhen: { path: 'services.acmeProvider', value: 'zerossl' },
+              help: 'External Account Binding Key ID from ZeroSSL. Create a free account at zerossl.com and go to Developer section to generate ACME credentials.' },
+            { path: 'services.zerosslEabKey', label: 'ZeroSSL EAB HMAC Key', type: 'password', placeholder: 'From zerossl.com/acme', showWhen: { path: 'services.acmeProvider', value: 'zerossl' },
+              help: 'External Account Binding HMAC Key from ZeroSSL. This is used to authenticate certificate requests with your ZeroSSL account.' },
             { path: 'services.actalisEabKeyId', label: 'Actalis EAB Key ID', type: 'text', placeholder: 'From Actalis ACME dashboard', showWhen: { path: 'services.acmeProvider', value: 'actalis' } },
             { path: 'services.actalisEabKey', label: 'Actalis EAB HMAC Key', type: 'password', placeholder: 'From Actalis ACME dashboard', showWhen: { path: 'services.acmeProvider', value: 'actalis' } },
             { path: 'services.customAcmeUrl', label: 'Custom ACME Directory URL', type: 'url', placeholder: 'https://acme.example.com/directory', showWhen: { path: 'services.acmeProvider', value: 'custom' } },
@@ -122,7 +126,8 @@ export const SETTINGS_SECTIONS = [
         title: 'Claude Code',
         globalOnly: ['credentials'],
         fields: [
-            { path: 'claude.apiKey', label: 'API Key (manual)', type: 'password', placeholder: 'sk-ant-...', hint: 'Only needed if not using credentials.json', globalOnly: true },
+            { path: 'claude.apiKey', label: 'API Key (manual)', type: 'password', placeholder: 'sk-ant-...', hint: 'Only needed if not using credentials.json', globalOnly: true,
+              help: 'Your Anthropic API key for Claude Code. Get one from console.anthropic.com. Prefer uploading credentials.json from your local Claude installation instead for OAuth authentication.' },
             {
                 path: 'claude.theme', label: 'Theme', type: 'select',
                 options: [
@@ -280,13 +285,15 @@ export function renderSettingsField(field, config, mode = 'global', profile = nu
         inputHtml = renderFieldInput(field, fieldId, value, options, dataAttr, isProfile);
     }
 
+    const tooltipHtml = field.help ? renderTooltip(field.help, fieldId) : '';
+
     if (mode === 'global') {
         if (field.type === 'checkbox') {
             return inputHtml;
         }
         return `
             <div>
-                <label class="${UI.label}">${field.label}</label>
+                <label class="${UI.label}">${field.label}${tooltipHtml}</label>
                 ${inputHtml}
                 ${hintHtml}
             </div>`;
@@ -296,7 +303,7 @@ export function renderSettingsField(field, config, mode = 'global', profile = nu
     return `
         <div class="border border-border rounded-md p-4 mb-3">
             <div class="flex items-center justify-between mb-2">
-                <label class="${UI.label}">${field.label}</label>
+                <label class="${UI.label}">${field.label}${tooltipHtml}</label>
                 <div class="flex items-center gap-2">
                     <label class="flex items-center gap-2 cursor-pointer text-sm">
                         <input type="radio" name="override-${field.path}" value="global" ${!hasOverride ? 'checked' : ''}

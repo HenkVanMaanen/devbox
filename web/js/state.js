@@ -18,7 +18,9 @@ export const state = {
     hetznerOptionsError: false,
     selectedProfileId: null,
     editingProfileId: null,
-    editingListItem: null  // { field: 'git.credentials', index: 2, isProfile: false }
+    editingListItem: null,  // { field: 'git.credentials', index: 2, isProfile: false }
+    formDirty: false,
+    currentFormContainer: null
 };
 
 let renderCallback = null;

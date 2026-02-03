@@ -9,6 +9,8 @@ import { generateServerName } from './names.js';
 import { initComboboxes } from './combobox.js';
 import { state, setState, setRenderCallback, router, showToast, showConfirm, showPrompt } from './state.js';
 import { renderDashboard, renderProfiles, renderProfileEdit, renderConfig, renderCredentials, renderCloudInit } from './pages.js';
+import { copyToClipboard } from './ui.js';
+import { captureFormState, isFormDirty, clearFormState, revertForm, hasAnyDirtyForm } from './dirty.js';
 import {
     toggleComboboxValue, selectComboboxValue,
     addCustomPackage, addCustomPackageToProfile,
@@ -28,7 +30,7 @@ import {
 async function init() {
     initTheme();
     setRenderCallback(render);
-    window.addEventListener('hashchange', router);
+    window.addEventListener('hashchange', handleHashChange);
     router();
 
     const token = storage.getHetznerToken();
@@ -50,6 +52,108 @@ async function init() {
     if (themeToggle) {
         themeToggle.addEventListener('click', toggleThemeDropdown);
     }
+
+    // Set up floating actions bar buttons
+    const floatingDiscard = document.getElementById('floating-discard');
+    const floatingSave = document.getElementById('floating-save');
+    if (floatingDiscard) {
+        floatingDiscard.addEventListener('click', handleFloatingDiscard);
+    }
+    if (floatingSave) {
+        floatingSave.addEventListener('click', handleFloatingSave);
+    }
+
+    // Warn about unsaved changes when leaving page
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // Set up dirty tracking on form inputs
+    document.addEventListener('input', handleFormInput);
+    document.addEventListener('change', handleFormInput);
+}
+
+// Handle hash change with dirty check
+async function handleHashChange(e) {
+    if (state.formDirty && state.currentFormContainer) {
+        const confirmed = await showConfirm(
+            'Unsaved Changes',
+            'You have unsaved changes. Are you sure you want to leave this page?',
+            'Leave Page'
+        );
+        if (!confirmed) {
+            // Prevent navigation by restoring the hash
+            e.preventDefault();
+            window.history.pushState(null, '', `#${state.page}`);
+            return;
+        }
+        clearDirtyState();
+    }
+    router();
+}
+
+// Handle beforeunload for browser navigation
+function handleBeforeUnload(e) {
+    if (hasAnyDirtyForm()) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return e.returnValue;
+    }
+}
+
+// Handle form input changes for dirty tracking
+function handleFormInput(e) {
+    const formContainer = state.currentFormContainer;
+    if (!formContainer) return;
+
+    // Check if the input is within our tracked form container
+    const container = document.getElementById(formContainer);
+    if (!container || !container.contains(e.target)) return;
+
+    // Check if form is dirty
+    const isDirty = isFormDirty(formContainer);
+    if (isDirty !== state.formDirty) {
+        setState({ formDirty: isDirty });
+        updateFloatingActionsBar(isDirty);
+    }
+}
+
+// Update floating actions bar visibility
+function updateFloatingActionsBar(show) {
+    const bar = document.getElementById('floating-actions');
+    if (bar) {
+        bar.classList.toggle('visible', show);
+    }
+}
+
+// Handle floating discard button
+function handleFloatingDiscard() {
+    const formContainer = state.currentFormContainer;
+    if (formContainer) {
+        revertForm(formContainer);
+        setState({ formDirty: false });
+        updateFloatingActionsBar(false);
+        showToast('Changes discarded', 'info');
+    }
+}
+
+// Handle floating save button
+function handleFloatingSave() {
+    // Determine which save function to call based on current page
+    if (state.page === 'config') {
+        saveConfig();
+    } else if (state.page === 'profile-edit') {
+        saveProfileEdit();
+    } else if (state.page === 'credentials') {
+        saveCredentials();
+    }
+}
+
+// Clear dirty state
+function clearDirtyState() {
+    if (state.currentFormContainer) {
+        clearFormState(state.currentFormContainer);
+    }
+    setState({ formDirty: false, currentFormContainer: null });
+    updateFloatingActionsBar(false);
 }
 
 function initTheme() {
@@ -196,6 +300,42 @@ function render() {
 
     app.innerHTML = renderPage();
     initComboboxes();
+
+    // Set up form dirty tracking for config pages
+    setupFormTracking();
+}
+
+// Set up form tracking based on current page
+function setupFormTracking() {
+    let containerId = null;
+
+    switch (state.page) {
+        case 'config':
+            containerId = 'app';
+            break;
+        case 'profile-edit':
+            containerId = 'app';
+            break;
+        case 'credentials':
+            containerId = 'app';
+            break;
+    }
+
+    if (containerId) {
+        // Small delay to ensure DOM is fully updated
+        setTimeout(() => {
+            captureFormState(containerId);
+            setState({ currentFormContainer: containerId, formDirty: false });
+            updateFloatingActionsBar(false);
+        }, 50);
+    } else {
+        // Clear tracking when not on a form page
+        if (state.currentFormContainer) {
+            clearFormState(state.currentFormContainer);
+            setState({ currentFormContainer: null, formDirty: false });
+            updateFloatingActionsBar(false);
+        }
+    }
 }
 
 function ensureHetznerOptions() {
@@ -267,6 +407,15 @@ function saveConfig() {
     config.claude.settings = getFieldValue('claude.settings');
 
     storage.saveGlobalConfig(config);
+
+    // Clear dirty state and recapture form state
+    if (state.currentFormContainer) {
+        clearFormState(state.currentFormContainer);
+        captureFormState(state.currentFormContainer);
+    }
+    setState({ formDirty: false });
+    updateFloatingActionsBar(false);
+
     showToast('Configuration saved', 'success');
 }
 
@@ -275,6 +424,14 @@ function saveCredentials() {
 
     storage.saveHetznerToken(token);
     setState({ serverTypes: [], locations: [], images: [], hetznerOptionsError: false });
+
+    // Clear dirty state and recapture form state
+    if (state.currentFormContainer) {
+        clearFormState(state.currentFormContainer);
+        captureFormState(state.currentFormContainer);
+    }
+    setState({ formDirty: false });
+    updateFloatingActionsBar(false);
 
     showToast('API token saved', 'success');
     loadServers();
@@ -580,6 +737,15 @@ function saveProfileEdit() {
     });
 
     storage.saveProfile(profileId, profile);
+
+    // Clear dirty state and recapture form state
+    if (state.currentFormContainer) {
+        clearFormState(state.currentFormContainer);
+        captureFormState(state.currentFormContainer);
+    }
+    setState({ formDirty: false });
+    updateFloatingActionsBar(false);
+
     showToast('Profile saved', 'success');
     render();
 }
@@ -595,6 +761,7 @@ window.devbox = {
     saveConfig,
     saveCredentials,
     validateToken,
+    copyToClipboard,
     addGitCredentialToConfig,
     removeGitCredentialFromConfig,
     addGitCredentialToProfile,

@@ -2,6 +2,7 @@
 
 import * as storage from './storage.js';
 import { state, setState, showToast } from './state.js';
+import { validateSSHKey, extractSSHKeyName } from './validation.js';
 
 // ============================================================================
 // COMBOBOX HANDLERS
@@ -402,12 +403,34 @@ export function removeGitCredentialFromProfile(index) {
 // ============================================================================
 
 export function addSSHKey() {
-    const name = document.getElementById('ssh-keys-name')?.value?.trim();
-    const pubKey = document.getElementById('ssh-keys-pubKey')?.value?.trim();
+    const nameInput = document.getElementById('ssh-keys-name');
+    const pubKeyInput = document.getElementById('ssh-keys-pubKey');
+    let name = nameInput?.value?.trim() || '';
+    const pubKey = pubKeyInput?.value?.trim();
 
-    if (!name || !pubKey) {
-        showToast('Please fill in both name and public key', 'error');
+    if (!pubKey) {
+        showToast('Please enter an SSH public key', 'error');
         return;
+    }
+
+    // Validate SSH key format
+    const validation = validateSSHKey(pubKey);
+    if (!validation.valid) {
+        showToast(validation.error, 'error');
+        return;
+    }
+
+    // Auto-extract name from key comment if name is empty
+    if (!name) {
+        const extractedName = extractSSHKeyName(pubKey);
+        if (extractedName) {
+            name = extractedName;
+            // Update the input field to show the extracted name
+            if (nameInput) nameInput.value = name;
+        } else {
+            // Generate a default name based on key type
+            name = validation.type ? `${validation.type}-key` : 'ssh-key';
+        }
     }
 
     const config = storage.getGlobalConfig();
@@ -438,12 +461,32 @@ export function removeSSHKey(index) {
 }
 
 export function addSSHKeyToProfile() {
-    const name = document.getElementById('profile-ssh-keys-name')?.value?.trim();
-    const pubKey = document.getElementById('profile-ssh-keys-pubKey')?.value?.trim();
+    const nameInput = document.getElementById('profile-ssh-keys-name');
+    const pubKeyInput = document.getElementById('profile-ssh-keys-pubKey');
+    let name = nameInput?.value?.trim() || '';
+    const pubKey = pubKeyInput?.value?.trim();
 
-    if (!name || !pubKey) {
-        showToast('Please fill in both name and public key', 'error');
+    if (!pubKey) {
+        showToast('Please enter an SSH public key', 'error');
         return;
+    }
+
+    // Validate SSH key format
+    const validation = validateSSHKey(pubKey);
+    if (!validation.valid) {
+        showToast(validation.error, 'error');
+        return;
+    }
+
+    // Auto-extract name from key comment if name is empty
+    if (!name) {
+        const extractedName = extractSSHKeyName(pubKey);
+        if (extractedName) {
+            name = extractedName;
+            if (nameInput) nameInput.value = name;
+        } else {
+            name = validation.type ? `${validation.type}-key` : 'ssh-key';
+        }
     }
 
     const profileId = state.editingProfileId;
@@ -564,6 +607,13 @@ export function saveSSHKeyEdit(index) {
         return;
     }
 
+    // Validate SSH key format
+    const validation = validateSSHKey(pubKey);
+    if (!validation.valid) {
+        showToast(validation.error, 'error');
+        return;
+    }
+
     const config = storage.getGlobalConfig();
     if (!Array.isArray(config.ssh.keys)) config.ssh.keys = [];
 
@@ -586,6 +636,13 @@ export function saveSSHKeyEditToProfile(index) {
 
     if (!name || !pubKey) {
         showToast('Name and public key are required', 'error');
+        return;
+    }
+
+    // Validate SSH key format
+    const validation = validateSSHKey(pubKey);
+    if (!validation.valid) {
+        showToast(validation.error, 'error');
         return;
     }
 

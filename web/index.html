@@ -55,6 +55,13 @@
     <!-- Toast container - ARIA live region for announcements -->
     <div id="toasts" class="toast-container" role="status" aria-live="polite" aria-atomic="true"></div>
 
+    <!-- Floating actions bar for unsaved changes -->
+    <div id="floating-actions" class="floating-actions" role="toolbar" aria-label="Form actions">
+        <span class="text-sm text-muted-foreground mr-2">You have unsaved changes</span>
+        <button id="floating-discard" class="modal-btn modal-btn-secondary" type="button">Discard Changes</button>
+        <button id="floating-save" class="modal-btn modal-btn-primary" type="button">Save Changes</button>
+    </div>
+
     <!-- Modal container -->
     <!-- Confirm modal -->
     <div id="modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-message">

@@ -343,26 +343,47 @@ describe('handlers.js', () => {
 
     describe('SSH key handlers', () => {
         describe('addSSHKey', () => {
-            it('does nothing with empty fields', () => {
+            it('does nothing with empty pubKey', () => {
                 mockElements = {
-                    'ssh-keys-name': { value: '' },
-                    'ssh-keys-pubKey': { value: 'ssh-ed25519 AAAA' }
+                    'ssh-keys-name': { value: 'my-key' },
+                    'ssh-keys-pubKey': { value: '' }
                 };
                 addSSHKey();
                 const config = storage.getGlobalConfig();
                 assert.deepEqual(config.ssh.keys, []);
             });
 
+            it('auto-generates name from key type when name is empty', () => {
+                // Reset ssh.keys to avoid shared reference issue from DEFAULT_GLOBAL_CONFIG
+                const config = storage.getGlobalConfig();
+                config.ssh.keys = [];
+                storage.saveGlobalConfig(config);
+
+                mockElements = {
+                    'ssh-keys-name': { value: '' },
+                    'ssh-keys-pubKey': { value: 'ssh-ed25519 AAAA' }
+                };
+                addSSHKey();
+                const updated = storage.getGlobalConfig();
+                assert.equal(updated.ssh.keys.length, 1);
+                assert.equal(updated.ssh.keys[0].name, 'ssh-ed25519-key');
+            });
+
             it('adds SSH key to global config', () => {
+                // Reset ssh.keys to avoid shared reference issue from DEFAULT_GLOBAL_CONFIG
+                const config = storage.getGlobalConfig();
+                config.ssh.keys = [];
+                storage.saveGlobalConfig(config);
+
                 mockElements = {
                     'ssh-keys-name': { value: 'work-laptop' },
                     'ssh-keys-pubKey': { value: 'ssh-ed25519 AAAA test@work' }
                 };
                 addSSHKey();
-                const config = storage.getGlobalConfig();
-                assert.equal(config.ssh.keys.length, 1);
-                assert.equal(config.ssh.keys[0].name, 'work-laptop');
-                assert.equal(config.ssh.keys[0].pubKey, 'ssh-ed25519 AAAA test@work');
+                const updated = storage.getGlobalConfig();
+                assert.equal(updated.ssh.keys.length, 1);
+                assert.equal(updated.ssh.keys[0].name, 'work-laptop');
+                assert.equal(updated.ssh.keys[0].pubKey, 'ssh-ed25519 AAAA test@work');
             });
 
             it('rejects duplicate key name', () => {

@@ -1,6 +1,6 @@
 // Dashboard page renderer - server cards, creation form
 
-import { UI, cn, escapeHtml, escapeAttr } from '../ui.js';
+import { UI, cn, escapeHtml, escapeAttr, renderCopyButton } from '../ui.js';
 import { renderSelectCombobox } from '../combobox.js';
 import { state } from '../state.js';
 import * as storage from '../storage.js';
@@ -85,7 +85,7 @@ function renderServerCard(server, config) {
             </div>
             <div class="${UI.cardBody}">
                 <div class="${UI.grid3} text-sm mb-4">
-                    <div><span class="text-muted-foreground">IP:</span> <code class="bg-muted px-1.5 py-0.5 rounded text-xs">${escapeHtml(ip)}</code></div>
+                    <div class="flex items-center gap-1.5"><span class="text-muted-foreground">IP:</span> <code class="bg-muted px-1.5 py-0.5 rounded text-xs">${escapeHtml(ip)}</code>${ip !== 'N/A' ? renderCopyButton(ip, 'Copy IP address') : ''}</div>
                     <div><span class="text-muted-foreground">Type:</span> ${escapeHtml(server.server_type.name)}</div>
                     <div><span class="text-muted-foreground">Location:</span> ${escapeHtml(server.datacenter.name)}</div>
                 </div>
@@ -103,9 +103,21 @@ function renderServerServices(urls, config) {
         <div class="pt-4 border-t border-border">
             <p class="text-xs text-muted-foreground mb-2">Services</p>
             <div class="${UI.row} flex-wrap">
-                ${urls.overview ? `<a href="${urls.overview}" target="_blank" class="${cn(UI.btn, UI.btnOutline, UI.btnSm)}">Overview</a>` : ''}
-                ${urls.code ? `<a href="${urls.code}" target="_blank" class="${cn(UI.btn, UI.btnOutline, UI.btnSm)}">VS Code</a>` : ''}
-                ${urls.terminal ? `<a href="${urls.terminal}" target="_blank" class="${cn(UI.btn, UI.btnOutline, UI.btnSm)}">Terminal</a>` : ''}
+                ${urls.overview ? `
+                    <span class="service-link-group">
+                        <a href="${urls.overview}" target="_blank" class="${cn(UI.btn, UI.btnOutline, UI.btnSm)}">Overview</a>
+                        ${renderCopyButton(urls.overview, 'Copy Overview URL')}
+                    </span>` : ''}
+                ${urls.code ? `
+                    <span class="service-link-group">
+                        <a href="${urls.code}" target="_blank" class="${cn(UI.btn, UI.btnOutline, UI.btnSm)}">VS Code</a>
+                        ${renderCopyButton(urls.code, 'Copy VS Code URL')}
+                    </span>` : ''}
+                ${urls.terminal ? `
+                    <span class="service-link-group">
+                        <a href="${urls.terminal}" target="_blank" class="${cn(UI.btn, UI.btnOutline, UI.btnSm)}">Terminal</a>
+                        ${renderCopyButton(urls.terminal, 'Copy Terminal URL')}
+                    </span>` : ''}
             </div>
             ${urls.overview ? `
             <div class="mt-3 pt-3 border-t border-border flex justify-center">

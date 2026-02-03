@@ -505,6 +505,149 @@ a:focus-visible {
     margin: 0.5rem 0;
 }
 
+/* Copy button */
+.copy-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    min-height: 28px;
+    padding: 0.25rem;
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: 0.25rem;
+    color: var(--color-muted-foreground);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.copy-btn:hover {
+    background: var(--color-muted);
+    color: var(--color-foreground);
+    border-color: var(--color-muted-hover);
+}
+.copy-btn:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+}
+
+/* Service link group - button with copy icon */
+.service-link-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+/* Tooltip */
+.tooltip-trigger {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin-left: 0.5rem;
+    color: var(--color-muted-foreground);
+    cursor: help;
+    border-radius: 50%;
+}
+.tooltip-trigger:hover,
+.tooltip-trigger:focus {
+    color: var(--color-foreground);
+}
+.tooltip-trigger:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 1px;
+}
+.tooltip {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 8px);
+    transform: translateX(-50%);
+    min-width: 200px;
+    max-width: 300px;
+    padding: 0.75rem 1rem;
+    background: var(--color-card);
+    border: 2px solid var(--color-border);
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    color: var(--color-foreground);
+    text-align: left;
+    white-space: normal;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 100;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s, visibility 0.15s;
+    pointer-events: none;
+}
+.tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 8px solid transparent;
+    border-top-color: var(--color-border);
+}
+.tooltip-trigger:hover .tooltip,
+.tooltip-trigger:focus .tooltip {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Validation states */
+input.invalid,
+textarea.invalid {
+    border-color: var(--color-destructive);
+}
+input.invalid:focus,
+textarea.invalid:focus {
+    border-color: var(--color-destructive);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-destructive) 20%, transparent);
+}
+input.valid,
+textarea.valid {
+    border-color: var(--color-success);
+}
+input.valid:focus,
+textarea.valid:focus {
+    border-color: var(--color-success);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-success) 20%, transparent);
+}
+
+/* Validation message */
+.validation-message {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--color-destructive);
+}
+.validation-message.hidden {
+    display: none;
+}
+
+/* Floating actions bar */
+.floating-actions {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    background: var(--color-card);
+    border-top: 2px solid var(--color-border);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+    z-index: 45;
+    transform: translateY(100%);
+    transition: transform 0.25s ease-out;
+}
+.floating-actions.visible {
+    transform: translateY(0);
+}
+
 /* Reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
