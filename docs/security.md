@@ -161,25 +161,45 @@ export function escapeHtml(str) {
 ```html
 <meta http-equiv="Content-Security-Policy" content="
     default-src 'none';
-    script-src 'self' 'unsafe-inline';
+    script-src 'self';
     style-src 'self' 'unsafe-inline';
     img-src 'self' data:;
     font-src 'self';
     connect-src 'self' https://api.hetzner.cloud;
     base-uri 'self';
     form-action 'self';
+    frame-ancestors 'none';
 ">
 ```
 
 | Directive | Value | Purpose |
 |-----------|-------|---------|
 | `default-src` | `'none'` | Deny everything by default |
-| `script-src` | `'self' 'unsafe-inline'` | Allow own scripts + inline handlers |
-| `style-src` | `'self' 'unsafe-inline'` | Allow own styles + Tailwind |
+| `script-src` | `'self'` | Only allow scripts from same origin (no inline) |
+| `style-src` | `'self' 'unsafe-inline'` | Allow own styles + dynamic inline styles |
 | `connect-src` | `'self' https://api.hetzner.cloud` | Restrict API calls |
 | `img-src` | `'self' data:` | Allow images + QR code data URIs |
+| `frame-ancestors` | `'none'` | Prevent clickjacking (cannot be embedded in iframes) |
 
-**Note**: `unsafe-inline` is required for inline event handlers. This could be improved by moving to `addEventListener` and using CSP nonces or hashes.
+**Why `unsafe-inline` for styles?**
+
+Dynamic inline styles are required for:
+- Theme preview color swatches (dynamic background colors)
+- Progress bars (dynamic width percentages)
+- Combobox filtering (show/hide via display property)
+
+These cannot use CSS classes because the values are computed at runtime. The security impact is limited because:
+1. All user input is escaped before rendering
+2. Style injection alone cannot execute JavaScript
+3. The threat model assumes a trusted machine
+
+**Additional Security Headers**
+
+```html
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+```
+
+This prevents browsers from MIME-sniffing responses away from the declared content-type.
 
 ### Prototype Pollution Prevention
 

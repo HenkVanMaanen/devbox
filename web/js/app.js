@@ -44,6 +44,12 @@ async function init() {
             toggle.setAttribute('aria-expanded', 'false');
         }
     });
+
+    // Theme toggle button - using addEventListener instead of inline onclick for CSP compliance
+    const themeToggle = document.getElementById('theme-toggle');
+    if (themeToggle) {
+        themeToggle.addEventListener('click', toggleThemeDropdown);
+    }
 }
 
 function initTheme() {

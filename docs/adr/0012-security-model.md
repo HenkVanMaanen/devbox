@@ -48,7 +48,7 @@ Adopt a **trusted user, trusted machine, untrusted network** threat model:
 | Plain text localStorage | Credentials readable by extensions/malware | No password prompts, persistent config |
 | Tokens in URLs | Visible in history/logs | Simple auth, works with any HTTP client |
 | Credentials in cloud-init | Visible on server filesystem | Stateless provisioning, no secrets manager needed |
-| `unsafe-inline` CSP | Weaker XSS protection | Simpler development, inline handlers |
+| `unsafe-inline` for styles | Style injection possible | Dynamic styling (theme previews, progress bars) |
 
 ## Consequences
 
@@ -116,19 +116,20 @@ Rejected as over-engineering for the threat model.
 
 ### Current Security Controls
 
-1. **CSP headers**: Restrict script sources and API endpoints
-2. **Input escaping**: `escapeHtml()`, `escapeAttr()` for all user content
-3. **Shell escaping**: Context-aware escaping for cloud-init
-4. **Input validation**: Regex patterns for packages, URLs, identifiers
-5. **Prototype pollution checks**: Block `__proto__`, `constructor`, `prototype`
-6. **HTTPS only**: CSP `connect-src` restricts to Hetzner API
+1. **CSP headers**: Restrict script sources (no `unsafe-inline` for scripts), API endpoints, frame ancestors
+2. **Security headers**: `X-Content-Type-Options: nosniff` prevents MIME sniffing
+3. **Input escaping**: `escapeHtml()`, `escapeAttr()` for all user content
+4. **Shell escaping**: Context-aware escaping for cloud-init
+5. **Input validation**: Regex patterns for packages, URLs, identifiers
+6. **Prototype pollution checks**: Block `__proto__`, `constructor`, `prototype`
+7. **HTTPS only**: CSP `connect-src` restricts to Hetzner API
+8. **Clickjacking prevention**: `frame-ancestors 'none'` in CSP
 
 ### Future Improvements
 
-1. **Remove `unsafe-inline`**: Refactor to use `addEventListener`, add CSP hashes
-2. **Add security headers**: `X-Frame-Options`, `X-Content-Type-Options`
-3. **Optional encryption**: Web Crypto API for sensitive fields (opt-in)
-4. **Audit logging**: Local log of sensitive operations (opt-in)
+1. **Remove `unsafe-inline` for styles**: Would require CSS custom properties for all dynamic values
+2. **Optional encryption**: Web Crypto API for sensitive fields (opt-in)
+3. **Audit logging**: Local log of sensitive operations (opt-in)
 
 ## References
 
