@@ -1,16 +1,16 @@
-# Claude Code Instructions
+# AI Agent Instructions
 
-This file provides context and guidelines for Claude Code when working on the Devbox codebase.
+This file provides context and guidelines for AI coding assistants working on the Devbox codebase.
 
 ## Project Overview
 
-Devbox is a browser-based development environment manager for Hetzner Cloud. It's a zero-backend SPA that provisions ephemeral cloud servers for AI-assisted coding with Claude Code.
+Devbox is a browser-based development environment manager for Hetzner Cloud. It's a zero-backend SPA that provisions ephemeral cloud servers for AI-assisted coding.
 
 **Key characteristics:**
 - No backend server - browser talks directly to Hetzner API
 - All state in localStorage
 - Cloud-init for server provisioning
-- Primary use case: ephemeral dev environments for Claude Code
+- Primary use case: ephemeral dev environments
 
 ## Quick Start
 
@@ -179,8 +179,6 @@ Use conventional commit format:
 type: short description
 
 Longer explanation if needed.
-
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 ```
 
 Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`
