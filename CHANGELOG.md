@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.0.5] - 2026-02-03
+
+### Added
+- Profiles page with full UI for create, edit, delete, duplicate profiles
+- Profile overrides for Hetzner, Services, Shell, Auto-Delete settings
+- Export/Import configuration to/from JSON files
+- Full cloud-init generation with daemon, Caddy, services setup
+
 ## [2.0.4] - 2026-02-03
 
 ### Fixed
