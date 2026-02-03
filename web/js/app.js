@@ -5,6 +5,7 @@ import * as storage from './storage.js';
 import * as hetzner from './hetzner.js';
 import * as themes from './themes.js';
 import { generate as generateCloudInit } from './cloudinit.js';
+import { generateServerName } from './names.js';
 import { initComboboxes } from './combobox.js';
 import { state, setState, setRenderCallback, router, showToast, showConfirm, showPrompt } from './state.js';
 import { renderDashboard, renderProfiles, renderProfileEdit, renderConfig, renderCredentials, renderCloudInit } from './pages.js';
@@ -113,9 +114,7 @@ async function createServer() {
         }
 
         setState({ createProgress: 'Generating cloud-init...' });
-        const bytes = new Uint8Array(5);
-        crypto.getRandomValues(bytes);
-        const serverName = 'devbox-' + Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 8);
+        const serverName = generateServerName();
         const userData = generateCloudInit(serverName, token, config);
 
         // Store access token locally (not in API-visible labels)
