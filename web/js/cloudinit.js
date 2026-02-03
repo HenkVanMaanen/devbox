@@ -129,6 +129,67 @@ export function generate(serverName, hetznerToken, config, options = {}) {
         });
     }
 
+    // Tmux config with theme colors
+    cloudInit.write_files.push({
+        path: '/home/dev/.tmux.conf',
+        owner: 'dev:dev',
+        permissions: '0644',
+        defer: true,
+        content: `# Theme colors (auto-generated from devbox theme)
+set -g status-style "bg=${themeColors.muted},fg=${themeColors.foreground}"
+set -g status-left-style "bg=${themeColors.primary},fg=${themeColors.background}"
+set -g status-right-style "bg=${themeColors.muted},fg=${themeColors.mutedForeground}"
+set -g window-status-current-style "bg=${themeColors.primary},fg=${themeColors.background}"
+set -g window-status-style "bg=${themeColors.muted},fg=${themeColors.mutedForeground}"
+set -g pane-border-style "fg=${themeColors.border}"
+set -g pane-active-border-style "fg=${themeColors.primary}"
+set -g message-style "bg=${themeColors.muted},fg=${themeColors.foreground}"
+set -g mode-style "bg=${themeColors.primary},fg=${themeColors.background}"
+
+# Sensible defaults
+set -g mouse on
+set -g history-limit 50000
+set -g default-terminal "screen-256color"
+set -ga terminal-overrides ",*256col*:Tc"
+set -g base-index 1
+setw -g pane-base-index 1
+set -g renumber-windows on
+set -s escape-time 0
+`
+    });
+
+    // Zellij config with theme colors
+    cloudInit.write_files.push({
+        path: '/home/dev/.config/zellij/config.kdl',
+        owner: 'dev:dev',
+        permissions: '0644',
+        defer: true,
+        content: `// Theme colors (auto-generated from devbox theme)
+theme "devbox"
+themes {
+    devbox {
+        fg "${themeColors.foreground}"
+        bg "${themeColors.background}"
+        black "${themeColors.background}"
+        red "${themeColors.destructive}"
+        green "${themeColors.success}"
+        yellow "${themeColors.warning}"
+        blue "${themeColors.primary}"
+        magenta "${themeColors.primary}"
+        cyan "${themeColors.primary}"
+        white "${themeColors.foreground}"
+        orange "${themeColors.warning}"
+    }
+}
+
+// Sensible defaults
+pane_frames false
+default_layout "compact"
+mouse_mode true
+copy_on_select true
+`
+    });
+
     // Git credentials
     if (gitCreds.length > 0) {
         cloudInit.write_files.push({

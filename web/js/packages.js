@@ -154,6 +154,7 @@ export const MISE_TOOLS = [
     { name: 'deno', versions: ['latest', '2.1', '2.0'], description: 'Deno JavaScript/TypeScript runtime' },
     { name: 'bun', versions: ['latest', '1.2', '1.1'], description: 'Bun JavaScript runtime' },
     { name: 'zig', versions: ['latest', '0.14', '0.13'], description: 'Zig programming language' },
+    { name: 'zellij', versions: ['latest', '0.41', '0.40'], description: 'Terminal multiplexer with panes and tabs' },
     { name: 'terraform', versions: ['latest', '1.10', '1.9'], description: 'Infrastructure as code tool' },
     { name: 'kubectl', versions: ['latest', '1.32', '1.31'], description: 'Kubernetes CLI' },
     { name: 'helm', versions: ['latest', '3.16', '3.15'], description: 'Kubernetes package manager' }
