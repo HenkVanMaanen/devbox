@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.0.5] - 2026-02-03
+
+### Fixed
+- GitHub Pages deployment now shows correct version from latest git tag
+
 ## [1.0.4] - 2026-02-03
 
 ### Fixed
