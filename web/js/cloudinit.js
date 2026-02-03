@@ -306,6 +306,7 @@ copy_on_select true
     // Shell terminal (each connection gets independent shell - users can start tmux/zellij manually)
     if (config.services.shellTerminal) {
         // Build ttyd theme from user's selected theme colors
+        // Single quotes around JSON prevent systemd from misinterpreting the double quotes
         const ttydTheme = JSON.stringify({
             background: themeColors.background,
             foreground: themeColors.foreground,
@@ -316,7 +317,7 @@ copy_on_select true
         cloudInit.write_files.push({
             path: '/etc/systemd/system/ttyd-term.service',
             permissions: '0644',
-            content: `[Unit]\nDescription=Terminal\nAfter=network.target\n[Service]\nType=simple\nUser=dev\nWorkingDirectory=/home/dev\nEnvironment=HOME=/home/dev\nExecStart=/usr/local/bin/ttyd -p 65534 -t fontSize=14 -t theme=${ttydTheme} -W ${config.shell.default || 'bash'}\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\n`
+            content: `[Unit]\nDescription=Terminal\nAfter=network.target\n[Service]\nType=simple\nUser=dev\nWorkingDirectory=/home/dev\nEnvironment=HOME=/home/dev\nExecStart=/usr/local/bin/ttyd -p 65534 -t fontSize=14 -t 'theme=${ttydTheme}' -W ${config.shell.default || 'bash'}\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\n`
         });
     }
 
