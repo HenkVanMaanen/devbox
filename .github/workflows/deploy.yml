@@ -31,6 +31,12 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Get version from latest tag
+        run: |
+          # Get latest tag, fallback to 'dev' if no tags
+          VERSION=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "dev")
+          echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
+
       - run: pnpm run build
 
       - run: pnpm test
