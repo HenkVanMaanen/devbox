@@ -40,7 +40,7 @@ export function renderDashboard() {
                     <div class="bg-destructive/10 border border-destructive/30 rounded-md p-4 mb-4">
                         <p class="text-sm text-destructive">${escapeHtml(state.error)}</p>
                     </div>
-                    <button class="${cn(UI.btn, UI.btnSecondary)}" onclick="window.devbox.loadServers()">Retry</button>
+                    <button class="${cn(UI.btn, UI.btnSecondary)}" data-action="loadServers">Retry</button>
                 </div>
             </div>
         `;
@@ -92,7 +92,7 @@ function renderServerCard(server, config) {
                 ${urls ? renderServerServices(urls, config) : ''}
             </div>
             <div class="${UI.cardFooter}">
-                <button class="${cn(UI.btn, UI.btnDestructive, UI.btnSm)}" onclick="window.devbox.deleteServer(${server.id}, ${escapeAttr(JSON.stringify(server.name))})">Delete Server</button>
+                <button class="${cn(UI.btn, UI.btnDestructive, UI.btnSm)}" data-action="deleteServer" data-id="${server.id}" data-name="${escapeAttr(server.name)}">Delete Server</button>
             </div>
         </div>
     `;
@@ -175,7 +175,7 @@ function renderCreateForm(config) {
                 </div>
                 ` : ''}
                 <button class="${cn(UI.btn, UI.btnPrimary, 'w-full')}"
-                    onclick="window.devbox.createServer()"
+                    data-action="createServer"
                     ${state.creating ? 'disabled' : ''}>
                     ${state.creating ? 'Creating...' : 'Create Server'}
                 </button>

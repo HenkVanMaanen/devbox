@@ -38,16 +38,11 @@ async function init() {
         await loadServers();
     }
 
-    document.addEventListener('click', (e) => {
-        const dropdown = document.getElementById('theme-dropdown');
-        const toggle = document.getElementById('theme-toggle');
-        if (dropdown && toggle && !dropdown.contains(e.target) && !toggle.contains(e.target)) {
-            dropdown.classList.remove('open');
-            toggle.setAttribute('aria-expanded', 'false');
-        }
-    });
+    // Global event handlers for event delegation (CSP compliant - no inline handlers)
+    document.addEventListener('click', handleGlobalClick);
+    document.addEventListener('change', handleGlobalChange);
 
-    // Theme toggle button - using addEventListener instead of inline onclick for CSP compliance
+    // Theme toggle button
     const themeToggle = document.getElementById('theme-toggle');
     if (themeToggle) {
         themeToggle.addEventListener('click', toggleThemeDropdown);
@@ -69,6 +64,134 @@ async function init() {
     // Set up dirty tracking on form inputs
     document.addEventListener('input', handleFormInput);
     document.addEventListener('change', handleFormInput);
+}
+
+// ============================================================================
+// EVENT DELEGATION (CSP compliant - no inline onclick handlers)
+// ============================================================================
+
+// Map of action names to handler functions
+const actionHandlers = {
+    // Server actions
+    createServer,
+    deleteServer: (el) => deleteServer(Number(el.dataset.id), el.dataset.name),
+    loadServers,
+
+    // Config actions
+    saveConfig,
+    saveCredentials,
+    validateToken,
+    exportConfig,
+    importConfig: () => document.getElementById('importFile')?.click(),
+
+    // Profile actions
+    setDefaultProfile: (el) => setDefaultProfile(el.dataset.id),
+    editProfile: (el) => editProfile(el.dataset.id),
+    backToProfiles,
+    createNewProfile,
+    duplicateProfile: (el) => duplicateProfile(el.dataset.id),
+    deleteProfile: (el) => deleteProfile(el.dataset.id),
+    saveProfileEdit,
+    toggleOverride: (el) => toggleOverride(el.dataset.path, el.dataset.enable === 'true'),
+
+    // List/credential handlers
+    addGitCredentialToConfig,
+    removeGitCredentialFromConfig: (el) => removeGitCredentialFromConfig(Number(el.dataset.index)),
+    addGitCredentialToProfile,
+    removeGitCredentialFromProfile: (el) => removeGitCredentialFromProfile(Number(el.dataset.index)),
+    addSSHKey,
+    removeSSHKey: (el) => removeSSHKey(Number(el.dataset.index)),
+    addSSHKeyToProfile,
+    removeSSHKeyFromProfile: (el) => removeSSHKeyFromProfile(Number(el.dataset.index)),
+    startEditListItem: (el) => startEditListItem(el.dataset.field, Number(el.dataset.index), el.dataset.isProfile === 'true'),
+    cancelEditListItem,
+    saveGitCredentialEdit: (el) => saveGitCredentialEdit(Number(el.dataset.index)),
+    saveGitCredentialEditToProfile: (el) => saveGitCredentialEditToProfile(Number(el.dataset.index)),
+    saveSSHKeyEdit: (el) => saveSSHKeyEdit(Number(el.dataset.index)),
+    saveSSHKeyEditToProfile: (el) => saveSSHKeyEditToProfile(Number(el.dataset.index)),
+
+    // Package handlers
+    addCustomPackage: (el) => addCustomPackage(el.dataset.type),
+    addCustomPackageToProfile: (el) => addCustomPackageToProfile(el.dataset.type),
+    addListItem: (el) => addListItem(el.dataset.path),
+    removeListItem: (el) => removeListItem(el.dataset.path, Number(el.dataset.index)),
+    addListItemToProfile: (el) => addListItemToProfile(el.dataset.path),
+    removeListItemFromProfile: (el) => removeListItemFromProfile(el.dataset.path, Number(el.dataset.index)),
+
+    // Claude credentials
+    importClaudeCredentials: () => document.querySelector('input[type="file"][accept=".json"]')?.click(),
+    clearClaudeCredentials,
+
+    // Cloud-init actions
+    copyCloudInit,
+    downloadCloudInit,
+    refreshCloudInit,
+
+    // Theme actions
+    changeTheme: (el) => changeTheme(el.dataset.theme),
+
+    // Clipboard
+    copyToClipboard: (el) => copyToClipboard(el.dataset.value),
+
+    // Data management
+    clearAll
+};
+
+// Global click handler for event delegation
+function handleGlobalClick(e) {
+    // Close theme dropdown when clicking outside
+    const dropdown = document.getElementById('theme-dropdown');
+    const toggle = document.getElementById('theme-toggle');
+    if (dropdown && toggle && !dropdown.contains(e.target) && !toggle.contains(e.target)) {
+        dropdown.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+    }
+
+    // Find the closest element with data-action attribute
+    const actionEl = e.target.closest('[data-action]');
+    if (!actionEl) return;
+
+    // Skip radio/checkbox - they're handled by change event
+    if (actionEl.type === 'radio' || actionEl.type === 'checkbox') return;
+
+    const action = actionEl.dataset.action;
+    const handler = actionHandlers[action];
+
+    if (handler) {
+        e.preventDefault();
+        handler(actionEl);
+    } else {
+        console.warn(`Unknown action: ${action}`);
+    }
+}
+
+// Global change handler for form elements with data-action (radios, checkboxes, file inputs)
+function handleGlobalChange(e) {
+    const actionEl = e.target.closest('[data-action]');
+    if (!actionEl) {
+        // Handle file inputs inside labels with data-action
+        if (e.target.type === 'file') {
+            const label = e.target.closest('label[data-action]');
+            if (label) {
+                const action = label.dataset.action;
+                if (action === 'importConfig') {
+                    importConfig(e.target);
+                } else if (action === 'importClaudeCredentials') {
+                    importClaudeCredentials(e.target);
+                }
+            }
+        }
+        return;
+    }
+
+    const action = actionEl.dataset.action;
+    const handler = actionHandlers[action];
+
+    if (handler) {
+        handler(actionEl);
+    } else {
+        console.warn(`Unknown action: ${action}`);
+    }
 }
 
 // Handle hash change with dirty check
@@ -563,8 +686,7 @@ function renderThemeDropdown() {
 
     let html = `
         <button class="theme-option ${currentTheme === 'system' ? 'selected' : ''}"
-                data-theme="system" role="option" aria-selected="${currentTheme === 'system'}"
-                onclick="window.devbox.changeTheme('system')">
+                data-action="changeTheme" data-theme="system" role="option" aria-selected="${currentTheme === 'system'}">
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
@@ -582,8 +704,7 @@ function renderThemeDropdown() {
             const isSelected = currentTheme === themeId;
             html += `
                 <button class="theme-option ${isSelected ? 'selected' : ''}"
-                        data-theme="${themeId}" role="option" aria-selected="${isSelected}"
-                        onclick="window.devbox.changeTheme('${themeId}')">
+                        data-action="changeTheme" data-theme="${themeId}" role="option" aria-selected="${isSelected}">
                     <span class="theme-preview" style="background: ${theme.colors.background}; border-color: ${theme.colors.border};">
                         <span style="background: ${theme.colors.primary};"></span>
                     </span>

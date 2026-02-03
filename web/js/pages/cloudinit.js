@@ -35,9 +35,9 @@ export function renderCloudInit() {
                         <p class="${UI.subtitle}">Preview the cloud-init user-data that will be sent to Hetzner</p>
                     </div>
                     <div class="${UI.row}">
-                        <button class="${cn(UI.btn, UI.btnOutline, UI.btnSm)}" onclick="window.devbox.copyCloudInit()">Copy</button>
-                        <button class="${cn(UI.btn, UI.btnOutline, UI.btnSm)}" onclick="window.devbox.downloadCloudInit()">Download</button>
-                        <button class="${cn(UI.btn, UI.btnSecondary, UI.btnSm)}" onclick="window.devbox.refreshCloudInit()">Refresh</button>
+                        <button class="${cn(UI.btn, UI.btnOutline, UI.btnSm)}" data-action="copyCloudInit">Copy</button>
+                        <button class="${cn(UI.btn, UI.btnOutline, UI.btnSm)}" data-action="downloadCloudInit">Download</button>
+                        <button class="${cn(UI.btn, UI.btnSecondary, UI.btnSm)}" data-action="refreshCloudInit">Refresh</button>
                     </div>
                 </div>
                 <div class="mt-4">

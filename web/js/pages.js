@@ -49,10 +49,10 @@ export function renderProfiles() {
                             <p class="text-sm text-muted-foreground">${escapeHtml(summary.join(' \u2022 '))}</p>
                         </div>
                         <div class="${UI.row}">
-                            ${!isDefault ? `<button class="${cn(UI.btn, UI.btnOutline, UI.btnSm)}" onclick="window.devbox.setDefaultProfile(${escapeAttr(JSON.stringify(id))})">Set Default</button>` : ''}
-                            <button class="${cn(UI.btn, UI.btnOutline, UI.btnSm)}" onclick="window.devbox.editProfile(${escapeAttr(JSON.stringify(id))})">Edit</button>
-                            <button class="${cn(UI.btn, UI.btnOutline, UI.btnSm)}" onclick="window.devbox.duplicateProfile(${escapeAttr(JSON.stringify(id))})">Duplicate</button>
-                            ${id !== 'default' ? `<button class="${cn(UI.btn, UI.btnDestructive, UI.btnSm)}" onclick="window.devbox.deleteProfile(${escapeAttr(JSON.stringify(id))})">Delete</button>` : ''}
+                            ${!isDefault ? `<button class="${cn(UI.btn, UI.btnOutline, UI.btnSm)}" data-action="setDefaultProfile" data-id="${escapeAttr(id)}">Set Default</button>` : ''}
+                            <button class="${cn(UI.btn, UI.btnOutline, UI.btnSm)}" data-action="editProfile" data-id="${escapeAttr(id)}">Edit</button>
+                            <button class="${cn(UI.btn, UI.btnOutline, UI.btnSm)}" data-action="duplicateProfile" data-id="${escapeAttr(id)}">Duplicate</button>
+                            ${id !== 'default' ? `<button class="${cn(UI.btn, UI.btnDestructive, UI.btnSm)}" data-action="deleteProfile" data-id="${escapeAttr(id)}">Delete</button>` : ''}
                         </div>
                     </div>
                 </div>
@@ -64,7 +64,7 @@ export function renderProfiles() {
         <div class="${UI.card} mb-4">
             <div class="${UI.cardHeader} flex items-center justify-between">
                 <h2 class="${UI.title}">Profiles</h2>
-                <button class="${cn(UI.btn, UI.btnPrimary, UI.btnSm)}" onclick="window.devbox.createNewProfile()">New Profile</button>
+                <button class="${cn(UI.btn, UI.btnPrimary, UI.btnSm)}" data-action="createNewProfile">New Profile</button>
             </div>
             <div class="${UI.cardBody}">
                 <p class="text-muted-foreground mb-4">Profiles let you save different configurations. Each profile can override global defaults.</p>
@@ -100,10 +100,10 @@ export function renderProfileEdit() {
         <div class="${UI.card} mb-4">
             <div class="${UI.cardHeader} flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <button class="${cn(UI.btn, UI.btnOutline, UI.btnSm)}" onclick="window.devbox.backToProfiles()">\u2190 Back</button>
+                    <button class="${cn(UI.btn, UI.btnOutline, UI.btnSm)}" data-action="backToProfiles">\u2190 Back</button>
                     <h2 class="${UI.title}">Edit Profile: ${escapeHtml(profile.name)}</h2>
                 </div>
-                <button class="${cn(UI.btn, UI.btnPrimary)}" onclick="window.devbox.saveProfileEdit()">Save Changes</button>
+                <button class="${cn(UI.btn, UI.btnPrimary)}" data-action="saveProfileEdit">Save Changes</button>
             </div>
             <div class="${UI.cardBody}">
                 <div class="mb-6">
@@ -142,11 +142,11 @@ export function renderConfig() {
         ${sectionsHtml}
 
         <div class="${UI.row}">
-            <button class="${cn(UI.btn, UI.btnPrimary)}" onclick="window.devbox.saveConfig()">Save Configuration</button>
-            <button class="${cn(UI.btn, UI.btnSecondary)}" onclick="window.devbox.exportConfig()">Export</button>
-            <label class="${cn(UI.btn, UI.btnSecondary)} cursor-pointer">
+            <button class="${cn(UI.btn, UI.btnPrimary)}" data-action="saveConfig">Save Configuration</button>
+            <button class="${cn(UI.btn, UI.btnSecondary)}" data-action="exportConfig">Export</button>
+            <label class="${cn(UI.btn, UI.btnSecondary)} cursor-pointer" data-action="importConfig">
                 Import
-                <input type="file" id="importFile" accept=".json" class="hidden" onchange="window.devbox.importConfig(this)">
+                <input type="file" id="importFile" accept=".json" class="hidden">
             </label>
         </div>
     `;
@@ -157,12 +157,12 @@ function renderClaudeSection(section, config) {
         <div>
             <label class="${UI.label}">Credentials</label>
             <div class="${UI.row} mb-2">
-                <label class="${cn(UI.btn, UI.btnSecondary)} cursor-pointer">
+                <label class="${cn(UI.btn, UI.btnSecondary)} cursor-pointer" data-action="importClaudeCredentials">
                     Upload credentials.json
-                    <input type="file" accept=".json" class="hidden" onchange="window.devbox.importClaudeCredentials(this)">
+                    <input type="file" id="claudeCredentialsFile" accept=".json" class="hidden">
                 </label>
                 ${config.claude.credentialsJson ? `
-                    <button class="${cn(UI.btn, UI.btnDestructive, UI.btnSm)}" onclick="window.devbox.clearClaudeCredentials()">Clear</button>
+                    <button class="${cn(UI.btn, UI.btnDestructive, UI.btnSm)}" data-action="clearClaudeCredentials">Clear</button>
                 ` : ''}
             </div>
             ${config.claude.credentialsJson ? `
@@ -251,15 +251,15 @@ export function renderCredentials() {
             <div class="${UI.cardBody}">
                 <div class="${UI.row} mb-2">
                     <input type="password" id="hetznerToken" class="${UI.input}" value="${escapeHtml(token)}" placeholder="Your Hetzner API token">
-                    <button class="${cn(UI.btn, UI.btnSecondary)}" onclick="window.devbox.validateToken()">Validate</button>
+                    <button class="${cn(UI.btn, UI.btnSecondary)}" data-action="validateToken">Validate</button>
                 </div>
                 <p class="${UI.hint}">Get your token from <a href="https://console.hetzner.cloud" target="_blank" class="text-primary hover:underline">Hetzner Cloud Console</a></p>
             </div>
         </div>
 
         <div class="${UI.row}">
-            <button class="${cn(UI.btn, UI.btnPrimary)}" onclick="window.devbox.saveCredentials()">Save API Token</button>
-            <button class="${cn(UI.btn, UI.btnDestructive)}" onclick="window.devbox.clearAll()">Clear All Data</button>
+            <button class="${cn(UI.btn, UI.btnPrimary)}" data-action="saveCredentials">Save API Token</button>
+            <button class="${cn(UI.btn, UI.btnDestructive)}" data-action="clearAll">Clear All Data</button>
         </div>
     `;
 }

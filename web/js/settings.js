@@ -307,12 +307,12 @@ export function renderSettingsField(field, config, mode = 'global', profile = nu
                 <div class="flex items-center gap-2">
                     <label class="flex items-center gap-2 cursor-pointer text-sm">
                         <input type="radio" name="override-${field.path}" value="global" ${!hasOverride ? 'checked' : ''}
-                               onchange="window.devbox.toggleOverride('${field.path}', false)" class="accent-primary">
+                               data-action="toggleOverride" data-path="${field.path}" data-enable="false" class="accent-primary">
                         <span>Global</span>
                     </label>
                     <label class="flex items-center gap-2 cursor-pointer text-sm">
                         <input type="radio" name="override-${field.path}" value="override" ${hasOverride ? 'checked' : ''}
-                               onchange="window.devbox.toggleOverride('${field.path}', true)" class="accent-primary">
+                               data-action="toggleOverride" data-path="${field.path}" data-enable="true" class="accent-primary">
                         <span>Override</span>
                     </label>
                 </div>
@@ -349,7 +349,7 @@ function renderFieldInput(field, fieldId, value, options, dataAttr, isProfile) {
                     <label class="${UI.label}">Add custom</label>
                     <div class="${UI.row}">
                         <input type="text" id="${customInputId}" class="${UI.input}" placeholder="${escapeHtml(field.customInput.placeholder || '')}">
-                        <button class="${cn(UI.btn, UI.btnSecondary)}" onclick="window.devbox.${customFn}('${field.path === 'packages.mise' ? 'mise' : 'apt'}')">${escapeHtml(field.customInput.buttonLabel || 'Add')}</button>
+                        <button class="${cn(UI.btn, UI.btnSecondary)}" data-action="${customFn}" data-type="${field.path === 'packages.mise' ? 'mise' : 'apt'}">${escapeHtml(field.customInput.buttonLabel || 'Add')}</button>
                     </div>
                     ${field.customInput.hint ? `<p class="${UI.hint}">${field.customInput.hint}</p>` : ''}
                 </div>` : '';
@@ -381,8 +381,8 @@ function renderFieldInput(field, fieldId, value, options, dataAttr, isProfile) {
                             <input type="email" id="git-credentials-edit-email" class="${UI.input}" value="${escapeHtml(cred.email || '')}" placeholder="Git Email (optional)" style="flex: 1; min-width: 150px">
                         </div>
                         <div class="flex gap-2">
-                            <button class="${cn(UI.btn, UI.btnSecondary, UI.btnSm)}" onclick="window.devbox.${saveFn}(${i})">Save</button>
-                            <button class="${cn(UI.btn, UI.btnSm)}" onclick="window.devbox.cancelEditListItem()">Cancel</button>
+                            <button class="${cn(UI.btn, UI.btnSecondary, UI.btnSm)}" data-action="${saveFn}" data-index="${i}">Save</button>
+                            <button class="${cn(UI.btn, UI.btnSm)}" data-action="cancelEditListItem">Cancel</button>
                         </div>
                     </div>`;
                 }
@@ -393,8 +393,8 @@ function renderFieldInput(field, fieldId, value, options, dataAttr, isProfile) {
                 <div class="flex items-center justify-between bg-muted/30 rounded-md px-3 py-2">
                     <span class="text-sm">${escapeHtml(cred.host)} <span class="text-muted-foreground">(${escapeHtml(cred.username)})</span>${identityHtml}</span>
                     <div class="flex gap-2">
-                        <button class="${cn(UI.btn, UI.btnSecondary, UI.btnSm)}" onclick="window.devbox.startEditListItem('${field.path}', ${i}, ${isProfile})">Edit</button>
-                        <button class="${cn(UI.btn, UI.btnDestructive, UI.btnSm)}" onclick="window.devbox.${removeFn}(${i})">Remove</button>
+                        <button class="${cn(UI.btn, UI.btnSecondary, UI.btnSm)}" data-action="startEditListItem" data-field="${field.path}" data-index="${i}" data-is-profile="${isProfile}">Edit</button>
+                        <button class="${cn(UI.btn, UI.btnDestructive, UI.btnSm)}" data-action="${removeFn}" data-index="${i}">Remove</button>
                     </div>
                 </div>
             `;
@@ -411,7 +411,7 @@ function renderFieldInput(field, fieldId, value, options, dataAttr, isProfile) {
                     <div class="flex gap-2 flex-wrap mt-2">
                         <input type="text" id="${fieldId}-name" class="${UI.input}" placeholder="Git Name (optional)" style="flex: 1; min-width: 120px">
                         <input type="email" id="${fieldId}-email" class="${UI.input}" placeholder="Git Email (optional)" style="flex: 1; min-width: 150px">
-                        <button class="${cn(UI.btn, UI.btnSecondary)}" onclick="window.devbox.${addFn}()">Add</button>
+                        <button class="${cn(UI.btn, UI.btnSecondary)}" data-action="${addFn}">Add</button>
                     </div>
                 </div>`;
         }
@@ -434,8 +434,8 @@ function renderFieldInput(field, fieldId, value, options, dataAttr, isProfile) {
                             <textarea id="ssh-keys-edit-pubKey" class="${UI.textarea}" rows="2" placeholder="ssh-ed25519 AAAA... you@example.com" style="flex: 1; min-width: 200px">${escapeHtml(key.pubKey || '')}</textarea>
                         </div>
                         <div class="flex gap-2">
-                            <button class="${cn(UI.btn, UI.btnSecondary, UI.btnSm)}" onclick="window.devbox.${saveFn}(${i})">Save</button>
-                            <button class="${cn(UI.btn, UI.btnSm)}" onclick="window.devbox.cancelEditListItem()">Cancel</button>
+                            <button class="${cn(UI.btn, UI.btnSecondary, UI.btnSm)}" data-action="${saveFn}" data-index="${i}">Save</button>
+                            <button class="${cn(UI.btn, UI.btnSm)}" data-action="cancelEditListItem">Cancel</button>
                         </div>
                     </div>`;
                 }
@@ -444,8 +444,8 @@ function renderFieldInput(field, fieldId, value, options, dataAttr, isProfile) {
                 <div class="flex items-center justify-between bg-muted/30 rounded-md px-3 py-2">
                     <span class="text-sm"><strong>${escapeHtml(key.name || 'Unnamed')}</strong><br><span class="text-xs text-muted-foreground font-mono">${escapeHtml(keyPreview)}</span></span>
                     <div class="flex gap-2">
-                        <button class="${cn(UI.btn, UI.btnSecondary, UI.btnSm)}" onclick="window.devbox.startEditListItem('${field.path}', ${i}, ${isProfile})">Edit</button>
-                        <button class="${cn(UI.btn, UI.btnDestructive, UI.btnSm)}" onclick="window.devbox.${removeFn}(${i})">Remove</button>
+                        <button class="${cn(UI.btn, UI.btnSecondary, UI.btnSm)}" data-action="startEditListItem" data-field="${field.path}" data-index="${i}" data-is-profile="${isProfile}">Edit</button>
+                        <button class="${cn(UI.btn, UI.btnDestructive, UI.btnSm)}" data-action="${removeFn}" data-index="${i}">Remove</button>
                     </div>
                 </div>
             `;
@@ -461,7 +461,7 @@ function renderFieldInput(field, fieldId, value, options, dataAttr, isProfile) {
                         <textarea id="${fieldId}-pubKey" class="${UI.textarea}" rows="2" placeholder="ssh-ed25519 AAAA... you@example.com" style="flex: 1; min-width: 200px"></textarea>
                     </div>
                     <div class="flex gap-2 mt-2">
-                        <button class="${cn(UI.btn, UI.btnSecondary)}" onclick="window.devbox.${addFn}()">Add</button>
+                        <button class="${cn(UI.btn, UI.btnSecondary)}" data-action="${addFn}">Add</button>
                     </div>
                 </div>`;
         }
@@ -473,14 +473,14 @@ function renderFieldInput(field, fieldId, value, options, dataAttr, isProfile) {
             const itemsHtml = items.length ? items.map((item, i) => `
                 <div class="flex items-center gap-2 bg-muted/30 rounded-md px-3 py-2">
                     <span class="flex-1 text-sm truncate">${escapeHtml(String(item || ''))}</span>
-                    <button class="${cn(UI.btn, UI.btnDestructive, UI.btnSm)}" onclick="window.devbox.${removeFn}('${field.path}', ${i})">Remove</button>
+                    <button class="${cn(UI.btn, UI.btnDestructive, UI.btnSm)}" data-action="${removeFn}" data-path="${field.path}" data-index="${i}">Remove</button>
                 </div>
             `).join('') : `<p class="${UI.subtitle}">No items added</p>`;
             return `
                 <div id="${listId}" class="space-y-2 mb-3">${itemsHtml}</div>
                 <div class="${UI.row}">
                     <input type="text" id="${fieldId}-input" class="${UI.input}" placeholder="${escapeHtml(field.placeholder || '')}">
-                    <button class="${cn(UI.btn, UI.btnSecondary)}" onclick="window.devbox.${addFn}('${field.path}')">${escapeHtml(field.addLabel || 'Add')}</button>
+                    <button class="${cn(UI.btn, UI.btnSecondary)}" data-action="${addFn}" data-path="${field.path}">${escapeHtml(field.addLabel || 'Add')}</button>
                 </div>`;
         }
         default:

@@ -104,7 +104,8 @@ export function renderCopyButton(value, ariaLabel = 'Copy to clipboard') {
     return `
         <button type="button"
             class="copy-btn"
-            onclick="window.devbox.copyToClipboard('${escapedValue}')"
+            data-action="copyToClipboard"
+            data-value="${escapedValue}"
             aria-label="${escapeAttr(ariaLabel)}"
             title="${escapeAttr(ariaLabel)}">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
