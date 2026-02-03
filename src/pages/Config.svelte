@@ -1,10 +1,11 @@
 <script lang="ts">
   import { configStore } from '$lib/stores/config.svelte';
+  import { profilesStore } from '$lib/stores/profiles.svelte';
   import { serversStore } from '$lib/stores/servers.svelte';
   import { credentialsStore } from '$lib/stores/credentials.svelte';
   import { toast } from '$lib/stores/toast.svelte';
   import { clone } from '$lib/utils/storage';
-  import type { GlobalConfig } from '$lib/types';
+  import type { GlobalConfig, Profiles } from '$lib/types';
   import Input from '$components/ui/Input.svelte';
   import Button from '$components/ui/Button.svelte';
   import Card from '$components/ui/Card.svelte';
@@ -85,6 +86,82 @@
 
   function removeGitCredential(index: number) {
     configStore.value.git.credentials = configStore.value.git.credentials.filter((_, i) => i !== index);
+  }
+
+  // Export configuration
+  let fileInputRef: HTMLInputElement | undefined = $state();
+
+  function exportConfig() {
+    const exportData = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      config: configStore.value,
+      profiles: profilesStore.profiles,
+      defaultProfileId: profilesStore.defaultProfileId,
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `devbox-config-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success('Configuration exported');
+  }
+
+  function triggerImport() {
+    fileInputRef?.click();
+  }
+
+  function handleImport(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target?.result as string);
+
+        if (!data.config) {
+          toast.error('Invalid config file: missing config');
+          return;
+        }
+
+        // Import config
+        configStore.value = data.config as GlobalConfig;
+        configStore.save();
+        snapshot = clone(configStore.value);
+
+        // Import profiles if present
+        if (data.profiles) {
+          const profiles = data.profiles as Profiles;
+          for (const [id, profile] of Object.entries(profiles)) {
+            if (!profilesStore.get(id)) {
+              profilesStore.profiles[id] = profile;
+            }
+          }
+          profilesStore.save();
+        }
+
+        // Set default profile if present
+        if (data.defaultProfileId) {
+          profilesStore.setDefault(data.defaultProfileId);
+        }
+
+        toast.success('Configuration imported successfully');
+      } catch (err) {
+        toast.error('Failed to parse config file');
+        console.error('Import error:', err);
+      }
+    };
+    reader.readAsText(file);
+
+    // Reset input so the same file can be imported again
+    input.value = '';
   }
 </script>
 
@@ -268,10 +345,20 @@
     </div>
   </Card>
 
-  <Card>
+  <Card title="Backup & Restore">
+    <p class="text-sm text-muted-foreground mb-4">
+      Export your configuration and profiles to a JSON file, or import a previously exported configuration.
+    </p>
     <div class="flex gap-3">
-      <Button variant="secondary">Export</Button>
-      <Button variant="secondary">Import</Button>
+      <Button variant="secondary" onclick={exportConfig}>Export Configuration</Button>
+      <Button variant="secondary" onclick={triggerImport}>Import Configuration</Button>
+      <input
+        bind:this={fileInputRef}
+        type="file"
+        accept=".json"
+        class="hidden"
+        onchange={handleImport}
+      />
     </div>
   </Card>
 </div>

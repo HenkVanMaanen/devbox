@@ -3,6 +3,7 @@
   import Toast from '$components/ui/Toast.svelte';
   import Dashboard from '$pages/Dashboard.svelte';
   import Config from '$pages/Config.svelte';
+  import Profiles from '$pages/Profiles.svelte';
   import Credentials from '$pages/Credentials.svelte';
 
   // Simple hash-based routing
@@ -27,7 +28,7 @@
     {:else if currentPage === 'config'}
       <Config />
     {:else if currentPage === 'profiles'}
-      <div class="text-muted-foreground">Profiles page - coming soon</div>
+      <Profiles />
     {:else if currentPage === 'credentials'}
       <Credentials />
     {:else}
