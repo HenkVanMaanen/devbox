@@ -71,6 +71,9 @@ pnpm run dev
 | [011](./docs/adr/0011-claude-code-primary-use-case.md) | Claude Code as primary use case |
 | [012](./docs/adr/0012-security-model.md) | Security model and threat assumptions |
 | [013](./docs/adr/0013-mermaid-diagrams.md) | Mermaid for documentation diagrams |
+| [014](./docs/adr/0014-esbuild-bundler.md) | esbuild as build tool |
+| [015](./docs/adr/0015-native-test-runner.md) | Node.js native test runner |
+| [016](./docs/adr/0016-no-typescript.md) | Plain JavaScript (no TypeScript) |
 
 ## Tech Stack
 

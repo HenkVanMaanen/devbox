@@ -58,6 +58,9 @@ ADRs document the significant architectural decisions made in this project:
 | [011](./adr/0011-claude-code-primary-use-case.md) | Claude Code as Primary Use Case | Accepted |
 | [012](./adr/0012-security-model.md) | Security Model and Threat Assumptions | Accepted |
 | [013](./adr/0013-mermaid-diagrams.md) | Mermaid for Documentation Diagrams | Accepted |
+| [014](./adr/0014-esbuild-bundler.md) | esbuild as Build Tool | Accepted |
+| [015](./adr/0015-native-test-runner.md) | Node.js Native Test Runner | Accepted |
+| [016](./adr/0016-no-typescript.md) | Plain JavaScript (No TypeScript) | Accepted |
 
 ## Project Structure
 

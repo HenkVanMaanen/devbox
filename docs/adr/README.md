@@ -27,6 +27,9 @@ ADRs capture important architectural decisions along with their context and cons
 | [011](./0011-claude-code-primary-use-case.md) | Claude Code as Primary Use Case | Accepted | Optimized for AI-assisted coding workflow |
 | [012](./0012-security-model.md) | Security Model and Threat Assumptions | Accepted | Trusted user, trusted machine, untrusted network |
 | [013](./0013-mermaid-diagrams.md) | Mermaid for Documentation Diagrams | Accepted | Text-based diagrams with native GitHub rendering |
+| [014](./0014-esbuild-bundler.md) | esbuild as Build Tool | Accepted | Fast, simple, sufficient for SPA needs |
+| [015](./0015-native-test-runner.md) | Node.js Native Test Runner | Accepted | Zero dependencies, built into Node.js |
+| [016](./0016-no-typescript.md) | Plain JavaScript (No TypeScript) | Accepted | Simplicity over type safety at current scale |
 
 ## ADR Template
 
