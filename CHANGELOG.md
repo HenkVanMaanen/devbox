@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.0.12] - 2026-02-03
+
+### Added
+- Profile selector on Dashboard for choosing configuration before server creation
+- Configuration summary preview showing server type, location, packages, repos
+- Refresh button on Cloud-Init page to regenerate with new access token
+- Profile selector on Cloud-Init page for previewing different profiles
+- Claude credentials.json upload with account info display (email, org, expiry)
+- Clear All Data button on Credentials page with confirmation modal
+
 ## [2.0.11] - 2026-02-03
 
 ### Fixed

@@ -12,12 +12,38 @@
   import ServerCard from '$components/ServerCard.svelte';
 
   let deleteModal = $state({ open: false, server: null as { id: number; name: string } | null });
+  let selectedProfileId = $state<string | null>(profilesStore.defaultProfileId);
 
-  // Load servers on mount
+  // Load servers and options on mount
   $effect(() => {
     if (credentialsStore.hasToken) {
       serversStore.load(credentialsStore.token);
+      serversStore.loadOptions(credentialsStore.token);
     }
+  });
+
+  // Get merged config for selected profile
+  const selectedConfig = $derived(profilesStore.getConfigForProfile(selectedProfileId));
+
+  // Build configuration summary
+  const configSummary = $derived.by(() => {
+    const parts: string[] = [];
+    const serverType = serversStore.serverTypes.find(t => t.name === selectedConfig.hetzner.serverType);
+    if (serverType) {
+      parts.push(`${serverType.name} (${serverType.cores} vCPU, ${serverType.memory}GB RAM)`);
+    }
+    const location = serversStore.locations.find(l => l.name === selectedConfig.hetzner.location);
+    if (location) {
+      parts.push(location.city);
+    }
+    if (selectedConfig.packages.mise?.length) {
+      const misePackages = selectedConfig.packages.mise.slice(0, 3).join(', ');
+      parts.push(misePackages + (selectedConfig.packages.mise.length > 3 ? '...' : ''));
+    }
+    if (selectedConfig.repos?.length) {
+      parts.push(`${selectedConfig.repos.length} repo(s)`);
+    }
+    return parts.join(' • ');
   });
 
   async function createServer() {
@@ -27,7 +53,7 @@
       return;
     }
 
-    const config = profilesStore.getConfigForProfile();
+    const config = profilesStore.getConfigForProfile(selectedProfileId);
     const serverName = generateServerName();
 
     try {
@@ -86,10 +112,47 @@
 <div class="space-y-6">
   <div class="flex items-center justify-between">
     <h1 class="text-2xl font-bold">Dashboard</h1>
-    <Button onclick={createServer} loading={serversStore.creating}>
-      {serversStore.creating ? serversStore.createProgress : 'Create Server'}
-    </Button>
   </div>
+
+  {#if credentialsStore.hasToken}
+    <Card>
+      <div class="space-y-4">
+        <h2 class="text-lg font-semibold">Create New Devbox</h2>
+
+        {#if profilesStore.profileList.length > 0}
+          <div>
+            <label for="profile-select" class="block text-sm font-medium mb-1.5">Profile</label>
+            <select
+              id="profile-select"
+              bind:value={selectedProfileId}
+              class="w-full min-h-[44px] px-3 py-2 text-base bg-background border-2 border-border rounded-md
+                     focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary
+                     transition-colors duration-150"
+            >
+              <option value={null}>Use global config (no profile)</option>
+              {#each profilesStore.profileList as profile (profile.id)}
+                <option value={profile.id}>
+                  {profile.id === profilesStore.defaultProfileId ? '★ ' : ''}{profile.name}
+                  {profile.id === profilesStore.defaultProfileId ? ' (Default)' : ''}
+                </option>
+              {/each}
+            </select>
+          </div>
+        {/if}
+
+        {#if configSummary}
+          <div class="bg-muted/30 rounded-md p-4">
+            <p class="text-sm font-medium mb-1">Configuration Summary</p>
+            <p class="text-sm text-muted-foreground">{configSummary}</p>
+          </div>
+        {/if}
+
+        <Button onclick={createServer} loading={serversStore.creating} class="w-full">
+          {serversStore.creating ? serversStore.createProgress : 'Create Server'}
+        </Button>
+      </div>
+    </Card>
+  {/if}
 
   {#if !credentialsStore.hasToken}
     <Card>

@@ -1,14 +1,19 @@
 <script lang="ts">
   import { credentialsStore } from '$lib/stores/credentials.svelte';
   import { serversStore } from '$lib/stores/servers.svelte';
+  import { configStore } from '$lib/stores/config.svelte';
+  import { profilesStore } from '$lib/stores/profiles.svelte';
   import { toast } from '$lib/stores/toast.svelte';
+  import { clearAll } from '$lib/utils/storage';
   import Input from '$components/ui/Input.svelte';
   import Button from '$components/ui/Button.svelte';
   import Card from '$components/ui/Card.svelte';
+  import Modal from '$components/ui/Modal.svelte';
   import FloatingActions from '$components/FloatingActions.svelte';
 
   let snapshot = $state(credentialsStore.token);
   let dirty = $derived(credentialsStore.token !== snapshot);
+  let clearAllModal = $state(false);
 
   function save() {
     credentialsStore.save();
@@ -30,6 +35,16 @@
     } else {
       toast.error('Token is invalid');
     }
+  }
+
+  function confirmClearAll() {
+    clearAll();
+    // Reset stores to defaults
+    credentialsStore.token = '';
+    credentialsStore.save();
+    configStore.reset();
+    // Reload the page to reset all state
+    window.location.reload();
   }
 </script>
 
@@ -53,7 +68,45 @@
       </div>
     </div>
   </Card>
+
+  <Card title="Danger Zone" description="Destructive actions that cannot be undone.">
+    <div class="space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="font-medium">Clear All Data</p>
+          <p class="text-sm text-muted-foreground">Remove all configuration, profiles, and credentials from this browser.</p>
+        </div>
+        <Button variant="destructive" onclick={() => clearAllModal = true}>
+          Clear All Data
+        </Button>
+      </div>
+    </div>
+  </Card>
 </div>
+
+<Modal
+  bind:open={clearAllModal}
+  title="Clear All Data"
+  onClose={() => clearAllModal = false}
+>
+  <p>Are you sure you want to clear all data? This will remove:</p>
+  <ul class="list-disc list-inside mt-2 text-muted-foreground">
+    <li>Hetzner API token</li>
+    <li>All profiles and configuration</li>
+    <li>Server access tokens</li>
+    <li>Theme preferences</li>
+  </ul>
+  <p class="mt-3 text-destructive font-medium">This action cannot be undone.</p>
+
+  {#snippet actions()}
+    <Button variant="secondary" onclick={() => clearAllModal = false}>
+      Cancel
+    </Button>
+    <Button variant="destructive" onclick={confirmClearAll}>
+      Clear All Data
+    </Button>
+  {/snippet}
+</Modal>
 
 {#if dirty}
   <FloatingActions onSave={save} onDiscard={discard} />

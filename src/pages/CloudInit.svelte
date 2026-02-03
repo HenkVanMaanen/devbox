@@ -6,12 +6,22 @@
   import Button from '$components/ui/Button.svelte';
   import Card from '$components/ui/Card.svelte';
 
-  // Generate cloud-init script
+  let selectedProfileId = $state<string | null>(profilesStore.defaultProfileId);
+  let refreshCounter = $state(0);
+
+  // Generate cloud-init script (refreshCounter triggers regeneration with new access token)
   const script = $derived.by(() => {
+    // Access refreshCounter to make this reactive to refresh button
+    void refreshCounter;
     if (!credentialsStore.hasToken) return '';
-    const config = profilesStore.getConfigForProfile();
+    const config = profilesStore.getConfigForProfile(selectedProfileId);
     return generateCloudInit('devbox-preview', credentialsStore.token, config);
   });
+
+  function refresh() {
+    refreshCounter++;
+    toast.success('Cloud-init refreshed with new access token');
+  }
 
   // Calculate size
   const size = $derived(new Blob([script]).size);
@@ -75,10 +85,32 @@
           <p class="text-sm text-muted-foreground">Preview the cloud-init user-data that will be sent to Hetzner</p>
         </div>
         <div class="flex gap-2">
+          <Button variant="secondary" size="sm" onclick={refresh}>Refresh</Button>
           <Button variant="secondary" size="sm" onclick={copyToClipboard}>Copy</Button>
           <Button variant="secondary" size="sm" onclick={download}>Download</Button>
         </div>
       </div>
+
+      {#if profilesStore.profileList.length > 0}
+        <div class="mb-4">
+          <label for="cloudinit-profile" class="block text-sm font-medium mb-1.5">Profile</label>
+          <select
+            id="cloudinit-profile"
+            bind:value={selectedProfileId}
+            class="w-full min-h-[44px] px-3 py-2 text-base bg-background border-2 border-border rounded-md
+                   focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary
+                   transition-colors duration-150"
+          >
+            <option value={null}>Use global config (no profile)</option>
+            {#each profilesStore.profileList as profile (profile.id)}
+              <option value={profile.id}>
+                {profile.id === profilesStore.defaultProfileId ? '★ ' : ''}{profile.name}
+                {profile.id === profilesStore.defaultProfileId ? ' (Default)' : ''}
+              </option>
+            {/each}
+          </select>
+        </div>
+      {/if}
 
       <div class="mb-4">
         <div class="flex items-center justify-between text-sm mb-1">
