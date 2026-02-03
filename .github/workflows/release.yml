@@ -15,13 +15,35 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Generate release notes
-        id: notes
-        run: |
-          # Extract version from tag
-          VERSION=${GITHUB_REF#refs/tags/}
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-          # Create release notes
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Extract version from tag
+        run: |
+          # Extract version from tag (v1.0.3 -> 1.0.3)
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          # Update package.json with the tag version
+          npm pkg set version="$VERSION"
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Create dist archive
+        run: |
+          cd dist
+          zip -r ../devbox-${{ env.VERSION }}.zip .
+
+      - name: Generate release notes
+        run: |
           cat << 'EOF' > release-notes.md
           ## What's New
 
@@ -36,7 +58,7 @@ jobs:
           npm run dev
           ```
 
-          Then configure your Hetzner API token and start creating devboxes!
+          Or download the pre-built `devbox-${{ env.VERSION }}.zip` below and serve the files with any static web server.
           EOF
 
       - name: Create Release
@@ -44,3 +66,4 @@ jobs:
         with:
           body_path: release-notes.md
           generate_release_notes: true
+          files: devbox-${{ env.VERSION }}.zip

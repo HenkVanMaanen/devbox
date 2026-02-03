@@ -192,12 +192,15 @@ Examples:
 
 When creating a release:
 
-1. **Update CHANGELOG.md first** - Add entry under `[Unreleased]` or new version section
-2. **Commit the changelog** - Before tagging
-3. **Create version tag** - `git tag -a vX.Y.Z -m "vX.Y.Z - Description"`
-4. **Push tag** - `git push origin vX.Y.Z`
+1. **Update CHANGELOG.md** - Add entry for the new version
+2. **Commit changes** - `git commit -m "chore: release vX.Y.Z"`
+3. **Create and push tag** - `git tag -a vX.Y.Z -m "vX.Y.Z" && git push && git push origin vX.Y.Z`
 
-GitHub Actions automatically creates a release when a `v*` tag is pushed.
+GitHub Actions automatically:
+- Extracts the version from the tag (e.g., `v1.0.3` → `1.0.3`)
+- Updates package.json with that version
+- Builds the project with the version injected
+- Creates a GitHub release with a downloadable zip
 
 **Changelog format** (Keep a Changelog):
 ```markdown

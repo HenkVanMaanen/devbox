@@ -28,6 +28,12 @@ import {
 // ============================================================================
 
 async function init() {
+    // Set version from build-time constant
+    const versionEl = document.getElementById('app-version');
+    if (versionEl) {
+        versionEl.textContent = `v${__APP_VERSION__}`;
+    }
+
     initTheme();
     setRenderCallback(render);
     window.addEventListener('hashchange', handleHashChange);

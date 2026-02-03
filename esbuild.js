@@ -3,6 +3,10 @@ import postcss from 'postcss';
 import tailwindcss from '@tailwindcss/postcss';
 import { readFile, writeFile } from 'node:fs/promises';
 
+// Read version from package.json
+const pkg = JSON.parse(await readFile('package.json', 'utf8'));
+const define = { '__APP_VERSION__': JSON.stringify(pkg.version) };
+
 const tailwindPlugin = {
     name: 'tailwindcss',
     setup(build) {
@@ -27,6 +31,7 @@ if (process.argv[2] === 'build') {
         entryNames: '[dir]/[name]-[hash]',
         plugins: [tailwindPlugin],
         metafile: true,
+        define,
     });
 
     // Generate dist/index.html from source template
@@ -47,6 +52,7 @@ if (process.argv[2] === 'build') {
         write: false,
         sourcemap: true,
         plugins: [tailwindPlugin],
+        define,
         banner: {
             js: `new EventSource('/esbuild').addEventListener('change', () => location.reload());`,
         },
