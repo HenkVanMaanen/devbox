@@ -459,14 +459,18 @@ function setupFormTracking() {
         // Small delay to ensure DOM is fully updated
         setTimeout(() => {
             captureFormState(containerId);
-            setState({ currentFormContainer: containerId, formDirty: false });
+            // Update state directly without re-render to avoid infinite loop
+            state.currentFormContainer = containerId;
+            state.formDirty = false;
             updateFloatingActionsBar(false);
         }, 50);
     } else {
         // Clear tracking when not on a form page
         if (state.currentFormContainer) {
             clearFormState(state.currentFormContainer);
-            setState({ currentFormContainer: null, formDirty: false });
+            // Update state directly without re-render
+            state.currentFormContainer = null;
+            state.formDirty = false;
             updateFloatingActionsBar(false);
         }
     }
