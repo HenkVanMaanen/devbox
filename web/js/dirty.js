@@ -94,6 +94,8 @@ export function revertForm(containerId) {
 
     inputs.forEach(input => {
         if (!input.id) return;
+        // Skip file inputs - they can't be reverted and dispatching events triggers file picker
+        if (input.type === 'file') return;
 
         const savedValue = savedState[input.id];
         if (savedValue === undefined) return;

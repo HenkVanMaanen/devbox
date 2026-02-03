@@ -142,7 +142,6 @@ export function renderConfig() {
         ${sectionsHtml}
 
         <div class="${UI.row}">
-            <button class="${cn(UI.btn, UI.btnPrimary)}" data-action="saveConfig">Save Configuration</button>
             <button class="${cn(UI.btn, UI.btnSecondary)}" data-action="exportConfig">Export</button>
             <label class="${cn(UI.btn, UI.btnSecondary)} cursor-pointer" data-action="importConfig">
                 Import
