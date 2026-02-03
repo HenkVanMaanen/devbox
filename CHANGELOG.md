@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-02-03
+
+### Added
+- Version display in navigation bar
+- Automated version injection from git tag during release build
+- Pre-built dist zip attached to GitHub releases
+
 ## [1.0.2] - 2026-02-03
 
 ### Added
