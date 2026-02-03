@@ -188,9 +188,13 @@
     const exportData = {
       version: 1,
       exportedAt: new Date().toISOString(),
+      // New format
       config: configStore.value,
       profiles: profilesStore.profiles,
       defaultProfileId: profilesStore.defaultProfileId,
+      // Old format (for backwards compatibility)
+      globalConfig: configStore.value,
+      defaultProfile: profilesStore.defaultProfileId,
     };
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
@@ -219,13 +223,15 @@
       try {
         const data = JSON.parse(e.target?.result as string);
 
-        if (!data.config) {
-          toast.error('Invalid config file: missing config');
+        // Support both new format (config) and old format (globalConfig)
+        const importedConfig = data.config || data.globalConfig;
+        if (!importedConfig) {
+          toast.error('Invalid config file: missing config or globalConfig');
           return;
         }
 
-        // Import config
-        configStore.value = data.config as GlobalConfig;
+        // Import config (merge with defaults to handle missing fields)
+        configStore.value = { ...configStore.value, ...importedConfig } as GlobalConfig;
         configStore.save();
         snapshot = clone(configStore.value);
 
@@ -240,9 +246,10 @@
           profilesStore.save();
         }
 
-        // Set default profile if present
-        if (data.defaultProfileId) {
-          profilesStore.setDefault(data.defaultProfileId);
+        // Set default profile if present (support both formats)
+        const defaultProfileId = data.defaultProfileId || data.defaultProfile;
+        if (defaultProfileId) {
+          profilesStore.setDefault(defaultProfileId);
         }
 
         toast.success('Configuration imported successfully');
