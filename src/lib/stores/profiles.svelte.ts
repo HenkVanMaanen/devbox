@@ -1,7 +1,7 @@
 // Profiles store using Svelte 5 runes
 
 import type { Profile, Profiles, GlobalConfig } from '$lib/types';
-import { load, save, clone, getNestedValue } from '$lib/utils/storage';
+import { load, save, clone, getNestedValue, uuid } from '$lib/utils/storage';
 import { configStore } from './config.svelte';
 
 function createProfilesStore() {
@@ -26,7 +26,7 @@ function createProfilesStore() {
 
     // Create a new profile
     create(name: string): string {
-      const id = crypto.randomUUID();
+      const id = uuid();
       profiles[id] = { id, name, overrides: {} };
       this.save();
       return id;
@@ -37,7 +37,7 @@ function createProfilesStore() {
       const source = profiles[fromId];
       if (!source) throw new Error(`Profile ${fromId} not found`);
 
-      const id = crypto.randomUUID();
+      const id = uuid();
       profiles[id] = {
         id,
         name: newName,

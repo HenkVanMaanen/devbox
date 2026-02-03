@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { HTMLInputAttributes } from 'svelte/elements';
+  import { uuid } from '$lib/utils/storage';
 
   interface Props extends Omit<HTMLInputAttributes, 'class'> {
     label?: string;
@@ -19,7 +20,7 @@
   }: Props = $props();
 
   // Generate a stable ID for the input
-  const generatedId = crypto.randomUUID();
+  const generatedId = uuid();
   const inputId = $derived(id ?? generatedId);
 </script>
 

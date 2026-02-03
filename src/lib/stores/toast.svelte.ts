@@ -1,12 +1,13 @@
 // Toast notifications store
 
 import type { Toast } from '$lib/types';
+import { uuid } from '$lib/utils/storage';
 
 function createToastStore() {
   let toasts = $state<Toast[]>([]);
 
   function add(message: string, type: Toast['type'], duration = 3000): void {
-    const id = crypto.randomUUID();
+    const id = uuid();
     toasts.push({ id, message, type });
 
     setTimeout(() => {

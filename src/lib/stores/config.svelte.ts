@@ -1,7 +1,7 @@
 // Global configuration store using Svelte 5 runes
 
 import type { GlobalConfig } from '$lib/types';
-import { load, save, clone, deepMerge, getNestedValue, setNestedValue } from '$lib/utils/storage';
+import { load, save, clone, deepMerge, getNestedValue, setNestedValue, uuid } from '$lib/utils/storage';
 
 const DEFAULT_CONFIG: GlobalConfig = {
   ssh: {
@@ -19,7 +19,7 @@ const DEFAULT_CONFIG: GlobalConfig = {
     codeServer: true,
     claudeTerminal: true,
     shellTerminal: true,
-    accessToken: crypto.randomUUID().slice(0, 8),
+    accessToken: uuid().slice(0, 8),
     acmeEmail: '',
     zerosslEabKeyId: '',
     zerosslEabKey: '',
