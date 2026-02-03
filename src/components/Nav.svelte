@@ -1,4 +1,6 @@
 <script lang="ts">
+  import ThemeSelector from './ThemeSelector.svelte';
+
   interface Props {
     currentPage: string;
   }
@@ -36,6 +38,7 @@
         {/each}
       </div>
 
+      <ThemeSelector />
       <span class="text-xs text-muted-foreground ml-2 opacity-60">v{version}</span>
     </div>
   </div>

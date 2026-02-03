@@ -5,6 +5,7 @@
   import { credentialsStore } from '$lib/stores/credentials.svelte';
   import { toast } from '$lib/stores/toast.svelte';
   import { clone } from '$lib/utils/storage';
+  import { validateSSHKey, extractSSHKeyName } from '$lib/utils/validation';
   import type { GlobalConfig, Profiles } from '$lib/types';
   import Input from '$components/ui/Input.svelte';
   import Button from '$components/ui/Button.svelte';
@@ -36,6 +37,17 @@
   // SSH Key management
   let newSSHKeyName = $state('');
   let newSSHKeyPubKey = $state('');
+  let sshKeyError = $state('');
+
+  // Validate SSH key on input
+  $effect(() => {
+    if (newSSHKeyPubKey.trim()) {
+      const result = validateSSHKey(newSSHKeyPubKey);
+      sshKeyError = result.error ?? '';
+    } else {
+      sshKeyError = '';
+    }
+  });
 
   function addSSHKey() {
     if (!newSSHKeyPubKey.trim()) {
@@ -43,13 +55,17 @@
       return;
     }
 
+    // Validate the SSH key
+    const validation = validateSSHKey(newSSHKeyPubKey);
+    if (!validation.valid) {
+      toast.error(validation.error ?? 'Invalid SSH key');
+      return;
+    }
+
     // Auto-extract name from key comment if not provided
     let name = newSSHKeyName.trim();
     if (!name) {
-      const parts = newSSHKeyPubKey.trim().split(' ');
-      if (parts.length >= 3) {
-        name = parts.slice(2).join(' ');
-      }
+      name = extractSSHKeyName(newSSHKeyPubKey) ?? '';
     }
     if (!name) {
       name = `key-${configStore.value.ssh.keys.length + 1}`;
@@ -58,6 +74,8 @@
     configStore.value.ssh.keys = [...configStore.value.ssh.keys, { name, pubKey: newSSHKeyPubKey.trim() }];
     newSSHKeyName = '';
     newSSHKeyPubKey = '';
+    sshKeyError = '';
+    toast.success(`SSH key "${name}" added`);
   }
 
   function removeSSHKey(index: number) {
@@ -191,17 +209,22 @@
     {/if}
 
     <div class="space-y-3 p-4 border border-border rounded-md">
-      <Input label="Name (optional)" bind:value={newSSHKeyName} placeholder="my-key" />
+      <Input label="Name (optional)" bind:value={newSSHKeyName} placeholder="my-key" help="Auto-extracted from key comment if empty" />
       <div class="field">
         <label for="ssh-pubkey" class="block text-sm font-medium mb-1.5">Public Key</label>
         <textarea
           id="ssh-pubkey"
           bind:value={newSSHKeyPubKey}
-          class="w-full min-h-[88px] px-3 py-2 text-base bg-background border-2 border-border rounded-md
+          class="w-full min-h-[88px] px-3 py-2 text-base bg-background border-2 rounded-md
                  focus:outline-none focus:ring-3 focus:ring-focus focus:border-primary
-                 placeholder:text-placeholder resize-y font-mono text-sm"
+                 placeholder:text-placeholder resize-y font-mono text-sm
+                 {sshKeyError ? 'border-destructive' : 'border-border'}"
           placeholder="ssh-ed25519 AAAA..."
+          aria-invalid={sshKeyError ? 'true' : undefined}
         ></textarea>
+        {#if sshKeyError}
+          <p class="text-sm text-destructive mt-1">{sshKeyError}</p>
+        {/if}
       </div>
       <Button variant="secondary" onclick={addSSHKey}>Add SSH Key</Button>
     </div>
