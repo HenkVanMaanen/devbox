@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.0.7] - 2026-02-03
+
+### Fixed
+- Clipboard copy now works on HTTP (fallback for non-secure contexts)
+- Fixed "matches is not a function" error from browser extensions
+- Added favicon
+
 ## [1.0.6] - 2026-02-03
 
 ### Fixed
