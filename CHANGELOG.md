@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.0.15] - 2026-02-05
+
+### Fixed
+- Edit profile modal now shows content instead of empty popup
+- Set Default button now correctly updates only the selected profile
+
 ## [2.0.14] - 2026-02-03
 
 ### Fixed

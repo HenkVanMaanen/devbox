@@ -19,12 +19,12 @@
   // Edit modal
   let showEditModal = $state(false);
   let editingProfileId = $state('');
-  let editingProfile = $derived(editingProfileId ? profilesStore.get(editingProfileId) : undefined);
+  let editingProfile = $derived(editingProfileId ? profilesStore.profiles[editingProfileId] : undefined);
 
   // Delete confirmation
   let showDeleteModal = $state(false);
   let deletingProfileId = $state('');
-  let deletingProfile = $derived(deletingProfileId ? profilesStore.get(deletingProfileId) : undefined);
+  let deletingProfile = $derived(deletingProfileId ? profilesStore.profiles[deletingProfileId] : undefined);
 
   // Available override paths (config sections that can be overridden per-profile)
   const overridePaths = [
@@ -152,7 +152,7 @@
     </Card>
   {:else}
     <div class="space-y-4">
-      {#each profilesStore.profileList as profile}
+      {#each profilesStore.profileList as profile (profile.id)}
         <Card>
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
