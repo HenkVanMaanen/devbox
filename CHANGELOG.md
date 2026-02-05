@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.0.17] - 2026-02-05
+
+### Changed
+- Extracted shared ConfigForm component used by both Global Config and Profile Edit pages
+- ACME email and EAB credentials can now be overridden per-profile
+- Shared dropdown options (shell, DNS, ACME providers) moved to dedicated module
+
+### Fixed
+- Custom package inputs (mise tools, APT packages) now available in profile edit
+
 ## [2.0.16] - 2026-02-05
 
 ### Changed
