@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.0.16] - 2026-02-05
+
+### Changed
+- Profile editing now uses a dedicated page instead of a modal
+- Profile edit page mirrors Global Config structure with override toggles for each field
+- All settings can now be overridden per-profile (Hetzner, Shell, Services, Auto-Delete, Packages)
+
 ## [2.0.15] - 2026-02-05
 
 ### Fixed

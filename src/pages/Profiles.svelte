@@ -1,6 +1,5 @@
 <script lang="ts">
   import { profilesStore } from '$lib/stores/profiles.svelte';
-  import { configStore } from '$lib/stores/config.svelte';
   import { toast } from '$lib/stores/toast.svelte';
   import Button from '$components/ui/Button.svelte';
   import Card from '$components/ui/Card.svelte';
@@ -16,28 +15,10 @@
   let duplicateSourceId = $state('');
   let duplicateNewName = $state('');
 
-  // Edit modal
-  let showEditModal = $state(false);
-  let editingProfileId = $state('');
-  let editingProfile = $derived(editingProfileId ? profilesStore.profiles[editingProfileId] : undefined);
-
   // Delete confirmation
   let showDeleteModal = $state(false);
   let deletingProfileId = $state('');
   let deletingProfile = $derived(deletingProfileId ? profilesStore.profiles[deletingProfileId] : undefined);
-
-  // Available override paths (config sections that can be overridden per-profile)
-  const overridePaths = [
-    { path: 'hetzner.serverType', label: 'Server Type', section: 'Hetzner' },
-    { path: 'hetzner.location', label: 'Location', section: 'Hetzner' },
-    { path: 'hetzner.baseImage', label: 'Base Image', section: 'Hetzner' },
-    { path: 'services.codeServer', label: 'VS Code Server', section: 'Services' },
-    { path: 'services.claudeTerminal', label: 'Claude Terminal', section: 'Services' },
-    { path: 'services.shellTerminal', label: 'Shell Terminal', section: 'Services' },
-    { path: 'shell.starship', label: 'Starship Prompt', section: 'Shell' },
-    { path: 'autoDelete.enabled', label: 'Auto-Delete', section: 'Auto-Delete' },
-    { path: 'autoDelete.timeoutMinutes', label: 'Timeout (minutes)', section: 'Auto-Delete' },
-  ];
 
   function createProfile() {
     if (!newProfileName.trim()) {
@@ -48,9 +29,8 @@
     toast.success(`Profile "${newProfileName}" created`);
     newProfileName = '';
     showCreateModal = false;
-    // Open edit modal for the new profile
-    editingProfileId = id;
-    showEditModal = true;
+    // Navigate to edit page
+    window.location.hash = `profiles/${id}`;
   }
 
   function openDuplicateModal(sourceId: string) {
@@ -67,16 +47,17 @@
       toast.error('Please enter a name for the duplicate');
       return;
     }
-    profilesStore.duplicate(duplicateSourceId, duplicateNewName.trim());
+    const id = profilesStore.duplicate(duplicateSourceId, duplicateNewName.trim());
     toast.success(`Profile duplicated as "${duplicateNewName}"`);
     duplicateNewName = '';
     duplicateSourceId = '';
     showDuplicateModal = false;
+    // Navigate to edit page
+    window.location.hash = `profiles/${id}`;
   }
 
-  function openEditModal(profileId: string) {
-    editingProfileId = profileId;
-    showEditModal = true;
+  function editProfile(profileId: string) {
+    window.location.hash = `profiles/${profileId}`;
   }
 
   function openDeleteModal(profileId: string) {
@@ -99,36 +80,18 @@
     toast.success(profileId ? 'Default profile set' : 'Default profile cleared');
   }
 
-  function toggleOverride(profileId: string, path: string) {
-    const profile = profilesStore.get(profileId);
-    if (!profile) return;
-
-    if (path in profile.overrides) {
-      profilesStore.disableOverride(profileId, path);
-    } else {
-      profilesStore.enableOverride(profileId, path);
-    }
-  }
-
-  function getOverrideValue(profileId: string, path: string): unknown {
-    const profile = profilesStore.get(profileId);
-    if (!profile || !(path in profile.overrides)) {
-      return configStore.get(path);
-    }
-    return profile.overrides[path];
-  }
-
-  function setOverrideValue(profileId: string, path: string, value: unknown) {
-    const profile = profilesStore.get(profileId);
-    if (!profile) return;
-    profile.overrides[path] = value;
-    profilesStore.save();
-  }
-
   function formatValue(value: unknown): string {
     if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (Array.isArray(value)) return `${value.length} items`;
     if (value === null || value === undefined) return '-';
     return String(value);
+  }
+
+  function formatPath(path: string): string {
+    // Convert 'hetzner.serverType' to 'Server Type'
+    const parts = path.split('.');
+    const last = parts[parts.length - 1] ?? path;
+    return last.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase());
   }
 </script>
 
@@ -172,7 +135,7 @@
               {:else}
                 <Button variant="ghost" size="sm" onclick={() => setDefault(null)}>Clear Default</Button>
               {/if}
-              <Button variant="secondary" size="sm" onclick={() => openEditModal(profile.id)}>Edit</Button>
+              <Button variant="secondary" size="sm" onclick={() => editProfile(profile.id)}>Edit</Button>
               <Button variant="ghost" size="sm" onclick={() => openDuplicateModal(profile.id)}>Duplicate</Button>
               <Button variant="destructive" size="sm" onclick={() => openDeleteModal(profile.id)}>Delete</Button>
             </div>
@@ -183,9 +146,8 @@
               <p class="text-sm font-medium text-muted-foreground mb-2">Overrides:</p>
               <div class="flex flex-wrap gap-2">
                 {#each Object.entries(profile.overrides) as [path, value]}
-                  {@const override = overridePaths.find((o) => o.path === path)}
                   <span class="px-2 py-1 bg-muted rounded text-sm">
-                    {override?.label ?? path}: {formatValue(value)}
+                    {formatPath(path)}: {formatValue(value)}
                   </span>
                 {/each}
               </div>
@@ -218,72 +180,6 @@
   {#snippet actions()}
     <Button variant="secondary" onclick={() => (showDuplicateModal = false)}>Cancel</Button>
     <Button onclick={duplicateProfile}>Duplicate</Button>
-  {/snippet}
-</Modal>
-
-<!-- Edit Profile Modal -->
-<Modal bind:open={showEditModal} title={editingProfile ? `Edit: ${editingProfile.name}` : 'Edit Profile'} onClose={() => (showEditModal = false)}>
-  {#if editingProfile}
-    <div class="space-y-6 max-h-[60vh] overflow-y-auto">
-      <p class="text-sm text-muted-foreground">
-        Enable overrides to customize settings for this profile. Disabled items use global settings.
-      </p>
-
-      {#each ['Hetzner', 'Services', 'Shell', 'Auto-Delete'] as section}
-        <div>
-          <h4 class="font-medium mb-3">{section}</h4>
-          <div class="space-y-3">
-            {#each overridePaths.filter((o) => o.section === section) as override}
-              {@const isEnabled = override.path in editingProfile.overrides}
-              {@const currentValue = getOverrideValue(editingProfileId, override.path)}
-              <div class="flex items-center justify-between p-3 bg-muted/50 rounded-md">
-                <div class="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={isEnabled}
-                    onchange={() => toggleOverride(editingProfileId, override.path)}
-                    class="w-5 h-5 rounded border-2 border-border text-primary focus:ring-3 focus:ring-focus bg-background cursor-pointer"
-                  />
-                  <span class={isEnabled ? 'font-medium' : 'text-muted-foreground'}>{override.label}</span>
-                </div>
-                {#if isEnabled}
-                  {#if typeof currentValue === 'boolean'}
-                    <select
-                      value={currentValue ? 'true' : 'false'}
-                      onchange={(e) => setOverrideValue(editingProfileId, override.path, e.currentTarget.value === 'true')}
-                      class="px-3 py-1.5 bg-background border-2 border-border rounded-md focus:outline-none focus:ring-3 focus:ring-focus focus:border-primary"
-                    >
-                      <option value="true">Yes</option>
-                      <option value="false">No</option>
-                    </select>
-                  {:else if typeof currentValue === 'number'}
-                    <input
-                      type="number"
-                      value={currentValue}
-                      onchange={(e) => setOverrideValue(editingProfileId, override.path, parseInt(e.currentTarget.value) || 0)}
-                      class="w-24 px-3 py-1.5 bg-background border-2 border-border rounded-md focus:outline-none focus:ring-3 focus:ring-focus focus:border-primary"
-                    />
-                  {:else}
-                    <input
-                      type="text"
-                      value={String(currentValue ?? '')}
-                      onchange={(e) => setOverrideValue(editingProfileId, override.path, e.currentTarget.value)}
-                      class="w-32 px-3 py-1.5 bg-background border-2 border-border rounded-md focus:outline-none focus:ring-3 focus:ring-focus focus:border-primary"
-                    />
-                  {/if}
-                {:else}
-                  <span class="text-sm text-muted-foreground">{formatValue(currentValue)}</span>
-                {/if}
-              </div>
-            {/each}
-          </div>
-        </div>
-      {/each}
-    </div>
-  {/if}
-
-  {#snippet actions()}
-    <Button onclick={() => (showEditModal = false)}>Done</Button>
   {/snippet}
 </Modal>
 
