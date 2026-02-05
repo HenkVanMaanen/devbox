@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Superseded by [ADR 0018](./0018-vite-build-tool.md)
 
 ## Context
 

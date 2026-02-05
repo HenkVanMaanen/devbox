@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Superseded by [ADR 0019](./0019-typescript-strict-mode.md)
 
 ## Context
 
