@@ -54,34 +54,14 @@ pnpm run dev
 - [Security](./docs/security.md) — security model, controls, and considerations
 - [ADRs](./docs/adr/) — architecture decision records
 
-## Architecture Decision Records
-
-| ADR | Decision |
-|-----|----------|
-| [001](./docs/adr/0001-zero-backend-architecture.md) | Zero-backend architecture |
-| [002](./docs/adr/0002-hetzner-cloud-provider.md) | Hetzner Cloud as provider |
-| [003](./docs/adr/0003-cloud-init-provisioning.md) | Cloud-init for provisioning |
-| [004](./docs/adr/0004-hash-based-routing.md) | Hash-based routing |
-| [005](./docs/adr/0005-localstorage-persistence.md) | localStorage persistence |
-| [006](./docs/adr/0006-two-level-config-hierarchy.md) | Two-level config hierarchy |
-| [007](./docs/adr/0007-wcag-aaa-accessibility.md) | WCAG AAA accessibility |
-| [008](./docs/adr/0008-ttyd-terminal.md) | ttyd for terminal |
-| [009](./docs/adr/0009-caddy-reverse-proxy.md) | Caddy reverse proxy |
-| [010](./docs/adr/0010-mise-runtime-manager.md) | mise for runtimes |
-| [011](./docs/adr/0011-claude-code-primary-use-case.md) | Claude Code as primary use case |
-| [012](./docs/adr/0012-security-model.md) | Security model and threat assumptions |
-| [013](./docs/adr/0013-mermaid-diagrams.md) | Mermaid for documentation diagrams |
-| [014](./docs/adr/0014-esbuild-bundler.md) | esbuild as build tool |
-| [015](./docs/adr/0015-native-test-runner.md) | Node.js native test runner |
-| [016](./docs/adr/0016-no-typescript.md) | Plain JavaScript (no TypeScript) |
-
 ## Tech Stack
 
 | Component | Technology |
 |-----------|------------|
-| Language | ES Modules JavaScript |
+| Framework | Svelte 5 |
+| Language | TypeScript (strict) |
 | Styling | Tailwind CSS v4 |
-| Build | esbuild |
+| Build | Vite |
 | Testing | Node.js native test runner |
 | Package Manager | pnpm |
 | Deployment | GitHub Pages |
