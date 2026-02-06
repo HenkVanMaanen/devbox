@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-02-06
+
+### Added
+- Environment variables support for server provisioning
+- Cost estimation display for server configurations
+
+### Changed
+- Removed old vanilla JavaScript app (migration to Svelte 5 complete)
+- Updated documentation to reflect Svelte 5 + TypeScript architecture
+
 ## [2.0.19] - 2026-02-06
 
 ### Added
