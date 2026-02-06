@@ -2,7 +2,7 @@
 
 import { getDefaultProfileConfig, getTheme as getStoredTheme } from './storage.js';
 import { getTheme, getDefaultTheme, THEMES } from './themes.js';
-import { shellEscape, buildGitCredentials, buildGitConfig, buildHostGitConfig, buildDaemonScript, buildCaddyConfig, buildOverviewPage } from './cloudinit-builders.js';
+import { shellEscape, fishEscape, buildGitCredentials, buildGitConfig, buildHostGitConfig, buildDaemonScript, buildCaddyConfig, buildOverviewPage } from './cloudinit-builders.js';
 
 // Main generate function - creates cloud-init user-data with native modules
 export function generate(serverName, hetznerToken, config, options = {}) {
@@ -95,11 +95,38 @@ export function generate(serverName, hetznerToken, config, options = {}) {
         content: `set -gx PATH ${MISE_SHIMS} $PATH\n`
     });
 
+    // Environment variables - inject into system-wide shell startup files
+    // Validate env var names (POSIX compliant: start with letter/underscore, contain only letters/digits/underscores)
+    const validEnvVarName = /^[A-Za-z_][A-Za-z0-9_]*$/;
+    const envVars = (config.envVars || []).filter(ev => validEnvVarName.test(ev.name));
+
+    if (envVars.length > 0) {
+        // Bash/Zsh system-wide env vars (/etc/profile.d/)
+        const bashEnvContent = envVars.map(ev => `export ${ev.name}="${shellEscape(ev.value)}"`).join('\n') + '\n';
+        cloudInit.write_files.push({
+            path: '/etc/profile.d/devbox-env.sh',
+            permissions: '0644',
+            content: bashEnvContent
+        });
+
+        // Fish system-wide env vars (/etc/fish/conf.d/)
+        const fishEnvContent = envVars.map(ev => `set -gx ${ev.name} "${fishEscape(ev.value)}"`).join('\n') + '\n';
+        cloudInit.write_files.push({
+            path: '/etc/fish/conf.d/devbox-env.fish',
+            permissions: '0644',
+            content: fishEnvContent
+        });
+    }
+
     // Shell configs (mise activation for interactive features + starship + claude alias)
     if (config.shell.default === 'fish') {
         let content = 'test -x /usr/local/bin/mise && /usr/local/bin/mise activate fish | source\n';
         if (config.shell.starship) content += 'type -q starship && starship init fish | source\n';
         if (config.claude.skipPermissions) content += 'alias claude="claude --dangerously-skip-permissions"\n';
+        // Add env vars for non-login shells (e.g., ttyd)
+        if (envVars.length > 0) {
+            content += envVars.map(ev => `set -gx ${ev.name} "${fishEscape(ev.value)}"`).join('\n') + '\n';
+        }
         cloudInit.write_files.push({
             path: '/home/dev/.config/fish/config.fish',
             owner: 'dev:dev',
@@ -111,6 +138,10 @@ export function generate(serverName, hetznerToken, config, options = {}) {
         let content = 'test -x /usr/local/bin/mise && eval "$(/usr/local/bin/mise activate zsh)"\n';
         if (config.shell.starship) content += 'command -v starship >/dev/null && eval "$(starship init zsh)"\n';
         if (config.claude.skipPermissions) content += 'alias claude="claude --dangerously-skip-permissions"\n';
+        // Add env vars for non-login shells (e.g., ttyd)
+        if (envVars.length > 0) {
+            content += envVars.map(ev => `export ${ev.name}="${shellEscape(ev.value)}"`).join('\n') + '\n';
+        }
         cloudInit.write_files.push({
             path: '/home/dev/.zshrc',
             owner: 'dev:dev',
@@ -122,6 +153,10 @@ export function generate(serverName, hetznerToken, config, options = {}) {
         let content = 'test -x /usr/local/bin/mise && eval "$(/usr/local/bin/mise activate bash)"\n';
         if (config.shell.starship) content += 'command -v starship >/dev/null && eval "$(starship init bash)"\n';
         if (config.claude.skipPermissions) content += 'alias claude="claude --dangerously-skip-permissions"\n';
+        // Add env vars for non-login shells (e.g., ttyd)
+        if (envVars.length > 0) {
+            content += envVars.map(ev => `export ${ev.name}="${shellEscape(ev.value)}"`).join('\n') + '\n';
+        }
         cloudInit.write_files.push({
             path: '/home/dev/.bashrc',
             owner: 'dev:dev',

@@ -37,6 +37,15 @@
     if (location) {
       parts.push(location.city);
     }
+    // Add price estimation
+    if (serverType && selectedConfig.hetzner.location) {
+      const priceInfo = serverType.prices.find(p => p.location === selectedConfig.hetzner.location);
+      if (priceInfo) {
+        const hourly = parseFloat(priceInfo.price_hourly.gross);
+        const monthly = parseFloat(priceInfo.price_monthly.gross);
+        parts.push(`€${hourly.toFixed(4)}/hr (~€${monthly.toFixed(2)}/mo)`);
+      }
+    }
     if (selectedConfig.packages.mise?.length) {
       const misePackages = selectedConfig.packages.mise.slice(0, 3).join(', ');
       parts.push(misePackages + (selectedConfig.packages.mise.length > 3 ? '...' : ''));

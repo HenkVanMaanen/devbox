@@ -11,6 +11,11 @@ export interface GitCredential {
   token: string;
 }
 
+export interface EnvVar {
+  name: string;
+  value: string;
+}
+
 export interface HetznerConfig {
   serverType: string;
   location: string;
@@ -74,6 +79,7 @@ export interface GlobalConfig {
   claude: ClaudeConfig;
   packages: PackagesConfig;
   repos: string[];
+  envVars: EnvVar[];
 }
 
 export interface Profile {

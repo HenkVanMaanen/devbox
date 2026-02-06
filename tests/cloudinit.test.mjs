@@ -33,7 +33,8 @@ const baseConfig = {
         acmeProvider: 'letsencrypt', acmeEmail: ''
     },
     autoDelete: { enabled: false, timeoutMinutes: 60, warningMinutes: 5 },
-    repos: []
+    repos: [],
+    envVars: []
 };
 
 const baseOptions = {
@@ -503,6 +504,119 @@ describe('cloudinit.js generate()', () => {
             const yaml = generate('test', 'token', baseConfig, opts);
             assert.ok(yaml.includes('.gitconfig-github.com'));
             assert.ok(yaml.includes('email = "work@example.com"'));
+        });
+    });
+
+    describe('environment variables', () => {
+        it('creates system-wide env file for bash/zsh', () => {
+            const config = { ...baseConfig, envVars: [{ name: 'DATABASE_URL', value: 'postgres://localhost' }] };
+            const yaml = generate('test', 'token', config, baseOptions);
+            assert.ok(yaml.includes('/etc/profile.d/devbox-env.sh'));
+            assert.ok(yaml.includes('export DATABASE_URL='));
+        });
+
+        it('creates system-wide env file for fish', () => {
+            const config = { ...baseConfig, envVars: [{ name: 'DATABASE_URL', value: 'postgres://localhost' }] };
+            const yaml = generate('test', 'token', config, baseOptions);
+            assert.ok(yaml.includes('/etc/fish/conf.d/devbox-env.fish'));
+            assert.ok(yaml.includes('set -gx DATABASE_URL'));
+        });
+
+        it('adds env vars to user shell rc file for bash', () => {
+            const config = { ...baseConfig, envVars: [{ name: 'MY_VAR', value: 'myvalue' }] };
+            const yaml = generate('test', 'token', config, baseOptions);
+            assert.ok(yaml.includes('.bashrc'));
+            assert.ok(yaml.includes('export MY_VAR='));
+        });
+
+        it('adds env vars to user shell rc file for fish', () => {
+            const config = {
+                ...baseConfig,
+                shell: { default: 'fish', starship: false },
+                envVars: [{ name: 'MY_VAR', value: 'myvalue' }]
+            };
+            const yaml = generate('test', 'token', config, baseOptions);
+            assert.ok(yaml.includes('config.fish'));
+            assert.ok(yaml.includes('set -gx MY_VAR'));
+        });
+
+        it('adds env vars to user shell rc file for zsh', () => {
+            const config = {
+                ...baseConfig,
+                shell: { default: 'zsh', starship: false },
+                envVars: [{ name: 'MY_VAR', value: 'myvalue' }]
+            };
+            const yaml = generate('test', 'token', config, baseOptions);
+            assert.ok(yaml.includes('.zshrc'));
+            assert.ok(yaml.includes('export MY_VAR='));
+        });
+
+        it('escapes shell metacharacters in values for bash', () => {
+            const config = { ...baseConfig, envVars: [{ name: 'TEST', value: 'val$ue"with`special!chars' }] };
+            const yaml = generate('test', 'token', config, baseOptions);
+            // shellEscape escapes $ " ` !
+            assert.ok(yaml.includes('\\$'));
+            assert.ok(yaml.includes('\\"'));
+        });
+
+        it('escapes fish metacharacters in values for fish', () => {
+            const config = { ...baseConfig, envVars: [{ name: 'TEST', value: 'val$ue"special' }] };
+            const yaml = generate('test', 'token', config, baseOptions);
+            // fishEscape escapes $ " \
+            assert.ok(yaml.includes('\\$'));
+        });
+
+        it('filters out invalid env var names', () => {
+            const config = {
+                ...baseConfig,
+                envVars: [
+                    { name: 'VALID_NAME', value: 'good' },
+                    { name: '123invalid', value: 'bad' },  // starts with number
+                    { name: 'also-invalid', value: 'bad' } // contains hyphen
+                ]
+            };
+            const yaml = generate('test', 'token', config, baseOptions);
+            assert.ok(yaml.includes('VALID_NAME'));
+            assert.ok(!yaml.includes('123invalid'));
+            assert.ok(!yaml.includes('also-invalid'));
+        });
+
+        it('handles multiple env vars', () => {
+            const config = {
+                ...baseConfig,
+                envVars: [
+                    { name: 'VAR1', value: 'value1' },
+                    { name: 'VAR2', value: 'value2' },
+                    { name: '_VAR3', value: 'value3' }
+                ]
+            };
+            const yaml = generate('test', 'token', config, baseOptions);
+            assert.ok(yaml.includes('VAR1'));
+            assert.ok(yaml.includes('VAR2'));
+            assert.ok(yaml.includes('_VAR3'));
+        });
+
+        it('handles empty envVars array', () => {
+            const yaml = generate('test', 'token', baseConfig, baseOptions);
+            // Should not create devbox-env files when no env vars
+            assert.ok(!yaml.includes('devbox-env.sh'));
+            assert.ok(!yaml.includes('devbox-env.fish'));
+        });
+
+        it('handles undefined envVars gracefully', () => {
+            const config = { ...baseConfig };
+            delete config.envVars;
+            const yaml = generate('test', 'token', config, baseOptions);
+            // Should not throw and should not create devbox-env files
+            assert.ok(!yaml.includes('devbox-env.sh'));
+        });
+
+        it('allows empty values for env vars', () => {
+            const config = { ...baseConfig, envVars: [{ name: 'EMPTY_VAR', value: '' }] };
+            const yaml = generate('test', 'token', config, baseOptions);
+            // Should include the env var with empty value
+            assert.ok(yaml.includes('EMPTY_VAR'));
+            assert.ok(yaml.includes('export EMPTY_VAR=""'));
         });
     });
 

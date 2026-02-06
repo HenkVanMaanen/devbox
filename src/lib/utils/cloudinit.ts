@@ -3,6 +3,7 @@
 import type { GlobalConfig, SSHKey, GitCredential } from '$lib/types';
 import {
   shellEscape,
+  fishEscape,
   buildGitCredentials,
   buildGitConfig,
   buildHostGitConfig,
@@ -149,10 +150,37 @@ export function generateCloudInit(
     content: `set -gx PATH ${MISE_SHIMS} $PATH\n`,
   });
 
+  // Environment variables - inject into system-wide shell startup files
+  // Validate env var names (POSIX compliant: start with letter/underscore, contain only letters/digits/underscores)
+  const validEnvVarName = /^[A-Za-z_][A-Za-z0-9_]*$/;
+  const envVars = (config.envVars ?? []).filter((ev) => validEnvVarName.test(ev.name));
+
+  if (envVars.length > 0) {
+    // Bash/Zsh system-wide env vars (/etc/profile.d/)
+    const bashEnvContent = envVars.map((ev) => `export ${ev.name}="${shellEscape(ev.value)}"`).join('\n') + '\n';
+    cloudInit.write_files.push({
+      path: '/etc/profile.d/devbox-env.sh',
+      permissions: '0644',
+      content: bashEnvContent,
+    });
+
+    // Fish system-wide env vars (/etc/fish/conf.d/)
+    const fishEnvContent = envVars.map((ev) => `set -gx ${ev.name} "${fishEscape(ev.value)}"`).join('\n') + '\n';
+    cloudInit.write_files.push({
+      path: '/etc/fish/conf.d/devbox-env.fish',
+      permissions: '0644',
+      content: fishEnvContent,
+    });
+  }
+
   // Bash config with mise activation and starship
   let bashContent = 'test -x /usr/local/bin/mise && eval "$(/usr/local/bin/mise activate bash)"\n';
   if (config.shell.starship) {
     bashContent += 'command -v starship >/dev/null && eval "$(starship init bash)"\n';
+  }
+  // Add env vars to .bashrc for non-login shells (e.g., ttyd)
+  if (envVars.length > 0) {
+    bashContent += envVars.map((ev) => `export ${ev.name}="${shellEscape(ev.value)}"`).join('\n') + '\n';
   }
   cloudInit.write_files.push({
     path: '/home/dev/.bashrc',
@@ -171,6 +199,10 @@ export function generateCloudInit(
     }
     if (config.claude.skipPermissions) {
       zshContent += 'alias claude="claude --dangerously-skip-permissions"\n';
+    }
+    // Add env vars for non-login shells (e.g., ttyd)
+    if (envVars.length > 0) {
+      zshContent += envVars.map((ev) => `export ${ev.name}="${shellEscape(ev.value)}"`).join('\n') + '\n';
     }
     cloudInit.write_files.push({
       path: '/home/dev/.zshrc',
@@ -195,6 +227,10 @@ end
     }
     if (config.claude.skipPermissions) {
       fishContent += 'alias claude="claude --dangerously-skip-permissions"\n';
+    }
+    // Add env vars for non-login shells (e.g., ttyd)
+    if (envVars.length > 0) {
+      fishContent += envVars.map((ev) => `set -gx ${ev.name} "${fishEscape(ev.value)}"`).join('\n') + '\n';
     }
     cloudInit.write_files.push({
       path: '/home/dev/.config/fish/config.fish',

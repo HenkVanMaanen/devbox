@@ -58,7 +58,8 @@ const DEFAULT_GLOBAL_CONFIG = {
         settings: '',
         skipPermissions: true
     },
-    repos: []
+    repos: [],
+    envVars: []
 };
 
 // Default profiles

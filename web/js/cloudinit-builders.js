@@ -12,6 +12,12 @@ export function shellEscape(s) {
     return s.replace(/[\\"$`!]/g, '\\$&').replace(/\n/g, '');
 }
 
+// Escape a value for fish shell double-quoted strings
+export function fishEscape(s) {
+    if (!s) return '';
+    return s.replace(/[\\"$]/g, '\\$&').replace(/\n/g, '');
+}
+
 // Escape a value for gitconfig (backslashes and double quotes)
 export function escapeGitConfig(val) {
     if (!val) return '';

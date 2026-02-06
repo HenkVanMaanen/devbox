@@ -101,6 +101,53 @@
     setValue('git.credentials', current.filter((_, i) => i !== index));
   }
 
+  // Environment variable management
+  let newEnvVarName = $state('');
+  let newEnvVarValue = $state('');
+  let envVarNameError = $state('');
+
+  // Validate env var name (POSIX compliant)
+  const validEnvVarName = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+  $effect(() => {
+    if (newEnvVarName.trim()) {
+      if (!validEnvVarName.test(newEnvVarName.trim())) {
+        envVarNameError = 'Name must start with a letter or underscore, and contain only letters, digits, and underscores';
+      } else {
+        envVarNameError = '';
+      }
+    } else {
+      envVarNameError = '';
+    }
+  });
+
+  function addEnvVar() {
+    if (!newEnvVarName.trim()) {
+      notify('Please enter a variable name', 'error');
+      return;
+    }
+    if (!validEnvVarName.test(newEnvVarName.trim())) {
+      notify('Invalid environment variable name', 'error');
+      return;
+    }
+    const current = getValue<Array<{name: string; value: string}>>('envVars') ?? [];
+    // Check for duplicate names
+    if (current.some(ev => ev.name === newEnvVarName.trim())) {
+      notify('Environment variable already exists', 'error');
+      return;
+    }
+    setValue('envVars', [...current, { name: newEnvVarName.trim(), value: newEnvVarValue }]);
+    newEnvVarName = '';
+    newEnvVarValue = '';
+    envVarNameError = '';
+    notify('Environment variable added', 'success');
+  }
+
+  function removeEnvVar(index: number) {
+    const current = getValue<Array<{name: string; value: string}>>('envVars') ?? [];
+    setValue('envVars', current.filter((_, i) => i !== index));
+  }
+
   // Repository management
   let newRepo = $state('');
 
@@ -490,6 +537,72 @@
     </div>
   {:else}
     <p class="text-sm text-muted-foreground">Using global repositories configuration.</p>
+  {/if}
+</Card>
+
+<!-- Environment Variables -->
+<Card title="Environment Variables">
+  {#if mode === 'profile'}
+    <div class="flex items-start gap-3 mb-4">
+      <input
+        type="checkbox"
+        checked={hasOverride('envVars')}
+        onchange={() => toggle('envVars')}
+        class="mt-1 w-5 h-5 rounded border-2 border-border text-primary focus:ring-3 focus:ring-focus bg-background cursor-pointer"
+      />
+      <p class="text-sm text-muted-foreground">Override environment variables for this profile</p>
+    </div>
+  {:else}
+    <p class="text-sm text-muted-foreground mb-4">Custom environment variables to inject into the server environment.</p>
+  {/if}
+
+  {#if mode === 'global' || hasOverride('envVars')}
+    {@const envVars = getValue<Array<{name: string; value: string}>>('envVars') ?? []}
+    {#if envVars.length > 0}
+      <div class="space-y-2 mb-4">
+        {#each envVars as envVar, i}
+          <div class="flex items-center justify-between p-3 bg-muted rounded-md">
+            <div>
+              <p class="font-medium font-mono">{envVar.name}</p>
+              <p class="text-sm text-muted-foreground">••••••••</p>
+            </div>
+            <Button variant="ghost" size="sm" onclick={() => removeEnvVar(i)}>Remove</Button>
+          </div>
+        {/each}
+      </div>
+    {/if}
+
+    <div class="space-y-3 p-4 border border-border rounded-md">
+      <div>
+        <label for="{idPrefix}env-name" class="block text-sm font-medium mb-1.5">Name</label>
+        <input
+          id="{idPrefix}env-name"
+          type="text"
+          bind:value={newEnvVarName}
+          placeholder="DATABASE_URL"
+          class="w-full min-h-[44px] px-3 py-2 text-base bg-background border-2 rounded-md font-mono
+                 focus:outline-none focus:ring-3 focus:ring-focus focus:border-primary
+                 {envVarNameError ? 'border-destructive' : 'border-border'}"
+        />
+        {#if envVarNameError}
+          <p class="text-sm text-destructive mt-1">{envVarNameError}</p>
+        {/if}
+      </div>
+      <div>
+        <label for="{idPrefix}env-value" class="block text-sm font-medium mb-1.5">Value</label>
+        <input
+          id="{idPrefix}env-value"
+          type="password"
+          bind:value={newEnvVarValue}
+          placeholder="postgres://localhost:5432/db"
+          class="w-full min-h-[44px] px-3 py-2 text-base bg-background border-2 border-border rounded-md
+                 focus:outline-none focus:ring-3 focus:ring-focus focus:border-primary"
+        />
+      </div>
+      <Button variant="secondary" onclick={addEnvVar}>Add Variable</Button>
+    </div>
+  {:else}
+    <p class="text-sm text-muted-foreground">Using global environment variables configuration.</p>
   {/if}
 </Card>
 

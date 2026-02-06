@@ -54,6 +54,7 @@ const DEFAULT_CONFIG: GlobalConfig = {
     apt: [],
   },
   repos: [],
+  envVars: [],
 };
 
 function createConfigStore() {
