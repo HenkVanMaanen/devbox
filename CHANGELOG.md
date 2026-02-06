@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.0.18] - 2026-02-06
+
+### Changed
+- All settings can now be overridden per-profile including:
+  - Git settings (username, email)
+  - SSH keys
+  - Git credentials
+  - Repositories
+  - Claude Code settings (API key, theme, skip permissions, settings JSON)
+- Simplified Config page by moving all form fields to shared ConfigForm component
+
 ## [2.0.17] - 2026-02-05
 
 ### Changed

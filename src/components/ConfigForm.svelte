@@ -1,9 +1,11 @@
 <script lang="ts">
   import { serversStore } from '$lib/stores/servers.svelte';
   import { getMiseToolOptions, getAptPackageOptions } from '$lib/data/packages';
-  import { shellOptions, dnsServices, acmeProviders } from '$lib/data/options';
+  import { shellOptions, dnsServices, acmeProviders, claudeThemes } from '$lib/data/options';
+  import { validateSSHKey, extractSSHKeyName } from '$lib/utils/validation';
   import Card from '$components/ui/Card.svelte';
   import Button from '$components/ui/Button.svelte';
+  import Input from '$components/ui/Input.svelte';
 
   interface Props {
     // Mode: 'global' for direct binding, 'profile' for override-based editing
@@ -16,9 +18,106 @@
     setValue: (path: string, value: unknown) => void;
     // Prefix for element IDs to avoid conflicts
     idPrefix?: string;
+    // Optional toast function for notifications
+    showToast?: (message: string, type: 'success' | 'error' | 'info') => void;
   }
 
-  let { mode, isOverridden, toggleOverride, getValue, setValue, idPrefix = '' }: Props = $props();
+  let { mode, isOverridden, toggleOverride, getValue, setValue, idPrefix = '', showToast }: Props = $props();
+
+  // Helper to show toast or console log
+  function notify(message: string, type: 'success' | 'error' | 'info' = 'info') {
+    if (showToast) {
+      showToast(message, type);
+    }
+  }
+
+  // SSH Key management
+  let newSSHKeyName = $state('');
+  let newSSHKeyPubKey = $state('');
+  let sshKeyError = $state('');
+
+  $effect(() => {
+    if (newSSHKeyPubKey.trim()) {
+      const result = validateSSHKey(newSSHKeyPubKey);
+      sshKeyError = result.error ?? '';
+    } else {
+      sshKeyError = '';
+    }
+  });
+
+  function addSSHKey() {
+    if (!newSSHKeyPubKey.trim()) {
+      notify('Please enter a public key', 'error');
+      return;
+    }
+    const validation = validateSSHKey(newSSHKeyPubKey);
+    if (!validation.valid) {
+      notify(validation.error ?? 'Invalid SSH key', 'error');
+      return;
+    }
+    let name = newSSHKeyName.trim();
+    if (!name) {
+      name = extractSSHKeyName(newSSHKeyPubKey) ?? '';
+    }
+    if (!name) {
+      const keys = getValue<Array<{name: string; pubKey: string}>>('ssh.keys');
+      name = `key-${keys.length + 1}`;
+    }
+    const current = getValue<Array<{name: string; pubKey: string}>>('ssh.keys');
+    setValue('ssh.keys', [...current, { name, pubKey: newSSHKeyPubKey.trim() }]);
+    newSSHKeyName = '';
+    newSSHKeyPubKey = '';
+    sshKeyError = '';
+    notify(`SSH key "${name}" added`, 'success');
+  }
+
+  function removeSSHKey(index: number) {
+    const current = getValue<Array<{name: string; pubKey: string}>>('ssh.keys');
+    setValue('ssh.keys', current.filter((_, i) => i !== index));
+  }
+
+  // Git credential management
+  let newGitHost = $state('');
+  let newGitUsername = $state('');
+  let newGitToken = $state('');
+
+  function addGitCredential() {
+    if (!newGitHost.trim() || !newGitUsername.trim() || !newGitToken.trim()) {
+      notify('Please fill in all fields', 'error');
+      return;
+    }
+    const current = getValue<Array<{host: string; username: string; token: string}>>('git.credentials');
+    setValue('git.credentials', [
+      ...current,
+      { host: newGitHost.trim(), username: newGitUsername.trim(), token: newGitToken.trim() },
+    ]);
+    newGitHost = '';
+    newGitUsername = '';
+    newGitToken = '';
+  }
+
+  function removeGitCredential(index: number) {
+    const current = getValue<Array<{host: string; username: string; token: string}>>('git.credentials');
+    setValue('git.credentials', current.filter((_, i) => i !== index));
+  }
+
+  // Repository management
+  let newRepo = $state('');
+
+  function addRepo() {
+    if (!newRepo.trim()) {
+      notify('Please enter a repository URL', 'error');
+      return;
+    }
+    const current = getValue<string[]>('repos');
+    setValue('repos', [...current, newRepo.trim()]);
+    newRepo = '';
+  }
+
+  function removeRepo(index: number) {
+    const current = getValue<string[]>('repos');
+    setValue('repos', current.filter((_, i) => i !== index));
+  }
 
   // Package filtering
   let miseToolFilter = $state('');
@@ -112,6 +211,238 @@
     }
   }
 </script>
+
+<!-- Git Settings -->
+<Card title="Git Settings">
+  <div class="space-y-4">
+    <div class="flex items-start gap-3">
+      {#if mode === 'profile'}
+        <input
+          type="checkbox"
+          checked={hasOverride('git.userName')}
+          onchange={() => toggle('git.userName')}
+          class="mt-3 w-5 h-5 rounded border-2 border-border text-primary focus:ring-3 focus:ring-focus bg-background cursor-pointer"
+        />
+      {/if}
+      <div class="flex-1">
+        <label for="{idPrefix}git-username" class="block text-sm font-medium mb-1.5">User Name</label>
+        <input
+          id="{idPrefix}git-username"
+          type="text"
+          value={getValue('git.userName')}
+          onchange={(e) => setValue('git.userName', e.currentTarget.value)}
+          disabled={isDisabled('git.userName')}
+          placeholder="John Doe"
+          class="w-full min-h-[44px] px-3 py-2 text-base bg-background border-2 border-border rounded-md
+                 focus:outline-none focus:ring-3 focus:ring-focus focus:border-primary
+                 disabled:opacity-50 disabled:cursor-not-allowed"
+        />
+      </div>
+    </div>
+
+    <div class="flex items-start gap-3">
+      {#if mode === 'profile'}
+        <input
+          type="checkbox"
+          checked={hasOverride('git.userEmail')}
+          onchange={() => toggle('git.userEmail')}
+          class="mt-3 w-5 h-5 rounded border-2 border-border text-primary focus:ring-3 focus:ring-focus bg-background cursor-pointer"
+        />
+      {/if}
+      <div class="flex-1">
+        <label for="{idPrefix}git-email" class="block text-sm font-medium mb-1.5">Email</label>
+        <input
+          id="{idPrefix}git-email"
+          type="email"
+          value={getValue('git.userEmail')}
+          onchange={(e) => setValue('git.userEmail', e.currentTarget.value)}
+          disabled={isDisabled('git.userEmail')}
+          placeholder="john@example.com"
+          class="w-full min-h-[44px] px-3 py-2 text-base bg-background border-2 border-border rounded-md
+                 focus:outline-none focus:ring-3 focus:ring-focus focus:border-primary
+                 disabled:opacity-50 disabled:cursor-not-allowed"
+        />
+      </div>
+    </div>
+  </div>
+</Card>
+
+<!-- SSH Keys -->
+<Card title="SSH Keys">
+  {#if mode === 'profile'}
+    <div class="flex items-start gap-3 mb-4">
+      <input
+        type="checkbox"
+        checked={hasOverride('ssh.keys')}
+        onchange={() => toggle('ssh.keys')}
+        class="mt-1 w-5 h-5 rounded border-2 border-border text-primary focus:ring-3 focus:ring-focus bg-background cursor-pointer"
+      />
+      <p class="text-sm text-muted-foreground">Override SSH keys for this profile</p>
+    </div>
+  {/if}
+
+  {#if mode === 'global' || hasOverride('ssh.keys')}
+    {#if getValue<Array<{name: string; pubKey: string}>>('ssh.keys').length > 0}
+      <div class="space-y-2 mb-4">
+        {#each getValue<Array<{name: string; pubKey: string}>>('ssh.keys') as key, i}
+          <div class="flex items-center justify-between p-3 bg-muted rounded-md">
+            <div>
+              <p class="font-medium">{key.name}</p>
+              <p class="text-sm text-muted-foreground font-mono truncate max-w-md">{key.pubKey.slice(0, 50)}...</p>
+            </div>
+            <Button variant="ghost" size="sm" onclick={() => removeSSHKey(i)}>Remove</Button>
+          </div>
+        {/each}
+      </div>
+    {/if}
+
+    <div class="space-y-3 p-4 border border-border rounded-md">
+      <div>
+        <label for="{idPrefix}ssh-name" class="block text-sm font-medium mb-1.5">Name (optional)</label>
+        <input
+          id="{idPrefix}ssh-name"
+          type="text"
+          bind:value={newSSHKeyName}
+          placeholder="my-key"
+          class="w-full min-h-[44px] px-3 py-2 text-base bg-background border-2 border-border rounded-md
+                 focus:outline-none focus:ring-3 focus:ring-focus focus:border-primary"
+        />
+        <p class="text-xs text-muted-foreground mt-1">Auto-extracted from key comment if empty</p>
+      </div>
+      <div>
+        <label for="{idPrefix}ssh-pubkey" class="block text-sm font-medium mb-1.5">Public Key</label>
+        <textarea
+          id="{idPrefix}ssh-pubkey"
+          bind:value={newSSHKeyPubKey}
+          class="w-full min-h-[88px] px-3 py-2 text-base bg-background border-2 rounded-md
+                 focus:outline-none focus:ring-3 focus:ring-focus focus:border-primary
+                 placeholder:text-placeholder resize-y font-mono text-sm
+                 {sshKeyError ? 'border-destructive' : 'border-border'}"
+          placeholder="ssh-ed25519 AAAA..."
+        ></textarea>
+        {#if sshKeyError}
+          <p class="text-sm text-destructive mt-1">{sshKeyError}</p>
+        {/if}
+      </div>
+      <Button variant="secondary" onclick={addSSHKey}>Add SSH Key</Button>
+    </div>
+  {:else}
+    <p class="text-sm text-muted-foreground">Using global SSH keys configuration.</p>
+  {/if}
+</Card>
+
+<!-- Git Credentials -->
+<Card title="Git Credentials">
+  {#if mode === 'profile'}
+    <div class="flex items-start gap-3 mb-4">
+      <input
+        type="checkbox"
+        checked={hasOverride('git.credentials')}
+        onchange={() => toggle('git.credentials')}
+        class="mt-1 w-5 h-5 rounded border-2 border-border text-primary focus:ring-3 focus:ring-focus bg-background cursor-pointer"
+      />
+      <p class="text-sm text-muted-foreground">Override Git credentials for this profile</p>
+    </div>
+  {/if}
+
+  {#if mode === 'global' || hasOverride('git.credentials')}
+    {#if getValue<Array<{host: string; username: string; token: string}>>('git.credentials').length > 0}
+      <div class="space-y-2 mb-4">
+        {#each getValue<Array<{host: string; username: string; token: string}>>('git.credentials') as cred, i}
+          <div class="flex items-center justify-between p-3 bg-muted rounded-md">
+            <div>
+              <p class="font-medium">{cred.host}</p>
+              <p class="text-sm text-muted-foreground">{cred.username}</p>
+            </div>
+            <Button variant="ghost" size="sm" onclick={() => removeGitCredential(i)}>Remove</Button>
+          </div>
+        {/each}
+      </div>
+    {/if}
+
+    <div class="space-y-3 p-4 border border-border rounded-md">
+      <div>
+        <label for="{idPrefix}git-host" class="block text-sm font-medium mb-1.5">Host</label>
+        <input
+          id="{idPrefix}git-host"
+          type="text"
+          bind:value={newGitHost}
+          placeholder="github.com"
+          class="w-full min-h-[44px] px-3 py-2 text-base bg-background border-2 border-border rounded-md
+                 focus:outline-none focus:ring-3 focus:ring-focus focus:border-primary"
+        />
+      </div>
+      <div>
+        <label for="{idPrefix}git-username" class="block text-sm font-medium mb-1.5">Username</label>
+        <input
+          id="{idPrefix}git-username"
+          type="text"
+          bind:value={newGitUsername}
+          placeholder="username"
+          class="w-full min-h-[44px] px-3 py-2 text-base bg-background border-2 border-border rounded-md
+                 focus:outline-none focus:ring-3 focus:ring-focus focus:border-primary"
+        />
+      </div>
+      <div>
+        <label for="{idPrefix}git-token" class="block text-sm font-medium mb-1.5">Token</label>
+        <input
+          id="{idPrefix}git-token"
+          type="password"
+          bind:value={newGitToken}
+          placeholder="ghp_..."
+          class="w-full min-h-[44px] px-3 py-2 text-base bg-background border-2 border-border rounded-md
+                 focus:outline-none focus:ring-3 focus:ring-focus focus:border-primary"
+        />
+      </div>
+      <Button variant="secondary" onclick={addGitCredential}>Add Credential</Button>
+    </div>
+  {:else}
+    <p class="text-sm text-muted-foreground">Using global Git credentials configuration.</p>
+  {/if}
+</Card>
+
+<!-- Repositories -->
+<Card title="Repositories">
+  {#if mode === 'profile'}
+    <div class="flex items-start gap-3 mb-4">
+      <input
+        type="checkbox"
+        checked={hasOverride('repos')}
+        onchange={() => toggle('repos')}
+        class="mt-1 w-5 h-5 rounded border-2 border-border text-primary focus:ring-3 focus:ring-focus bg-background cursor-pointer"
+      />
+      <p class="text-sm text-muted-foreground">Override repositories for this profile</p>
+    </div>
+  {:else}
+    <p class="text-sm text-muted-foreground mb-4">Repositories to automatically clone when creating a new devbox.</p>
+  {/if}
+
+  {#if mode === 'global' || hasOverride('repos')}
+    {#if getValue<string[]>('repos').length > 0}
+      <div class="space-y-2 mb-4">
+        {#each getValue<string[]>('repos') as repo, i}
+          <div class="flex items-center justify-between p-3 bg-muted rounded-md">
+            <p class="text-sm font-mono truncate flex-1">{repo}</p>
+            <Button variant="ghost" size="sm" onclick={() => removeRepo(i)}>Remove</Button>
+          </div>
+        {/each}
+      </div>
+    {/if}
+
+    <div class="flex gap-2">
+      <input
+        type="text"
+        bind:value={newRepo}
+        placeholder="https://github.com/user/repo.git"
+        class="flex-1 min-h-[44px] px-3 py-2 text-base bg-background border-2 border-border rounded-md
+               focus:outline-none focus:ring-3 focus:ring-focus focus:border-primary"
+      />
+      <Button variant="secondary" onclick={addRepo}>Add</Button>
+    </div>
+  {:else}
+    <p class="text-sm text-muted-foreground">Using global repositories configuration.</p>
+  {/if}
+</Card>
 
 <!-- Hetzner Settings -->
 <Card title="Hetzner Settings">
@@ -829,4 +1160,113 @@
   {:else}
     <p class="text-sm text-muted-foreground">Using global APT packages configuration.</p>
   {/if}
+</Card>
+
+<!-- Claude Code -->
+<Card title="Claude Code">
+  <div class="space-y-4">
+    <!-- API Key -->
+    <div class="flex items-start gap-3">
+      {#if mode === 'profile'}
+        <input
+          type="checkbox"
+          checked={hasOverride('claude.apiKey')}
+          onchange={() => toggle('claude.apiKey')}
+          class="mt-3 w-5 h-5 rounded border-2 border-border text-primary focus:ring-3 focus:ring-focus bg-background cursor-pointer"
+        />
+      {/if}
+      <div class="flex-1">
+        <label for="{idPrefix}claude-apikey" class="block text-sm font-medium mb-1.5">API Key</label>
+        <input
+          id="{idPrefix}claude-apikey"
+          type="password"
+          value={getValue('claude.apiKey')}
+          onchange={(e) => setValue('claude.apiKey', e.currentTarget.value)}
+          disabled={isDisabled('claude.apiKey')}
+          placeholder="sk-ant-..."
+          class="w-full min-h-[44px] px-3 py-2 text-base bg-background border-2 border-border rounded-md
+                 focus:outline-none focus:ring-3 focus:ring-focus focus:border-primary
+                 disabled:opacity-50 disabled:cursor-not-allowed"
+        />
+        <p class="text-xs text-muted-foreground mt-1">Your Anthropic API key</p>
+      </div>
+    </div>
+
+    <!-- Theme -->
+    <div class="flex items-start gap-3">
+      {#if mode === 'profile'}
+        <input
+          type="checkbox"
+          checked={hasOverride('claude.theme')}
+          onchange={() => toggle('claude.theme')}
+          class="mt-3 w-5 h-5 rounded border-2 border-border text-primary focus:ring-3 focus:ring-focus bg-background cursor-pointer"
+        />
+      {/if}
+      <div class="flex-1">
+        <label for="{idPrefix}claude-theme" class="block text-sm font-medium mb-1.5">Theme</label>
+        <select
+          id="{idPrefix}claude-theme"
+          value={getValue('claude.theme')}
+          onchange={(e) => setValue('claude.theme', e.currentTarget.value)}
+          disabled={isDisabled('claude.theme')}
+          class="w-full min-h-[44px] px-3 py-2 text-base bg-background border-2 border-border rounded-md
+                 focus:outline-none focus:ring-3 focus:ring-focus focus:border-primary
+                 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {#each claudeThemes as theme}
+            <option value={theme.value}>{theme.label} - {theme.description}</option>
+          {/each}
+        </select>
+      </div>
+    </div>
+
+    <!-- Skip Permissions -->
+    <div class="flex items-center gap-3">
+      {#if mode === 'profile'}
+        <input
+          type="checkbox"
+          checked={hasOverride('claude.skipPermissions')}
+          onchange={() => toggle('claude.skipPermissions')}
+          class="w-5 h-5 rounded border-2 border-border text-primary focus:ring-3 focus:ring-focus bg-background cursor-pointer"
+        />
+      {/if}
+      <label class="flex items-center gap-3 cursor-pointer flex-1">
+        <input
+          type="checkbox"
+          checked={getValue('claude.skipPermissions')}
+          onchange={(e) => setValue('claude.skipPermissions', e.currentTarget.checked)}
+          disabled={isDisabled('claude.skipPermissions')}
+          class="w-5 h-5 rounded border-2 border-border text-primary focus:ring-3 focus:ring-focus bg-background cursor-pointer
+                 disabled:opacity-50 disabled:cursor-not-allowed"
+        />
+        <span class={isDisabled('claude.skipPermissions') ? 'opacity-50' : ''}>Enable --dangerously-skip-permissions flag</span>
+      </label>
+    </div>
+
+    <!-- Settings JSON -->
+    <div class="flex items-start gap-3">
+      {#if mode === 'profile'}
+        <input
+          type="checkbox"
+          checked={hasOverride('claude.settings')}
+          onchange={() => toggle('claude.settings')}
+          class="mt-3 w-5 h-5 rounded border-2 border-border text-primary focus:ring-3 focus:ring-focus bg-background cursor-pointer"
+        />
+      {/if}
+      <div class="flex-1">
+        <label for="{idPrefix}claude-settings" class="block text-sm font-medium mb-1.5">Settings JSON</label>
+        <textarea
+          id="{idPrefix}claude-settings"
+          value={getValue('claude.settings')}
+          onchange={(e) => setValue('claude.settings', e.currentTarget.value)}
+          disabled={isDisabled('claude.settings')}
+          class="w-full min-h-[88px] px-3 py-2 text-base bg-background border-2 border-border rounded-md
+                 focus:outline-none focus:ring-3 focus:ring-focus focus:border-primary
+                 placeholder:text-placeholder resize-y font-mono text-sm
+                 disabled:opacity-50 disabled:cursor-not-allowed"
+          placeholder={'{"theme": "dark"}'}
+        ></textarea>
+      </div>
+    </div>
+  </div>
 </Card>

@@ -3,6 +3,7 @@
   import { configStore } from '$lib/stores/config.svelte';
   import { serversStore } from '$lib/stores/servers.svelte';
   import { credentialsStore } from '$lib/stores/credentials.svelte';
+  import { toast } from '$lib/stores/toast.svelte';
   import { clone } from '$lib/utils/storage';
   import Button from '$components/ui/Button.svelte';
   import ConfigForm from '$components/ConfigForm.svelte';
@@ -68,6 +69,13 @@
   function goBack() {
     window.location.hash = 'profiles';
   }
+
+  // Toast helper for ConfigForm
+  function showToast(message: string, type: 'success' | 'error' | 'info') {
+    if (type === 'success') toast.success(message);
+    else if (type === 'error') toast.error(message);
+    else toast.info(message);
+  }
 </script>
 
 {#if !profile}
@@ -91,6 +99,7 @@
       {toggleOverride}
       {getValue}
       {setValue}
+      {showToast}
       idPrefix="profile-"
     />
   </div>
