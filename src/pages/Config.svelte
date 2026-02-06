@@ -163,61 +163,6 @@
     // Reset input so the same file can be imported again
     input.value = '';
   }
-
-  // Claude credentials.json upload
-  let claudeCredentialsInputRef: HTMLInputElement | undefined = $state();
-
-  function triggerClaudeCredentialsUpload() {
-    claudeCredentialsInputRef?.click();
-  }
-
-  function handleClaudeCredentialsUpload(event: Event) {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const credentials = JSON.parse(e.target?.result as string);
-        configStore.value.claude.credentialsJson = credentials;
-        toast.success('Claude credentials imported');
-      } catch {
-        toast.error('Invalid JSON file');
-      }
-    };
-    reader.readAsText(file);
-    input.value = ''; // Reset for re-upload
-  }
-
-  function clearClaudeCredentials() {
-    configStore.value.claude.credentialsJson = null;
-    toast.success('Claude credentials cleared');
-  }
-
-  // Helper to extract account info from credentials
-  function getClaudeAccountInfo(
-    credentials: Record<string, unknown> | null
-  ): { email?: string; org?: string; expires?: string; isExpired?: boolean } | null {
-    if (!credentials) return null;
-
-    const oauth = credentials.claudeAiOauth as Record<string, unknown> | undefined;
-    if (!oauth) return null;
-
-    const result: { email?: string; org?: string; expires?: string; isExpired?: boolean } = {};
-
-    if (oauth.email) result.email = String(oauth.email);
-    if (oauth.organizationName) result.org = String(oauth.organizationName);
-    if (oauth.expiresAt) {
-      const expiry = new Date(String(oauth.expiresAt));
-      result.expires = expiry.toLocaleDateString();
-      result.isExpired = expiry < new Date();
-    }
-
-    return Object.keys(result).length > 0 ? result : null;
-  }
-
-  const claudeAccountInfo = $derived(getClaudeAccountInfo(configStore.value.claude.credentialsJson));
 </script>
 
 <div class="space-y-6 pb-24">
@@ -225,54 +170,6 @@
 
   <!-- All form fields via ConfigForm -->
   <ConfigForm mode="global" {getValue} {setValue} {showToast} idPrefix="global-" />
-
-  <!-- Claude Credentials Upload (special functionality not in ConfigForm) -->
-  <Card title="Claude Credentials File">
-    <div class="space-y-4">
-      <div class="flex items-center gap-2">
-        <Button variant="secondary" onclick={triggerClaudeCredentialsUpload}>
-          Upload credentials.json
-        </Button>
-        {#if configStore.value.claude.credentialsJson}
-          <Button variant="destructive" size="sm" onclick={clearClaudeCredentials}>
-            Clear
-          </Button>
-        {/if}
-        <input
-          bind:this={claudeCredentialsInputRef}
-          type="file"
-          accept=".json"
-          class="hidden"
-          onchange={handleClaudeCredentialsUpload}
-        />
-      </div>
-      {#if configStore.value.claude.credentialsJson}
-        <div class="bg-muted/30 rounded-md p-3">
-          <div class="text-sm flex items-center gap-2">
-            <span class="text-success">✓</span>
-            <span>Credentials loaded</span>
-          </div>
-          {#if claudeAccountInfo}
-            <div class="text-sm text-muted-foreground mt-1 space-y-0.5">
-              {#if claudeAccountInfo.email}
-                <div><span class="text-muted-foreground">Account:</span> {claudeAccountInfo.email}</div>
-              {/if}
-              {#if claudeAccountInfo.org}
-                <div><span class="text-muted-foreground">Org:</span> {claudeAccountInfo.org}</div>
-              {/if}
-              {#if claudeAccountInfo.expires}
-                <div>
-                  <span class="text-muted-foreground">Expires:</span>
-                  <span class={claudeAccountInfo.isExpired ? 'text-destructive' : ''}>{claudeAccountInfo.expires}</span>
-                </div>
-              {/if}
-            </div>
-          {/if}
-        </div>
-      {/if}
-      <p class="text-xs text-muted-foreground">Upload your ~/.claude/credentials.json file for OAuth authentication</p>
-    </div>
-  </Card>
 
   <Card title="Backup & Restore">
     <p class="text-sm text-muted-foreground mb-4">

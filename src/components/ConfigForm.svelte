@@ -210,6 +210,55 @@
       toggleOverride(path);
     }
   }
+
+  // Claude credentials.json upload
+  let claudeCredentialsInputRef: HTMLInputElement | undefined = $state();
+
+  function handleClaudeCredentialsUpload(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const credentials = JSON.parse(e.target?.result as string);
+        setValue('claude.credentialsJson', credentials);
+        notify('Claude credentials imported', 'success');
+      } catch {
+        notify('Invalid JSON file', 'error');
+      }
+    };
+    reader.readAsText(file);
+    input.value = ''; // Reset for re-upload
+  }
+
+  function clearClaudeCredentials() {
+    setValue('claude.credentialsJson', null);
+    notify('Claude credentials cleared', 'success');
+  }
+
+  // Helper to extract account info from credentials
+  function getClaudeAccountInfo(
+    credentials: Record<string, unknown> | null
+  ): { email?: string; org?: string; expires?: string; isExpired?: boolean } | null {
+    if (!credentials) return null;
+
+    const oauth = credentials.claudeAiOauth as Record<string, unknown> | undefined;
+    if (!oauth) return null;
+
+    const result: { email?: string; org?: string; expires?: string; isExpired?: boolean } = {};
+
+    if (oauth.email) result.email = String(oauth.email);
+    if (oauth.organizationName) result.org = String(oauth.organizationName);
+    if (oauth.expiresAt) {
+      const expiry = new Date(String(oauth.expiresAt));
+      result.expires = expiry.toLocaleDateString();
+      result.isExpired = expiry < new Date();
+    }
+
+    return Object.keys(result).length > 0 ? result : null;
+  }
 </script>
 
 <!-- Git Settings -->
@@ -1165,6 +1214,71 @@
 <!-- Claude Code -->
 <Card title="Claude Code">
   <div class="space-y-4">
+    <!-- Credentials File Upload -->
+    {#if mode === 'profile'}
+      <div class="flex items-start gap-3 mb-4">
+        <input
+          type="checkbox"
+          checked={hasOverride('claude.credentialsJson')}
+          onchange={() => toggle('claude.credentialsJson')}
+          class="mt-1 w-5 h-5 rounded border-2 border-border text-primary focus:ring-3 focus:ring-focus bg-background cursor-pointer"
+        />
+        <p class="text-sm text-muted-foreground">Override credentials file for this profile</p>
+      </div>
+    {/if}
+
+    {#if mode === 'global' || hasOverride('claude.credentialsJson')}
+      {@const credentials = getValue<Record<string, unknown> | null>('claude.credentialsJson')}
+      {@const accountInfo = getClaudeAccountInfo(credentials)}
+      <div class="space-y-3 {mode === 'profile' ? 'ml-8' : ''}">
+        <p class="text-sm font-medium">Credentials File</p>
+        <div class="flex items-center gap-2">
+          <Button variant="secondary" onclick={() => claudeCredentialsInputRef?.click()}>
+            Upload credentials.json
+          </Button>
+          {#if credentials}
+            <Button variant="destructive" size="sm" onclick={clearClaudeCredentials}>
+              Clear
+            </Button>
+          {/if}
+          <input
+            bind:this={claudeCredentialsInputRef}
+            type="file"
+            accept=".json"
+            class="hidden"
+            onchange={handleClaudeCredentialsUpload}
+          />
+        </div>
+        {#if credentials}
+          <div class="bg-muted/30 rounded-md p-3">
+            <div class="text-sm flex items-center gap-2">
+              <span class="text-success">✓</span>
+              <span>Credentials loaded</span>
+            </div>
+            {#if accountInfo}
+              <div class="text-sm text-muted-foreground mt-1 space-y-0.5">
+                {#if accountInfo.email}
+                  <div><span class="text-muted-foreground">Account:</span> {accountInfo.email}</div>
+                {/if}
+                {#if accountInfo.org}
+                  <div><span class="text-muted-foreground">Org:</span> {accountInfo.org}</div>
+                {/if}
+                {#if accountInfo.expires}
+                  <div>
+                    <span class="text-muted-foreground">Expires:</span>
+                    <span class={accountInfo.isExpired ? 'text-destructive' : ''}>{accountInfo.expires}</span>
+                  </div>
+                {/if}
+              </div>
+            {/if}
+          </div>
+        {/if}
+        <p class="text-xs text-muted-foreground">Upload your ~/.claude/credentials.json file for OAuth authentication</p>
+      </div>
+    {:else}
+      <p class="text-sm text-muted-foreground ml-8">Using global credentials file.</p>
+    {/if}
+
     <!-- API Key -->
     <div class="flex items-start gap-3">
       {#if mode === 'profile'}

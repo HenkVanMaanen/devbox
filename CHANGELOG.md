@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.0.19] - 2026-02-06
+
+### Added
+- Claude credentials file can now be overridden per-profile
+
 ## [2.0.18] - 2026-02-06
 
 ### Changed
