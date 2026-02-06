@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-02-06
+
+### Added
+- Clickable version number in navigation shows changelog in a modal
+- Modal component now supports custom max-width via `maxWidth` prop
+
 ## [2.1.0] - 2026-02-06
 
 ### Added

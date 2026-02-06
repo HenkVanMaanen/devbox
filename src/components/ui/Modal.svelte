@@ -8,9 +8,10 @@
     onClose: () => void;
     children: Snippet;
     actions?: Snippet;
+    maxWidth?: string;
   }
 
-  let { open = $bindable(), title, onClose, children, actions }: Props = $props();
+  let { open = $bindable(), title, onClose, children, actions, maxWidth = 'max-w-md' }: Props = $props();
 
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === 'Escape') {
@@ -40,7 +41,7 @@
     transition:fade={{ duration: 150 }}
   >
     <div
-      class="bg-card border-2 border-border rounded-lg shadow-xl w-full max-w-md"
+      class="bg-card border-2 border-border rounded-lg shadow-xl w-full {maxWidth}"
       transition:scale={{ start: 0.95, duration: 150 }}
     >
       <div class="px-6 py-4 border-b border-border">

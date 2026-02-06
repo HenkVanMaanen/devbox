@@ -1,5 +1,8 @@
 <script lang="ts">
   import ThemeSelector from './ThemeSelector.svelte';
+  import changelog from '../../CHANGELOG.md?raw';
+  import Modal from './ui/Modal.svelte';
+  import Button from './ui/Button.svelte';
 
   interface Props {
     currentPage: string;
@@ -16,6 +19,7 @@
   ];
 
   const version = __APP_VERSION__;
+  let showChangelog = $state(false);
 </script>
 
 <nav class="border-b-2 border-border bg-card sticky top-0 z-40">
@@ -40,7 +44,31 @@
       </div>
 
       <ThemeSelector />
-      <span class="text-xs text-muted-foreground ml-2 opacity-60">v{version}</span>
+      <button
+        type="button"
+        onclick={() => showChangelog = true}
+        class="text-xs text-muted-foreground ml-2 opacity-60 hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-3 focus:ring-focus focus:ring-offset-2 focus:ring-offset-background rounded transition-opacity cursor-pointer"
+        aria-label="View changelog for version {version}"
+        title="View changelog"
+      >
+        v{version}
+      </button>
     </div>
   </div>
 </nav>
+
+<Modal
+  bind:open={showChangelog}
+  title="Changelog"
+  onClose={() => showChangelog = false}
+  maxWidth="max-w-2xl"
+>
+  <div class="max-h-[60vh] overflow-y-auto text-sm">
+    <pre class="whitespace-pre-wrap font-sans leading-relaxed">{changelog}</pre>
+  </div>
+  {#snippet actions()}
+    <Button variant="secondary" onclick={() => showChangelog = false}>
+      Close
+    </Button>
+  {/snippet}
+</Modal>
