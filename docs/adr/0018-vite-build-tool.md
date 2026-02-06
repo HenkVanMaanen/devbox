@@ -108,13 +108,4 @@ Rejected because Vite wraps Rollup with better defaults.
 
 ## Migration Notes
 
-The old esbuild configuration is preserved in package.json under `old:*` scripts for reference:
-
-```json
-{
-  "old:dev": "node esbuild.js",
-  "old:build": "rm -rf dist && node esbuild.js build"
-}
-```
-
-The vanilla JS codebase remains in `web/js/` for reference but is no longer used.
+The old vanilla JS codebase (`web/js/`) and esbuild configuration have been removed after the Svelte 5 migration was completed. The `old:*` scripts in package.json have also been removed.

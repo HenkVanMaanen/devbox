@@ -7,13 +7,13 @@ Devbox is a single-page application (SPA) that runs entirely in the browser with
 ```mermaid
 flowchart TB
     subgraph Browser
-        subgraph SPA["Devbox SPA"]
-            State["State Manager"]
+        subgraph SPA["Devbox SPA (Svelte 5)"]
+            Stores["Svelte Stores"]
             Storage["Storage (localStorage)"]
             Themes["Themes System"]
             CloudInit["Cloud-Init Generator"]
-            State & Storage & Themes & CloudInit --> App["App Orchestrator (app.js)"]
-            App --> Hetzner["Hetzner API Client (hetzner.js)"]
+            Stores & Storage & Themes & CloudInit --> App["App.svelte"]
+            App --> Hetzner["Hetzner API Client"]
         end
     end
 
@@ -28,39 +28,43 @@ flowchart TB
     end
 ```
 
+## Tech Stack
+
+- **Framework**: Svelte 5 with runes (`$state`, `$derived`, `$effect`)
+- **Language**: TypeScript (strict mode)
+- **Build Tool**: Vite 6
+- **CSS**: Tailwind CSS v4
+- **Package Manager**: pnpm
+
 ## Module Architecture
 
 ### Core Modules
 
 | Module | Responsibility |
 |--------|----------------|
-| `app.js` | Main orchestrator: initialization, event wiring, API actions |
-| `state.js` | Application state, routing, notifications, modals |
-| `storage.js` | localStorage wrapper with typed accessors |
-| `hetzner.js` | Hetzner Cloud API client (servers, SSH keys, images) |
+| `src/App.svelte` | Root component, routing, layout |
+| `src/main.ts` | Entry point, mounts Svelte app |
+| `src/lib/stores/*.svelte.ts` | Reactive state stores using Svelte 5 runes |
+| `src/lib/api/hetzner.ts` | Hetzner Cloud API client |
+| `src/lib/utils/storage.ts` | localStorage wrapper |
 
-### UI Modules
+### UI Components
 
 | Module | Responsibility |
 |--------|----------------|
-| `pages.js` | Page renderers (Profiles, Config, Credentials, ProfileEdit) |
-| `pages/dashboard.js` | Dashboard page (server list, create form) |
-| `pages/cloudinit.js` | Cloud-init preview page |
-| `handlers.js` | UI event handlers for form interactions |
-| `combobox.js` | Multi-select and single-select combobox components |
-| `themes.js` | Theme definitions and CSS variable injection |
-| `settings.js` | Settings field definitions and rendering |
-| `ui.js` | Design system constants and HTML escaping |
+| `src/pages/*.svelte` | Page components (Dashboard, Config, Credentials, etc.) |
+| `src/components/*.svelte` | Reusable UI components (Nav, ServerCard, etc.) |
+| `src/components/ui/*.svelte` | Base UI components (Button, Card, Input, Modal) |
 
 ### Generation Modules
 
 | Module | Responsibility |
 |--------|----------------|
-| `cloudinit.js` | Cloud-init YAML generation engine |
-| `cloudinit-builders.js` | Helper functions for cloud-init components |
-| `packages.js` | APT and mise package definitions |
-| `names.js` | Funny alliterative server name generator |
-| `qrcode.js` | QR code generation wrapper |
+| `src/lib/utils/cloudinit.ts` | Cloud-init YAML generation engine |
+| `src/lib/utils/cloudinit-builders.ts` | Helper functions for cloud-init components |
+| `src/lib/data/packages.ts` | APT and mise package definitions |
+| `src/lib/utils/names.ts` | Funny alliterative server name generator |
+| `src/lib/utils/qrcode.ts` | QR code generation |
 
 ## Data Flow
 
@@ -68,11 +72,11 @@ flowchart TB
 
 ```mermaid
 flowchart TD
-    A["User clicks 'Create Server'"] --> B["handlers.js<br/>handleCreateServer"]
-    B --> C["storage.js<br/>getEffectiveConfig"]
-    C -->|"Merge global + profile"| D["cloudinit.js<br/>generateCloudInit"]
-    D -->|"YAML generation"| E["hetzner.js<br/>createServer"]
-    E -->|"API call with user-data"| F["state.js<br/>notify + re-render"]
+    A["User clicks 'Create Server'"] --> B["Dashboard.svelte"]
+    B --> C["config.svelte.ts<br/>getEffectiveConfig"]
+    C -->|"Merge global + profile"| D["cloudinit.ts<br/>generateCloudInit"]
+    D -->|"YAML generation"| E["hetzner.ts<br/>createServer"]
+    E -->|"API call with user-data"| F["toast.svelte.ts<br/>notify"]
 ```
 
 ### Configuration Inheritance
@@ -109,27 +113,22 @@ flowchart TD
 
 ## State Management
 
-Devbox uses a simple centralized state pattern:
+Devbox uses Svelte 5 runes for reactive state:
 
-```javascript
-// state.js
-let state = {
-  servers: [],
-  sshKeys: [],
-  profiles: [],
-  globalConfig: {},
-  activeProfile: null,
-  notifications: [],
-  modal: null,
-};
+```typescript
+// src/lib/stores/servers.svelte.ts
+let servers = $state<Server[]>([]);
 
-export function setState(updates, callback) {
-  Object.assign(state, updates);
-  if (callback) callback(state);
+export function setServers(newServers: Server[]) {
+  servers = newServers;
+}
+
+export function getServers() {
+  return servers;
 }
 ```
 
-State changes trigger re-renders via explicit callbacks, not automatic reactivity.
+State changes automatically trigger re-renders via Svelte's reactivity system.
 
 ## Security Model
 
@@ -142,16 +141,14 @@ State changes trigger re-renders via explicit callbacks, not automatic reactivit
 
 ### XSS Prevention
 
-All user input is escaped before rendering:
+Svelte automatically escapes content in templates. Use `{@html}` carefully:
 
-```javascript
-// ui.js
-export function escapeHtml(str) {
-  return str.replace(/[&<>"']/g, char => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;',
-    '"': '&quot;', "'": '&#39;'
-  })[char]);
-}
+```svelte
+<!-- Safe - auto-escaped -->
+<div>{userInput}</div>
+
+<!-- Dangerous - only use with trusted content -->
+{@html trustedHtml}
 ```
 
 ### Content Security Policy
@@ -194,15 +191,17 @@ flowchart TB
 ```mermaid
 flowchart LR
     subgraph Source
-        JS["web/js/*.js"]
-        CSS["web/src/*"]
+        Svelte["src/**/*.svelte"]
+        TS["src/**/*.ts"]
+        CSS["src/app.css"]
     end
 
-    Source --> Build["esbuild<br/>+ PostCSS<br/>+ Tailwind"]
+    Source --> Build["Vite<br/>+ Svelte<br/>+ Tailwind"]
 
     subgraph Dist["dist/"]
-        Bundle["bundle.js"]
-        Styles["style.css"]
+        Bundle["index-*.js"]
+        Styles["index-*.css"]
+        HTML["index.html"]
     end
 
     Build --> Dist

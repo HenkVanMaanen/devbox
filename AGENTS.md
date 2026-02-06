@@ -15,10 +15,10 @@ Devbox is a browser-based development environment manager for Hetzner Cloud. It'
 ## Quick Start
 
 ```bash
-npm install    # Install dependencies
-npm run dev    # Development server with hot reload
-npm test       # Run all tests (do this before committing)
-npm run build  # Production build
+pnpm install   # Install dependencies
+pnpm dev       # Development server with hot reload
+pnpm test      # Run all tests (do this before committing)
+pnpm build     # Production build
 ```
 
 ## Architecture
@@ -28,19 +28,26 @@ Read these files first for context:
 - `docs/security.md` - Security model and controls
 - `docs/adr/` - Architecture Decision Records for major decisions
 
+### Tech Stack
+
+- **Framework**: Svelte 5 with runes
+- **Language**: TypeScript
+- **Build tool**: Vite 6
+- **CSS**: Tailwind CSS v4
+- **Package manager**: pnpm
+
 ### Module Structure
 
 | Module | Purpose |
 |--------|---------|
-| `web/js/app.js` | Main orchestrator - start here |
-| `web/js/state.js` | Application state and routing |
-| `web/js/storage.js` | localStorage persistence |
-| `web/js/hetzner.js` | Hetzner Cloud API client |
-| `web/js/cloudinit.js` | Cloud-init YAML generation |
-| `web/js/cloudinit-builders.js` | Helper functions for cloud-init |
-| `web/js/handlers.js` | UI event handlers |
-| `web/js/themes.js` | Theme definitions and application |
-| `web/js/settings.js` | Settings field definitions |
+| `src/App.svelte` | Root component |
+| `src/main.ts` | Entry point |
+| `src/lib/stores/` | Svelte runes-based state stores |
+| `src/lib/api/hetzner.ts` | Hetzner Cloud API client |
+| `src/lib/utils/cloudinit.ts` | Cloud-init YAML generation |
+| `src/lib/utils/cloudinit-builders.ts` | Helper functions for cloud-init |
+| `src/components/` | Reusable UI components |
+| `src/pages/` | Page components |
 
 ## Coding Standards
 
@@ -48,39 +55,34 @@ Read these files first for context:
 
 - **Functions**: camelCase (`generateCloudInit`, `escapeHtml`)
 - **Constants**: UPPER_SNAKE_CASE (`DEFAULT_GLOBAL_CONFIG`, `API_BASE`)
-- **Files**: kebab-case (`cloudinit-builders.js`)
+- **Files**: kebab-case (`cloudinit-builders.ts`)
+- **Components**: PascalCase (`ServerCard.svelte`)
 - **CSS classes**: kebab-case with Tailwind utilities
 
 ### File Organization
 
-- New UI modules go in `web/js/`
-- New page renderers go in `web/js/pages/`
+- Reusable components go in `src/components/`
+- Page components go in `src/pages/`
+- State stores go in `src/lib/stores/`
+- Utility functions go in `src/lib/utils/`
 - Tests go in `tests/` with `.test.mjs` extension
 - Documentation goes in `docs/`
 
 ### Code Style
 
-- ES Modules (import/export)
-- No TypeScript - plain JavaScript
+- TypeScript with strict mode
+- Svelte 5 runes for reactivity (`$state`, `$derived`, `$effect`)
 - Prefer `const` over `let`
-- Use template literals for HTML generation
 - Always escape user content before rendering
 
 ## Security Requirements
 
 **Always follow these rules:**
 
-1. **HTML escaping**: Use `escapeHtml()` or `escapeAttr()` for all user-controlled content
-   ```javascript
-   // Good
-   `<div>${escapeHtml(userInput)}</div>`
-
-   // Bad - XSS vulnerability
-   `<div>${userInput}</div>`
-   ```
+1. **HTML escaping**: Svelte handles this automatically in templates, but be careful with `{@html}`
 
 2. **Shell escaping**: Use `shellEscape()` for values embedded in cloud-init scripts
-   ```javascript
+   ```typescript
    // Good
    `echo ${shellEscape(userName)}`
 
@@ -94,8 +96,8 @@ Read these files first for context:
 
 ## Testing Requirements
 
-- **Run tests before committing**: `npm test`
-- **Add tests for new functions**: Especially for `cloudinit.js`, `storage.js`, `handlers.js`
+- **Run tests before committing**: `pnpm test`
+- **Add tests for new functions**: Especially for cloud-init and storage utilities
 - **Test file naming**: `modulename.test.mjs`
 - **Use Node.js native test runner**: `import { describe, it } from 'node:test'`
 
@@ -103,7 +105,7 @@ Example test:
 ```javascript
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { myFunction } from '../web/js/mymodule.js';
+import { myFunction } from '../src/lib/utils/mymodule.ts';
 
 describe('myFunction', () => {
     it('does something', () => {
@@ -124,10 +126,10 @@ describe('myFunction', () => {
 
 | Area | Why | Files |
 |------|-----|-------|
-| Security | XSS, injection risks | `ui.js`, `cloudinit-builders.js` |
-| Storage | User data persistence | `storage.js` |
-| Cloud-init | Server provisioning | `cloudinit.js`, `cloudinit-builders.js` |
-| CSP headers | Security policy | `web/index.html` |
+| Security | XSS, injection risks | `cloudinit-builders.ts` |
+| Storage | User data persistence | `src/lib/utils/storage.ts` |
+| Cloud-init | Server provisioning | `cloudinit.ts`, `cloudinit-builders.ts` |
+| CSP headers | Security policy | `index.html` |
 
 **Ask before:**
 - Adding new npm dependencies
@@ -158,19 +160,22 @@ Everything happens client-side:
 
 ### Theme System
 
-Themes inject CSS variables at runtime. When adding new UI:
-- Use CSS variables from `themes.js` (e.g., `var(--primary)`)
+Themes use CSS variables via Tailwind. When adding new UI:
+- Use Tailwind utility classes
 - Test with both dark and light themes
 - Ensure 7:1 contrast ratio (WCAG AAA)
 
 ### State Management
 
-State is simple - no reactive framework:
-```javascript
-setState({ key: value }); // Updates state and triggers render
-```
+State uses Svelte 5 runes in store files:
+```typescript
+// In src/lib/stores/example.svelte.ts
+let value = $state(initialValue);
 
-Don't mutate state directly. Always use `setState()`.
+export function setValue(newValue) {
+    value = newValue;
+}
+```
 
 ## Commit Guidelines
 
@@ -222,10 +227,11 @@ GitHub Actions automatically:
 ## Useful Commands
 
 ```bash
-npm test                    # Run all tests
-npm run dev                 # Dev server with watch
-npm run build              # Production build
-git log --oneline -10      # Recent commits for context
+pnpm test                   # Run all tests
+pnpm dev                    # Dev server with watch
+pnpm build                  # Production build
+pnpm check                  # TypeScript/Svelte type checking
+git log --oneline -10       # Recent commits for context
 ```
 
 ## When in Doubt

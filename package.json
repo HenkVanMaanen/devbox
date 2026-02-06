@@ -7,10 +7,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",
-    "test": "node --test 'tests/*.test.mjs'",
-    "old:dev": "node esbuild.js",
-    "old:build": "rm -rf dist && node esbuild.js build",
-    "old:test": "node --test 'tests/*.test.mjs'"
+    "test": "node --test 'tests/*.test.mjs'"
   },
   "dependencies": {
     "playwright": "^1.58.0"

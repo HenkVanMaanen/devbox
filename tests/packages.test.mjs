@@ -1,8 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { APT_PACKAGES, APT_CATEGORIES, APT_CATEGORY_LABELS, MISE_TOOLS, getPackagesByCategory } from '../web/js/packages.js';
+import { APT_PACKAGES, APT_CATEGORIES, APT_CATEGORY_LABELS, MISE_TOOLS, getPackagesByCategory } from '../src/lib/data/packages.ts';
 
-describe('packages.js', () => {
+describe('packages.ts', () => {
     describe('APT_PACKAGES', () => {
         it('has packages defined', () => {
             assert.ok(APT_PACKAGES.length > 50);

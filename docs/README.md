@@ -58,41 +58,44 @@ ADRs document the significant architectural decisions made in this project:
 | [011](./adr/0011-claude-code-primary-use-case.md) | Claude Code as Primary Use Case | Accepted |
 | [012](./adr/0012-security-model.md) | Security Model and Threat Assumptions | Accepted |
 | [013](./adr/0013-mermaid-diagrams.md) | Mermaid for Documentation Diagrams | Accepted |
-| [014](./adr/0014-esbuild-bundler.md) | esbuild as Build Tool | Accepted |
+| [014](./adr/0014-esbuild-bundler.md) | esbuild as Build Tool | Superseded by 018 |
 | [015](./adr/0015-native-test-runner.md) | Node.js Native Test Runner | Accepted |
-| [016](./adr/0016-no-typescript.md) | Plain JavaScript (No TypeScript) | Accepted |
+| [016](./adr/0016-no-typescript.md) | Plain JavaScript (No TypeScript) | Superseded by 020 |
+| [018](./adr/0018-vite-build-tool.md) | Vite as Build Tool | Accepted |
+| [020](./adr/0020-svelte5-runes.md) | Svelte 5 with Runes | Accepted |
+| [021](./adr/0021-tailwind-v4.md) | Tailwind CSS v4 | Accepted |
+| [022](./adr/0022-pnpm.md) | pnpm Package Manager | Accepted |
 
 ## Project Structure
 
 ```
 devbox/
-├── web/                    # Frontend SPA
-│   ├── index.html         # Entry point with CSP headers
-│   ├── js/                # JavaScript modules
-│   │   ├── app.js         # Main orchestrator
-│   │   ├── pages/         # Page renderers
-│   │   ├── hetzner.js     # Hetzner API client
-│   │   ├── storage.js     # localStorage wrapper
-│   │   ├── state.js       # Application state & router
-│   │   ├── themes.js      # Theme system
-│   │   ├── cloudinit.js   # Cloud-init generator
-│   │   └── ...            # Other modules
-│   └── src/
-│       └── style.css      # Tailwind CSS
+├── src/                    # Svelte 5 + TypeScript SPA
+│   ├── App.svelte         # Root component
+│   ├── main.ts            # Entry point
+│   ├── components/        # Reusable UI components
+│   ├── pages/             # Page components
+│   └── lib/
+│       ├── api/           # API clients (Hetzner)
+│       ├── stores/        # Svelte runes-based stores
+│       ├── utils/         # Utility functions
+│       └── data/          # Static data (packages, options)
 ├── tests/                  # Test suite
 ├── docs/                   # Documentation
 │   └── adr/               # Architecture Decision Records
 ├── dist/                   # Production build output
-└── esbuild.js             # Build configuration
+├── index.html             # Entry HTML with CSP headers
+└── vite.config.ts         # Vite build configuration
 ```
 
 ## Technology Stack
 
 | Component | Technology | Why |
 |-----------|------------|-----|
-| Language | ES Modules JavaScript | Native browser support, no transpilation |
+| Framework | Svelte 5 with runes | Reactive, minimal boilerplate, excellent DX |
+| Language | TypeScript | Type safety, better tooling, maintainability |
 | Styling | Tailwind CSS v4 | Utility-first, small bundle, easy theming |
-| Build | esbuild | Fast, simple, excellent ES module support |
+| Build | Vite | Fast HMR, excellent Svelte support |
 | Testing | Node.js native test runner | Zero dependencies, built-in |
 | Package Manager | pnpm | Fast, disk-efficient |
 | Deployment | GitHub Pages | Free, automatic via GitHub Actions |
