@@ -1,6 +1,6 @@
 <script lang="ts">
   import ThemeSelector from './ThemeSelector.svelte';
-  import changelog from '../../CHANGELOG.md?raw';
+  import changelogHtml from '../../CHANGELOG.md?html';
   import Modal from './ui/Modal.svelte';
   import Button from './ui/Button.svelte';
 
@@ -63,8 +63,8 @@
   onClose={() => showChangelog = false}
   maxWidth="max-w-2xl"
 >
-  <div class="max-h-[60vh] overflow-y-auto text-sm">
-    <pre class="whitespace-pre-wrap font-sans leading-relaxed">{changelog}</pre>
+  <div class="changelog max-h-[60vh] overflow-y-auto text-sm">
+    {@html changelogHtml}
   </div>
   {#snippet actions()}
     <Button variant="secondary" onclick={() => showChangelog = false}>
@@ -72,3 +72,15 @@
     </Button>
   {/snippet}
 </Modal>
+
+<style>
+  @reference '../app.css';
+
+  .changelog :global(h1) { @apply text-xl font-bold mb-4; }
+  .changelog :global(h2) { @apply text-lg font-semibold mt-6 mb-3 pb-1 border-b border-border; }
+  .changelog :global(h3) { @apply text-base font-medium mt-4 mb-2 text-muted-foreground; }
+  .changelog :global(ul) { @apply list-disc pl-5 my-2; }
+  .changelog :global(li) { @apply my-1; }
+  .changelog :global(a) { @apply text-primary hover:underline; }
+  .changelog :global(p) { @apply my-2; }
+</style>
