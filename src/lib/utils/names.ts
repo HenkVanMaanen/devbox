@@ -34,8 +34,5 @@ export function generateServerName(): string {
   const adj = matchingAdjectives.length > 0 ? randomFrom(matchingAdjectives) : randomFrom(adjectives);
   const noun = matchingNouns.length > 0 ? randomFrom(matchingNouns) : randomFrom(nouns);
 
-  // Add random suffix for uniqueness
-  const suffix = Math.random().toString(36).slice(2, 6);
-
-  return `devbox-${adj}-${noun}-${suffix}`;
+  return `${adj}-${noun}`;
 }
