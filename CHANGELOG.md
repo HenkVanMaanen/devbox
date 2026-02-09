@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-02-09
+
+### Changed
+- Server names are now just two words (e.g., `happy-hedgehog`) without prefix or suffix
+
 ## [2.4.0] - 2026-02-09
 
 ### Changed
