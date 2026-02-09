@@ -529,7 +529,7 @@ copy_on_select true
   // IP/hash substitution and Caddy restart
   if (servicesEnabled) {
     runcmd.push('mkdir -p /var/www/devbox-overview');
-    runcmd.push('IP=$(curl -4 -s ifconfig.me | tr "." "-")');
+    runcmd.push('IP=$(curl -4 -s ifconfig.me | awk -F. \'{printf "%02x%02x%02x%02x", $1, $2, $3, $4}\')');
     runcmd.push(`HASH=$(caddy hash-password --plaintext "${shellEscape(config.services.accessToken)}")`);
     runcmd.push('sed -e "s/__IP__/$IP/g" -e "s|__HASH__|$HASH|g" /etc/caddy/Caddyfile.template > /etc/caddy/Caddyfile');
     runcmd.push('sed "s/__IP__/$IP/g" /var/www/devbox-overview/index.html.template > /var/www/devbox-overview/index.html');

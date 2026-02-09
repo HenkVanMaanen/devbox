@@ -14,16 +14,20 @@
 
   let { server, onDelete }: Props = $props();
 
+  function ipToHex(ip: string): string {
+    return ip.split('.').map(o => parseInt(o, 10).toString(16).padStart(2, '0')).join('');
+  }
+
   const accessToken = $derived(serversStore.getServerToken(server.name));
   const dnsService = $derived(configStore.value.services.dnsService || 'sslip.io');
-  const ipDashed = $derived(server.public_net.ipv4.ip.replace(/\./g, '-'));
-  const baseUrl = $derived(`https://${ipDashed}.${dnsService}`);
+  const ipHex = $derived(ipToHex(server.public_net.ipv4.ip));
+  const baseUrl = $derived(`https://${ipHex}.${dnsService}`);
 
   // Generate QR code for easy mobile access
   const qrCodeSvg = $derived.by(() => {
     if (!accessToken || server.status !== 'running') return '';
     try {
-      const url = `https://devbox:${encodeURIComponent(accessToken)}@${ipDashed}.${dnsService}/`;
+      const url = `https://devbox:${encodeURIComponent(accessToken)}@${ipHex}.${dnsService}/`;
       return generateQR(url);
     } catch {
       return '';
@@ -97,13 +101,13 @@
 
       {#if accessToken}
         {@const overviewUrl = `${baseUrl}/`}
-        {@const terminalUrl = `https://65534.${ipDashed}.${dnsService}/`}
-        {@const codeUrl = `https://65532.${ipDashed}.${dnsService}/`}
+        {@const terminalUrl = `https://65534.${ipHex}.${dnsService}/`}
+        {@const codeUrl = `https://65532.${ipHex}.${dnsService}/`}
 
         <div class="space-y-2">
           <div class="flex items-center gap-2">
             <a
-              href="https://devbox:{accessToken}@{ipDashed}.{dnsService}/"
+              href="https://devbox:{accessToken}@{ipHex}.{dnsService}/"
               target="_blank"
               rel="noopener noreferrer"
               class="text-sm text-primary hover:underline"
@@ -124,7 +128,7 @@
           {#if configStore.value.services.shellTerminal}
             <div class="flex items-center gap-2">
               <a
-                href="https://devbox:{accessToken}@65534.{ipDashed}.{dnsService}/"
+                href="https://devbox:{accessToken}@65534.{ipHex}.{dnsService}/"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="text-sm text-primary hover:underline"
@@ -146,7 +150,7 @@
           {#if configStore.value.services.codeServer}
             <div class="flex items-center gap-2">
               <a
-                href="https://devbox:{accessToken}@65532.{ipDashed}.{dnsService}/"
+                href="https://devbox:{accessToken}@65532.{ipHex}.{dnsService}/"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="text-sm text-primary hover:underline"

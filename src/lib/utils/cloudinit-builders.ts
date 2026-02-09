@@ -123,7 +123,7 @@ let last=Date.now(),warn=false,services=new Map(),baseDomain;
 
 function loadConfig(){
   const caddyfile=fs.readFileSync('/etc/caddy/Caddyfile','utf8');
-  const domainMatch=caddyfile.match(/^(\\d+-\\d+-\\d+-\\d+\\.[a-z.]+)\\s*\\{/m);
+  const domainMatch=caddyfile.match(/^([0-9a-f]{8}\\.[a-z.]+)\\s*\\{/m);
   if(!domainMatch){console.error('Failed to detect domain');process.exit(1)}
   return domainMatch[1];
 }
