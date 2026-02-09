@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-02-09
+
+### Changed
+- DNS service URLs now use hex IP format (e.g., `c0a80164.sslip.io`) instead of dashed decimal for shorter, cleaner URLs
+
 ## [2.3.0] - 2026-02-06
 
 ### Changed
