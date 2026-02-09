@@ -45,7 +45,7 @@ function createServersStore() {
 
     // Get devbox servers only
     get devboxServers() {
-      return servers.filter((s) => s.name.startsWith('devbox'));
+      return servers.filter((s) => s.labels?.managed === 'devbox');
     },
 
     // Get all server tokens (for export)
@@ -83,7 +83,7 @@ function createServersStore() {
 
       try {
         const allServers = await hetzner.listServers(token);
-        servers = allServers.filter((s) => s.name.startsWith('devbox'));
+        servers = allServers.filter((s) => s.labels?.managed === 'devbox');
       } catch (e) {
         error = e instanceof Error ? e.message : 'Failed to load servers';
         servers = [];

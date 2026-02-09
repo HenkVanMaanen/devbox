@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.5.1] - 2026-02-09
+
+### Fixed
+- Servers with simplified names now appear in UI (filter by label instead of name prefix)
+
 ## [2.5.0] - 2026-02-09
 
 ### Changed
