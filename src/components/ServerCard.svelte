@@ -19,7 +19,12 @@
   }
 
   const accessToken = $derived(serversStore.getServerToken(server.name));
-  const dnsService = $derived(configStore.value.services.dnsService || 'sslip.io');
+  // Use custom domain if configured, otherwise use the selected DNS service
+  const dnsService = $derived(
+    configStore.value.services.dnsService === 'custom'
+      ? (configStore.value.services.customDnsDomain || 'sslip.io')
+      : (configStore.value.services.dnsService || 'sslip.io')
+  );
   const ipHex = $derived(ipToHex(server.public_net.ipv4.ip));
   const baseUrl = $derived(`https://${ipHex}.${dnsService}`);
 

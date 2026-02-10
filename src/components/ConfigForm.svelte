@@ -863,6 +863,42 @@
       </div>
     </div>
 
+    <!-- Custom DNS Domain (shown when dnsService is 'custom') -->
+    {#if getValue('services.dnsService') === 'custom'}
+      <div class="flex items-start gap-3">
+        {#if mode === 'profile'}
+          <input
+            type="checkbox"
+            checked={hasOverride('services.customDnsDomain')}
+            onchange={() => toggle('services.customDnsDomain')}
+            class="mt-3 w-5 h-5 rounded border-2 border-border text-primary focus:ring-3 focus:ring-focus bg-background cursor-pointer"
+          />
+        {/if}
+        <div class="flex-1">
+          <label for="{idPrefix}custom-dns-domain" class="block text-sm font-medium mb-1.5">Custom Domain</label>
+          <input
+            id="{idPrefix}custom-dns-domain"
+            type="text"
+            value={getValue('services.customDnsDomain')}
+            onchange={(e) => setValue('services.customDnsDomain', e.currentTarget.value.trim().toLowerCase())}
+            disabled={isDisabled('services.customDnsDomain')}
+            placeholder="dev.example.com"
+            required
+            pattern="[a-z0-9][a-z0-9.-]*[a-z0-9]\.[a-z]&#123;2,&#125;"
+            class="w-full min-h-[44px] px-3 py-2 text-base bg-background border-2 border-border rounded-md
+                   focus:outline-none focus:ring-3 focus:ring-focus focus:border-primary
+                   disabled:opacity-50 disabled:cursor-not-allowed"
+          />
+          <p class="text-sm text-muted-foreground mt-1.5">
+            Delegate this domain to sslip.io nameservers:
+            <code class="text-xs bg-muted px-1 py-0.5 rounded">ns-aws.sslip.io</code>,
+            <code class="text-xs bg-muted px-1 py-0.5 rounded">ns-azure.sslip.io</code>,
+            <code class="text-xs bg-muted px-1 py-0.5 rounded">ns-gce.sslip.io</code>
+          </p>
+        </div>
+      </div>
+    {/if}
+
     <!-- ACME Provider -->
     <div class="flex items-start gap-3">
       {#if mode === 'profile'}

@@ -27,7 +27,8 @@ export interface ServicesConfig {
   claudeTerminal: boolean;
   shellTerminal: boolean;
   accessToken: string;
-  dnsService: 'sslip.io' | 'nip.io';
+  dnsService: 'sslip.io' | 'nip.io' | 'traefik.me' | 'custom';
+  customDnsDomain: string;
   acmeProvider: 'zerossl' | 'letsencrypt' | 'buypass' | 'actalis' | 'custom';
   acmeEmail: string;
   zerosslEabKeyId: string;

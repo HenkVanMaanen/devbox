@@ -22,6 +22,7 @@ const DEFAULT_CONFIG: GlobalConfig = {
     shellTerminal: true,
     accessToken: uuid().slice(0, 8),
     dnsService: 'sslip.io',
+    customDnsDomain: '',
     acmeProvider: 'zerossl',
     acmeEmail: '',
     zerosslEabKeyId: '',

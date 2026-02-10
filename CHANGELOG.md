@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-02-10
+
+### Added
+- Custom domain support for DNS services (delegate your domain to sslip.io nameservers)
+- traefik.me as additional wildcard DNS option
+
+### Changed
+- Caddy configuration is now domain-agnostic: servers accept requests from any DNS service (sslip.io, nip.io, traefik.me, custom domains) simultaneously
+- Changing DNS service setting no longer breaks existing servers
+
 ## [2.5.1] - 2026-02-09
 
 ### Fixed

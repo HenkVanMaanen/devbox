@@ -63,9 +63,6 @@ export function generateCloudInit(
   const servicesEnabled = config.services.codeServer || config.services.shellTerminal;
   const MISE_SHIMS = '/home/dev/.local/share/mise/shims';
 
-  // DNS service (sslip.io or nip.io)
-  const dnsService = config.services.dnsService || 'sslip.io';
-
   // Shell (fish, zsh, or bash)
   const defaultShell = config.shell.default || 'fish';
   const shellBin = defaultShell === 'fish' ? '/usr/bin/fish' : defaultShell === 'zsh' ? '/usr/bin/zsh' : '/bin/bash';

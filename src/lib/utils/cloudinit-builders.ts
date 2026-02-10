@@ -113,19 +113,29 @@ export function buildDaemonScript(config: GlobalConfig, hetznerToken: string): s
   const timeout = config.autoDelete.timeoutMinutes;
   const warning = config.autoDelete.warningMinutes;
   const gitUser = config.git.userName || '';
+  // Get DNS service for URL generation (custom domain or standard service)
+  const dnsService = config.services.dnsService === 'custom'
+    ? (config.services.customDnsDomain || 'sslip.io')
+    : (config.services.dnsService || 'sslip.io');
 
   return `#!/usr/bin/env node
 const http=require('http'),fs=require('fs'),https=require('https'),{execSync}=require('child_process');
 const TIMEOUT=${timeout},WARNING=${warning},TOKEN='${escapeSingleQuotedJS(hetznerToken)}',USER='${escapeSingleQuotedJS(gitUser)}';
+const DNS_SERVICE='${escapeSingleQuotedJS(dnsService)}';
 const PORT_NAMES={65532:'VS Code',65533:'Claude',65534:'Terminal'};
 const IGNORED_PORTS=new Set([22,80,443,2019,65531]);
-let last=Date.now(),warn=false,services=new Map(),baseDomain;
+let last=Date.now(),warn=false,services=new Map(),ipHex;
 
 function loadConfig(){
-  const caddyfile=fs.readFileSync('/etc/caddy/Caddyfile','utf8');
-  const domainMatch=caddyfile.match(/^([0-9a-f]{8}\\.[a-z.]+)\\s*\\{/m);
-  if(!domainMatch){console.error('Failed to detect domain');process.exit(1)}
-  return domainMatch[1];
+  // Get IP hex from metadata or calculate from public IP
+  try{
+    const ip=execSync('curl -4 -s --connect-timeout 5 ifconfig.me',{encoding:'utf8',timeout:10000}).trim();
+    const parts=ip.split('.');
+    if(parts.length===4){
+      return parts.map(p=>parseInt(p).toString(16).padStart(2,'0')).join('');
+    }
+  }catch{}
+  console.error('Failed to detect IP');process.exit(1);
 }
 
 function scanPorts(){
@@ -150,7 +160,7 @@ function isPortListening(port){
 }
 
 function getServices(){
-  return Array.from(services.values()).map(s=>({name:s.name,port:s.port,url:\`https://\${s.port}.\${baseDomain}\`,active:true})).sort((a,b)=>a.port-b.port);
+  return Array.from(services.values()).map(s=>({name:s.name,port:s.port,url:\`https://\${s.port}.\${ipHex}.\${DNS_SERVICE}\`,active:true})).sort((a,b)=>a.port-b.port);
 }
 
 function updateServices(){
@@ -162,14 +172,20 @@ function updateServices(){
 }
 
 function prewarmCert(port){
-  https.get(\`https://\${port}.\${baseDomain}/\`,{rejectUnauthorized:false,timeout:30000},()=>{}).on('error',()=>{});
+  https.get(\`https://\${port}.\${ipHex}.\${DNS_SERVICE}/\`,{rejectUnauthorized:false,timeout:30000},()=>{}).on('error',()=>{});
   console.log(\`Pre-warming certificate for port \${port}\`);
 }
 
+// Domain-agnostic verification: accepts any domain matching our IP hex
+// This allows the same server to work with sslip.io, nip.io, custom domains, etc.
 function verifyDomain(domain){
   if(!domain)return false;
-  const expected=new RegExp(\`^(\\\\d+)\\\\.\${baseDomain.replace(/\\./g,'\\\\.')}\$\`);
-  const match=domain.match(expected);
+  // Pattern 1: {ipHex}.{any-suffix} - base domain for overview page
+  const basePattern=new RegExp(\`^\${ipHex}\\\\.[a-z0-9.-]+\$\`,'i');
+  if(basePattern.test(domain))return true;
+  // Pattern 2: {port}.{ipHex}.{any-suffix} - service subdomain
+  const svcPattern=new RegExp(\`^(\\\\d+)\\\\.\${ipHex}\\\\.[a-z0-9.-]+\$\`,'i');
+  const match=domain.match(svcPattern);
   if(!match)return false;
   const port=parseInt(match[1]);
   return isPortListening(port);
@@ -186,7 +202,7 @@ function del(){if(!sid)return;https.request({hostname:'api.hetzner.cloud',path:'
 function checkActivityAndMaybeDelete(){check();const i=(Date.now()-last)/1000;if(TIMEOUT*60-i<=WARNING*60&&!warn)warn=true;if(i>=TIMEOUT*60){wip();del()}}
 
 function main(){
-  baseDomain=loadConfig();console.log(\`Devbox daemon starting with domain: \${baseDomain}\`);
+  ipHex=loadConfig();console.log(\`Devbox daemon starting with IP hex: \${ipHex}, DNS: \${DNS_SERVICE}\`);
   services=scanPorts();
   console.log(\`Found \${services.size} services on startup\`);
   for(const[p,s]of services)prewarmCert(p);
@@ -216,12 +232,9 @@ const ACME_PROVIDERS: Record<string, { ca: string; requiresEab?: boolean }> = {
   actalis: { ca: 'https://acme-api.actalis.com/acme/directory', requiresEab: true },
 };
 
-// Build Caddyfile for services
+// Build Caddyfile for services (domain-agnostic)
+// Accepts any domain matching {port}.{ipHex}.{anything} or {ipHex}.{anything}
 export function buildCaddyConfig(config: GlobalConfig): string {
-  const dns = config.services.dnsService || 'sslip.io';
-  const dnsLabels = dns.split('.').length;
-  const portLabelIndex = dnsLabels + 1;
-
   let caddyfile = '{\n';
   caddyfile += '  on_demand_tls {\n    ask http://localhost:65531/verify-domain\n  }\n';
 
@@ -251,15 +264,46 @@ export function buildCaddyConfig(config: GlobalConfig): string {
     }
   }
 
-  caddyfile += '}\n';
+  caddyfile += '}\n\n';
 
   const authBlock = '  basic_auth {\n    devbox __HASH__\n  }\n';
 
-  // Overview page at base domain (ip.dns)
-  caddyfile += `__IP__.${dns} {\n${authBlock}  route /api/* {\n    uri strip_prefix /api\n    reverse_proxy localhost:65531\n  }\n  root * /var/www/devbox-overview\n  file_server\n}\n`;
+  // HTTP to HTTPS redirect (also needed for ACME HTTP-01 challenge)
+  caddyfile += `:80 {
+  redir https://{host}{uri} permanent
+}
 
-  // Wildcard route for all services
-  caddyfile += `*.__IP__.${dns} {\n  tls {\n    on_demand\n  }\n${authBlock}  reverse_proxy localhost:{http.request.host.labels.${portLabelIndex}}\n}\n`;
+`;
+
+  // Single HTTPS listener - domain-agnostic routing via header matching
+  caddyfile += `:443 {
+  tls {
+    on_demand
+  }
+${authBlock}
+  # Base domain: {ipHex}.{any-suffix} - serves overview page
+  @base header_regexp basehost Host (?i)^__IP__\\.[a-z0-9.-]+$
+  handle @base {
+    route /api/* {
+      uri strip_prefix /api
+      reverse_proxy localhost:65531
+    }
+    root * /var/www/devbox-overview
+    file_server
+  }
+
+  # Service subdomain: {port}.{ipHex}.{any-suffix} - proxies to port
+  @service header_regexp svchost Host (?i)^(\\d+)\\.__IP__\\.[a-z0-9.-]+$
+  handle @service {
+    reverse_proxy localhost:{re.svchost.1}
+  }
+
+  # Fallback: reject unmatched requests
+  handle {
+    respond "Not Found" 404
+  }
+}
+`;
 
   return caddyfile;
 }
