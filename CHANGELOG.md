@@ -18,7 +18,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 - Chezmoi dotfiles configuration with repo URL and age key for secret decryption
 - Age key written to `~/.config/chezmoi/key.txt` for encrypted dotfiles
-- mosh installed on provisioned servers with UDP ports 60000-61000 open
 - ADR 0023: chezmoi for Dotfile Management
 
 ### Fixed
