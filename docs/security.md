@@ -42,9 +42,10 @@ flowchart LR
 | Credential | Storage Location | Encryption | Justification |
 |------------|------------------|------------|---------------|
 | Hetzner API token | localStorage | None | User-controlled, trusted machine assumed |
-| Git credentials | localStorage | None | Same as above |
+| Git credential | localStorage | None | Bootstrap credential for chezmoi/repo cloning |
 | SSH public keys | localStorage | N/A | Public data |
 | Access tokens | localStorage | None | Per-server, ephemeral |
+| Age key | localStorage | None | For chezmoi secret decryption |
 | ACME EAB keys | localStorage | None | Optional, user-provided |
 
 **Why no encryption at rest?**
@@ -95,17 +96,21 @@ https://devbox:TOKEN@terminal.example.com/
 
 Cloud-init scripts contain:
 
-- Git credentials (username + token)
-- Hetzner API token (for auto-delete)
+- Bootstrap git credential (username + token for cloning chezmoi repo)
+- Age private key (for chezmoi secret decryption)
+- Hetzner API token (for auto-delete daemon)
 - Service access tokens
 
 **Where this data lives on the server:**
 
 ```
-/var/lib/cloud/instance/user-data    # Original cloud-init
-/home/dev/.git-credentials           # Git credentials (0600)
-/opt/devbox/daemon.mjs               # Contains Hetzner token
+/var/lib/cloud/instance/user-data      # Original cloud-init
+/home/dev/.git-credentials             # Git credential (0600)
+/home/dev/.config/chezmoi/key.txt      # Age key (0600)
+/usr/local/bin/devbox-daemon           # Contains Hetzner token
 ```
+
+Most sensitive configuration (additional git credentials, API keys, env vars) is managed by chezmoi and decrypted on the server using the age key — not embedded directly in cloud-init.
 
 **Mitigations:**
 
@@ -113,23 +118,19 @@ Cloud-init scripts contain:
 2. **Ephemeral servers**: Data exists only for server lifetime (typically < 1 day)
 3. **User-controlled**: User decides what credentials to include
 4. **No persistence**: Servers are deleted, not stopped/restarted
+5. **Minimal cloud-init secrets**: Only bootstrap credential in cloud-init; chezmoi handles the rest
 
 ### Shell Injection Prevention
 
 All user input embedded in cloud-init is escaped:
 
 ```javascript
-// Shell context
-function shellEscape(str) {
-    return "'" + str.replace(/'/g, "'\"'\"'") + "'";
+// Shell context (double-quoted strings)
+function shellEscape(s) {
+    return s.replace(/[\\"$`!]/g, '\\$&').replace(/\n/g, '');
 }
 
-// Git config context
-function escapeGitConfig(val) {
-    return val.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-}
-
-// JavaScript string context
+// JavaScript string context (single-quoted)
 function escapeSingleQuotedJS(s) {
     return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
             .replace(/\n/g, '\\n').replace(/<\//g, '<\\/');
@@ -219,15 +220,7 @@ export function setNestedValue(obj, path, value) {
 
 ## Input Validation
 
-### Package Names
-
-```javascript
-if (!/^[a-zA-Z0-9@._:\/+-]+$/.test(value)) {
-    // Reject
-}
-```
-
-### Repository URLs
+### Chezmoi/Repository URLs
 
 ```javascript
 if (!/^(https?:\/\/|git@)[\w.@:\/~-]+$/.test(value)) {

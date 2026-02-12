@@ -36,6 +36,7 @@ ADRs capture important architectural decisions along with their context and cons
 | [020](./0020-svelte-runes-stores.md) | Reactive Stores with Runes | Accepted | Global state management using Svelte 5 runes |
 | [021](./0021-tailwind-css-v4.md) | Tailwind CSS v4 | Accepted | Utility-first CSS with runtime theming |
 | [022](./0022-pnpm-package-manager.md) | pnpm Package Manager | Accepted | Disk-efficient, strict package management |
+| [023](./0023-chezmoi-dotfile-management.md) | chezmoi for Dotfile Management | Accepted | Personal dev config managed via dotfiles repo, not UI |
 
 ## ADR Template
 

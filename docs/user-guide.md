@@ -15,8 +15,8 @@
 3. Enter your Hetzner API token
 4. Configure your Global Config with:
    - SSH public keys
-   - Git name and email
-   - Preferred shell
+   - Chezmoi dotfiles repo URL and age key
+   - Git credential for cloning
 
 ## Core Concepts
 
@@ -25,11 +25,12 @@
 Global config contains settings that apply to all servers by default:
 
 - **SSH Keys**: Your public keys for server access
-- **Git Configuration**: Name, email, and optional credentials
-- **Shell**: Default shell (bash, zsh, fish)
-- **Packages**: Default apt and mise packages
-- **Services**: ttyd, Caddy, and other services
-- **Claude Code**: API key and preferences
+- **Chezmoi Dotfiles**: Repo URL, age key, and bootstrap git credential
+- **Hetzner Settings**: Server type, location, base image
+- **Services**: DNS service, ACME provider, access token
+- **Auto-Delete**: Idle timeout settings
+
+Personal dev environment config (shell, packages, git user, Claude Code, env vars) is managed by [chezmoi](https://github.com/twpayne/chezmoi) in your dotfiles repo.
 
 Access via **Global Config** in the navigation.
 
@@ -41,10 +42,9 @@ Profiles let you override specific global settings for different projects or use
 
 | Profile | Purpose | Overrides |
 |---------|---------|-----------|
-| `nodejs` | Node.js projects | `packages.mise: ["node@lts"]` |
-| `python-ml` | ML/Data science | `packages.mise: ["python@3.12"]`, `packages.apt: ["python3-venv"]` |
-| `minimal` | Quick experiments | Most services disabled |
-| `full-stack` | Web development | Node.js + database packages |
+| `eu-server` | European location | `hetzner.location: "fsn1"` |
+| `heavy` | Resource-intensive work | `hetzner.serverType: "cx42"` |
+| `long-running` | Extended sessions | `autoDelete.timeoutMinutes: 480` |
 
 ### Creating a Profile
 
@@ -93,52 +93,30 @@ ssh.keys: ["ssh-ed25519 AAAA... user@machine"]
 
 Multiple keys supported. These are added to the dev user's `authorized_keys`.
 
-### Git Configuration
+### Chezmoi Dotfiles
 
 ```
-git.name: "Your Name"
-git.email: "you@example.com"
-git.credentials: [
-  { host: "github.com", username: "user", token: "ghp_..." }
-]
+chezmoi.repoUrl: "https://github.com/user/dotfiles.git"
+chezmoi.ageKey: "AGE-SECRET-KEY-1..."
 ```
 
-Credentials are stored in `~/.git-credentials` with HTTPS credential helper.
+Your private dotfiles repo is cloned and applied via `chezmoi init --apply` on server boot. The age key is used to decrypt encrypted secrets in your chezmoi repo. Chezmoi manages shell config, packages, git user settings, Claude Code setup, and environment variables.
 
-### Packages
-
-**APT packages** (system packages):
-```
-packages.apt: ["git", "curl", "jq", "ripgrep"]
-```
-
-**mise packages** (runtime versions):
-```
-packages.mise: ["node@lts", "python@3.12", "go@latest"]
-```
-
-### Shell Configuration
+### Git Credential
 
 ```
-shell.default: "zsh"           # bash, zsh, or fish
-shell.starship: true           # Enable Starship prompt
+git.credential: { host: "github.com", username: "user", token: "ghp_..." }
 ```
+
+A single bootstrap credential used to clone your chezmoi repo and any private repositories. Additional credentials are managed by chezmoi.
 
 ### Services
 
 ```
-services.ttyd: true            # Browser terminal (recommended)
-services.caddy: true           # Reverse proxy for HTTPS
-services.acmeProvider: "letsencrypt"  # Certificate provider
-services.domain: "dev.example.com"    # Your domain
-```
-
-### Claude Code
-
-```
-claude.apiKey: "sk-ant-..."    # Anthropic API key
-claude.skipPermissions: false  # Auto-approve tool use
-claude.theme: "dark"           # Match UI theme
+services.dnsService: "sslip.io"         # DNS service for subdomains
+services.acmeProvider: "zerossl"        # Certificate provider
+services.acmeEmail: "admin@example.com" # ACME registration email
+services.accessToken: "abc123"          # Basic auth token for services
 ```
 
 ## Workflows
@@ -196,14 +174,13 @@ Useful to avoid forgetting to delete servers.
 
 ### Claude Code not working
 
-- Verify API key is correct
+- Verify your chezmoi dotfiles correctly configure Claude Code
 - Check `~/.claude/settings.json` on the server
 - Try running `claude` manually to see error messages
 
 ## Tips
 
-1. **Use mise for runtimes**: More flexible than system packages
-2. **Enable Starship**: Better terminal prompt experience
-3. **Use zsh**: Better completion and history than bash
-4. **Save profiles**: Don't recreate config each time
-5. **Check cloud-init size**: Large configs may need trimming
+1. **Use chezmoi**: Manage your entire dev environment as code in a git repo
+2. **Use age encryption**: Keep secrets (API keys, tokens) encrypted in your dotfiles
+3. **Save profiles**: Use profiles for different server types/locations
+4. **Check cloud-init size**: Large configs may need trimming

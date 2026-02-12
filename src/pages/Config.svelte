@@ -46,11 +46,11 @@
 
   function setValue(path: string, value: unknown) {
     const keys = path.split('.');
-    let current: Record<string, unknown> = configStore.value as Record<string, unknown>;
+    let current: Record<string, unknown> = configStore.value as unknown as Record<string, unknown>;
     for (let i = 0; i < keys.length - 1; i++) {
-      current = current[keys[i]] as Record<string, unknown>;
+      current = current[keys[i]!] as Record<string, unknown>;
     }
-    current[keys[keys.length - 1]] = value;
+    current[keys[keys.length - 1]!] = value;
   }
 
   // Toast helper for ConfigForm
@@ -106,14 +106,14 @@
         const data = JSON.parse(e.target?.result as string);
 
         // Support both new format (config) and old format (globalConfig)
-        const importedConfig = data.config || data.globalConfig;
-        if (!importedConfig) {
+        const rawConfig = data.config || data.globalConfig;
+        if (!rawConfig) {
           toast.error('Invalid config file: missing config or globalConfig');
           return;
         }
 
         // Import config (merge with defaults to handle missing fields)
-        configStore.value = { ...configStore.value, ...importedConfig } as GlobalConfig;
+        configStore.value = { ...configStore.value, ...rawConfig } as GlobalConfig;
         configStore.save();
         snapshot = clone(configStore.value);
 

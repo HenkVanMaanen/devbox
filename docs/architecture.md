@@ -62,7 +62,6 @@ flowchart TB
 |--------|----------------|
 | `src/lib/utils/cloudinit.ts` | Cloud-init YAML generation engine |
 | `src/lib/utils/cloudinit-builders.ts` | Helper functions for cloud-init components |
-| `src/lib/data/packages.ts` | APT and mise package definitions |
 | `src/lib/utils/names.ts` | Funny alliterative server name generator |
 | `src/lib/utils/qrcode.ts` | QR code generation |
 
@@ -85,29 +84,28 @@ flowchart TD
 flowchart TD
     subgraph Global["Global Config"]
         G1["ssh.keys: [...]"]
-        G2["git.name: 'User'"]
-        G3["git.email: 'user@example.com'"]
-        G4["packages.apt: ['git', 'curl']"]
-        G5["shell.default: 'zsh'"]
+        G2["chezmoi.repoUrl: '...'"]
+        G3["git.credential: {...}"]
+        G4["services.dnsService: 'sslip.io'"]
+        G5["hetzner.serverType: 'cx22'"]
     end
 
     Global -->|"deepMerge"| Profile
 
     subgraph Profile["Profile Overrides"]
-        P1["packages.mise: ['node@lts']"]
-        P2["services.vscode: true"]
+        P1["hetzner.serverType: 'cx32'"]
+        P2["hetzner.location: 'nbg1'"]
     end
 
     Profile -->|"Result"| Effective
 
     subgraph Effective["Effective Config"]
         E1["ssh.keys: [...] (global)"]
-        E2["git.name: 'User' (global)"]
-        E3["git.email: '...' (global)"]
-        E4["packages.apt: [...] (global)"]
-        E5["packages.mise: [...] (profile)"]
-        E6["shell.default: 'zsh' (global)"]
-        E7["services.vscode: true (profile)"]
+        E2["chezmoi.repoUrl: '...' (global)"]
+        E3["git.credential: {...} (global)"]
+        E4["services.dnsService: '...' (global)"]
+        E5["hetzner.serverType: 'cx32' (profile)"]
+        E6["hetzner.location: 'nbg1' (profile)"]
     end
 ```
 
@@ -135,9 +133,9 @@ State changes automatically trigger re-renders via Svelte's reactivity system.
 ### Credential Handling
 
 1. **Hetzner API token**: Stored in localStorage, sent only to Hetzner API
-2. **Git credentials**: Embedded in cloud-init, sent to Hetzner as user-data
-3. **SSH keys**: Fetched from Hetzner account, not stored locally
-4. **Claude API key**: Embedded in cloud-init for server configuration
+2. **Git credential**: Bootstrap credential embedded in cloud-init for cloning chezmoi repo
+3. **SSH keys**: Registered with Hetzner, added to server's authorized_keys
+4. **Age key**: Written to server for chezmoi secret decryption
 
 ### XSS Prevention
 
@@ -164,23 +162,16 @@ flowchart TB
     subgraph Server["Cloud Server"]
         subgraph Services["Services"]
             Caddy["Caddy<br/>(port 443)<br/>- Auto HTTPS<br/>- Subdomains"]
-            ttyd["ttyd<br/>(port 7681)<br/>- WebSocket<br/>- Terminal"]
+            ttyd["ttyd<br/>(port 65534)<br/>- WebSocket<br/>- Terminal"]
             DevServers["Dev Servers<br/>(port 3000+)"]
         end
 
         Caddy --> ttyd
         Caddy --> DevServers
 
-        ttyd --> Mux["tmux/zellij<br/>(multiplexer)"]
-        Mux --> Shell["User Shell<br/>(bash/zsh)"]
+        ttyd --> Shell["User Shell<br/>(bash)"]
+        Shell --> Chezmoi["chezmoi<br/>(dotfiles)"]
         Shell --> Claude["Claude Code<br/>(primary use)"]
-
-        subgraph Runtimes["mise (runtimes)"]
-            Node["node@lts"]
-            Python["python@3.12"]
-            Go["go@latest"]
-            Other["..."]
-        end
     end
 
     Internet((HTTPS)) --> Caddy

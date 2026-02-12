@@ -11,9 +11,9 @@ export interface GitCredential {
   token: string;
 }
 
-export interface EnvVar {
-  name: string;
-  value: string;
+export interface ChezmoiConfig {
+  repoUrl: string;
+  ageKey: string;
 }
 
 export interface HetznerConfig {
@@ -23,9 +23,6 @@ export interface HetznerConfig {
 }
 
 export interface ServicesConfig {
-  codeServer: boolean;
-  claudeTerminal: boolean;
-  shellTerminal: boolean;
   accessToken: string;
   dnsService: 'sslip.io' | 'nip.io' | 'traefik.me' | 'custom';
   customDnsDomain: string;
@@ -40,28 +37,10 @@ export interface ServicesConfig {
   customEabKey: string;
 }
 
-export interface PackagesConfig {
-  mise: string[];
-  apt: string[];
-}
-
 export interface AutoDeleteConfig {
   enabled: boolean;
   timeoutMinutes: number;
   warningMinutes: number;
-}
-
-export interface ClaudeConfig {
-  apiKey: string;
-  settings: string;
-  credentialsJson: Record<string, unknown> | null;
-  theme: '' | 'dark' | 'light' | 'dark-daltonized' | 'light-daltonized';
-  skipPermissions: boolean;
-}
-
-export interface ShellConfig {
-  default: 'fish' | 'zsh' | 'bash';
-  starship: boolean;
 }
 
 export interface GlobalConfig {
@@ -69,18 +48,12 @@ export interface GlobalConfig {
     keys: SSHKey[];
   };
   git: {
-    userName: string;
-    userEmail: string;
-    credentials: GitCredential[];
+    credential: GitCredential;
   };
-  shell: ShellConfig;
+  chezmoi: ChezmoiConfig;
   services: ServicesConfig;
   hetzner: HetznerConfig;
   autoDelete: AutoDeleteConfig;
-  claude: ClaudeConfig;
-  packages: PackagesConfig;
-  repos: string[];
-  envVars: EnvVar[];
 }
 
 export interface Profile {

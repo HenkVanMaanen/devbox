@@ -36,5 +36,6 @@ export default defineConfig({
   server: {
     port: 8080,
     host: '0.0.0.0',
+    allowedHosts: ['3000.310d39ae.dev.calabytes.nl'],
   },
 });

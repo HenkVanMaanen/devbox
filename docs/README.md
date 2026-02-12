@@ -65,6 +65,7 @@ ADRs document the significant architectural decisions made in this project:
 | [020](./adr/0020-svelte5-runes.md) | Svelte 5 with Runes | Accepted |
 | [021](./adr/0021-tailwind-v4.md) | Tailwind CSS v4 | Accepted |
 | [022](./adr/0022-pnpm.md) | pnpm Package Manager | Accepted |
+| [023](./adr/0023-chezmoi-dotfile-management.md) | chezmoi for Dotfile Management | Accepted |
 
 ## Project Structure
 
@@ -79,7 +80,7 @@ devbox/
 │       ├── api/           # API clients (Hetzner)
 │       ├── stores/        # Svelte runes-based stores
 │       ├── utils/         # Utility functions
-│       └── data/          # Static data (packages, options)
+│       └── data/          # Static data (options)
 ├── tests/                  # Test suite
 ├── docs/                   # Documentation
 │   └── adr/               # Architecture Decision Records

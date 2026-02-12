@@ -1,4 +1,5 @@
 /** https://github.com/datalog/qrcode-svg under MIT license */
+// @ts-nocheck
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 interface QROptions {

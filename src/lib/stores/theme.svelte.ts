@@ -32,6 +32,7 @@ export interface ThemeColors {
   warning: string;
   warningForeground: string;
   placeholder: string;
+  [key: string]: string;
 }
 
 export interface TerminalColors {
@@ -51,6 +52,7 @@ export interface TerminalColors {
   brightMagenta: string;
   brightCyan: string;
   brightWhite: string;
+  [key: string]: string;
 }
 
 export const THEMES: Theme[] = [

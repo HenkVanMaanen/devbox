@@ -84,10 +84,10 @@ Read these files first for context:
 2. **Shell escaping**: Use `shellEscape()` for values embedded in cloud-init scripts
    ```typescript
    // Good
-   `echo ${shellEscape(userName)}`
+   `chezmoi init --apply "${shellEscape(repoUrl)}"`
 
    // Bad - command injection
-   `echo ${userName}`
+   `chezmoi init --apply "${repoUrl}"`
    ```
 
 3. **Prototype pollution**: Check for `__proto__`, `constructor`, `prototype` when handling dynamic object paths

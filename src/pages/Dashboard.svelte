@@ -46,12 +46,8 @@
         parts.push(`€${hourly.toFixed(4)}/hr (~€${monthly.toFixed(2)}/mo)`);
       }
     }
-    if (selectedConfig.packages.mise?.length) {
-      const misePackages = selectedConfig.packages.mise.slice(0, 3).join(', ');
-      parts.push(misePackages + (selectedConfig.packages.mise.length > 3 ? '...' : ''));
-    }
-    if (selectedConfig.repos?.length) {
-      parts.push(`${selectedConfig.repos.length} repo(s)`);
+    if (selectedConfig.chezmoi?.repoUrl) {
+      parts.push('chezmoi');
     }
     return parts.join(' • ');
   });

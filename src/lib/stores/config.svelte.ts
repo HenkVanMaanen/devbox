@@ -8,18 +8,13 @@ const DEFAULT_CONFIG: GlobalConfig = {
     keys: [],
   },
   git: {
-    userName: '',
-    userEmail: '',
-    credentials: [],
+    credential: { host: 'github.com', username: '', token: '' },
   },
-  shell: {
-    default: 'fish',
-    starship: true,
+  chezmoi: {
+    repoUrl: '',
+    ageKey: '',
   },
   services: {
-    codeServer: true,
-    claudeTerminal: true,
-    shellTerminal: true,
     accessToken: uuid().slice(0, 8),
     dnsService: 'sslip.io',
     customDnsDomain: '',
@@ -43,24 +38,13 @@ const DEFAULT_CONFIG: GlobalConfig = {
     timeoutMinutes: 90,
     warningMinutes: 5,
   },
-  claude: {
-    apiKey: '',
-    settings: '',
-    credentialsJson: null,
-    theme: '',
-    skipPermissions: false,
-  },
-  packages: {
-    mise: [],
-    apt: [],
-  },
-  repos: [],
-  envVars: [],
 };
 
 function createConfigStore() {
   const stored = load<GlobalConfig>('config');
-  let config = $state<GlobalConfig>(stored ? deepMerge(DEFAULT_CONFIG, stored) : clone(DEFAULT_CONFIG));
+  let config = $state<GlobalConfig>(
+    stored ? deepMerge(DEFAULT_CONFIG, stored) : clone(DEFAULT_CONFIG)
+  );
 
   return {
     get value() {

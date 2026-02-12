@@ -41,9 +41,9 @@ pnpm run dev
 ## Usage
 
 1. **Add credentials**: Enter your Hetzner API token in Credentials
-2. **Configure**: Set up SSH keys, Git config, packages in Global Config
-3. **Create profiles**: Save configurations for different projects
-4. **Launch**: Create a server and access via browser terminal
+2. **Configure**: Set up SSH keys, chezmoi dotfiles repo, and git credential
+3. **Create profiles**: Save configurations for different server types
+4. **Launch**: Create a server — chezmoi sets up your full dev environment
 5. **Code**: Use Claude Code for AI-assisted development
 6. **Clean up**: Delete server when done
 

@@ -6,6 +6,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- Dev environment configuration (shell, packages, git user, Claude Code, env vars) is now managed by chezmoi dotfiles instead of cloud-init
+- Git credentials simplified to a single bootstrap credential (chezmoi manages additional credentials)
+- Repositories are now cloned by chezmoi run scripts instead of cloud-init
+- Cloud-init is now minimal: installs chezmoi, writes bootstrap credential and age key, runs `chezmoi init --apply`
+- Services simplified to always-on terminal (ttyd); removed code-server and service toggles
+- Removed mise from cloud-init (chezmoi manages runtimes)
+- Removed nodejs apt source (uses default system packages for daemon only)
+
+### Added
+- Chezmoi dotfiles configuration with repo URL and age key for secret decryption
+- Age key written to `~/.config/chezmoi/key.txt` for encrypted dotfiles
+- mosh installed on provisioned servers with UDP ports 60000-61000 open
+- ADR 0023: chezmoi for Dotfile Management
+
+### Fixed
+- SSH key uniqueness error when key already exists in Hetzner (normalized comparison)
+- TypeScript type errors across multiple files (qrcode, servers, theme, config)
+
+### Removed
+- Shell configuration UI (shell selection, starship toggle)
+- Package management UI (mise tools, APT packages)
+- Claude Code configuration UI (API key, theme, credentials, skip permissions)
+- Environment variables UI
+- Git user settings UI (name, email)
+- Code-server and VS Code integration
+- Service toggle checkboxes (terminal, code-server, Claude terminal)
+- Repository list UI (chezmoi handles repo cloning)
+
 ## [2.6.0] - 2026-02-10
 
 ### Added

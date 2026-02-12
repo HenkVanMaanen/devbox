@@ -2,7 +2,6 @@
   import { credentialsStore } from '$lib/stores/credentials.svelte';
   import { serversStore } from '$lib/stores/servers.svelte';
   import { configStore } from '$lib/stores/config.svelte';
-  import { profilesStore } from '$lib/stores/profiles.svelte';
   import { toast } from '$lib/stores/toast.svelte';
   import { clearAll } from '$lib/utils/storage';
   import Input from '$components/ui/Input.svelte';

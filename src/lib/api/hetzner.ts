@@ -148,10 +148,22 @@ export async function ensureSSHKey(
   name: string,
   publicKey: string
 ): Promise<HetznerSSHKey> {
+  // Normalize: compare only key type + key data, ignore comments and extra whitespace
+  const normalize = (k: string) => k.trim().split(/\s+/).slice(0, 2).join(' ');
   const keys = await listSSHKeys(token);
-  const existing = keys.find((k) => k.public_key.trim() === publicKey.trim());
+  const existing = keys.find((k) => normalize(k.public_key) === normalize(publicKey));
   if (existing) return existing;
-  return createSSHKey(token, name, publicKey);
+  try {
+    return await createSSHKey(token, name, publicKey);
+  } catch (e) {
+    // Handle race condition or normalization mismatch — re-fetch and match
+    if (e instanceof Error && e.message.includes('uniqueness_error')) {
+      const refreshed = await listSSHKeys(token);
+      const match = refreshed.find((k) => normalize(k.public_key) === normalize(publicKey));
+      if (match) return match;
+    }
+    throw e;
+  }
 }
 
 // Token validation
