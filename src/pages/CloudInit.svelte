@@ -69,7 +69,7 @@
 </script>
 
 <div class="space-y-6">
-  <h1 class="text-2xl font-bold">Cloud-Init Preview</h1>
+  <h1 class="text-2xl font-bold">Cloud-Init</h1>
 
   {#if !credentialsStore.hasToken}
     <Card>
@@ -82,6 +82,27 @@
       </div>
     </Card>
   {:else}
+    {#if profilesStore.profileList.length > 0}
+      <div>
+        <label for="cloudinit-profile" class="block text-sm font-medium mb-1.5">Profile</label>
+        <select
+          id="cloudinit-profile"
+          bind:value={selectedProfileId}
+          class="w-full min-h-[44px] px-3 py-2 text-base bg-background border-2 border-border rounded-md
+                 focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary
+                 transition-colors duration-150"
+        >
+          <option value={null}>Use global config (no profile)</option>
+          {#each profilesStore.profileList as profile (profile.id)}
+            <option value={profile.id}>
+              {profile.id === profilesStore.defaultProfileId ? '★ ' : ''}{profile.name}
+              {profile.id === profilesStore.defaultProfileId ? ' (Default)' : ''}
+            </option>
+          {/each}
+        </select>
+      </div>
+    {/if}
+
     <Card>
       <div class="flex items-center justify-between flex-wrap gap-4 mb-4">
         <div>
@@ -94,27 +115,6 @@
           <Button variant="secondary" size="sm" onclick={download}>Download</Button>
         </div>
       </div>
-
-      {#if profilesStore.profileList.length > 0}
-        <div class="mb-4">
-          <label for="cloudinit-profile" class="block text-sm font-medium mb-1.5">Profile</label>
-          <select
-            id="cloudinit-profile"
-            bind:value={selectedProfileId}
-            class="w-full min-h-[44px] px-3 py-2 text-base bg-background border-2 border-border rounded-md
-                   focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary
-                   transition-colors duration-150"
-          >
-            <option value={null}>Use global config (no profile)</option>
-            {#each profilesStore.profileList as profile (profile.id)}
-              <option value={profile.id}>
-                {profile.id === profilesStore.defaultProfileId ? '★ ' : ''}{profile.name}
-                {profile.id === profilesStore.defaultProfileId ? ' (Default)' : ''}
-              </option>
-            {/each}
-          </select>
-        </div>
-      {/if}
 
       <div class="mb-4">
         <div class="flex items-center justify-between text-sm mb-1">

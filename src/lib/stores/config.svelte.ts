@@ -38,6 +38,10 @@ const DEFAULT_CONFIG: GlobalConfig = {
     timeoutMinutes: 90,
     warningMinutes: 5,
   },
+  customCloudInit: {
+    yaml: '',
+    mode: 'merge',
+  },
 };
 
 function createConfigStore() {

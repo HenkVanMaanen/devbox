@@ -4,6 +4,7 @@
   import { validateSSHKey, extractSSHKeyName } from '$lib/utils/validation';
   import Card from '$components/ui/Card.svelte';
   import Button from '$components/ui/Button.svelte';
+  import CustomCloudInitEditor from '$components/CustomCloudInitEditor.svelte';
 
   interface Props {
     // Mode: 'global' for direct binding, 'profile' for override-based editing
@@ -755,4 +756,25 @@
       </div>
     </div>
   </div>
+</Card>
+
+<!-- Custom Cloud-Init -->
+<Card title="Custom Cloud-Init">
+  {#if mode === 'profile'}
+    <div class="flex items-start gap-3 mb-4">
+      <input
+        type="checkbox"
+        checked={hasOverride('customCloudInit')}
+        onchange={() => toggle('customCloudInit')}
+        class="mt-1 w-5 h-5 rounded border-2 border-border text-primary focus:ring-3 focus:ring-focus bg-background cursor-pointer"
+      />
+      <p class="text-sm text-muted-foreground">Override custom cloud-init for this profile</p>
+    </div>
+  {/if}
+
+  {#if mode === 'global' || hasOverride('customCloudInit')}
+    <CustomCloudInitEditor {getValue} {setValue} {isDisabled} {idPrefix} />
+  {:else}
+    <p class="text-sm text-muted-foreground">Using global custom cloud-init configuration.</p>
+  {/if}
 </Card>

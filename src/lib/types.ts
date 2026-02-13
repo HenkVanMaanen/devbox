@@ -43,6 +43,11 @@ export interface AutoDeleteConfig {
   warningMinutes: number;
 }
 
+export interface CustomCloudInitConfig {
+  yaml: string;
+  mode: 'merge' | 'replace';
+}
+
 export interface GlobalConfig {
   ssh: {
     keys: SSHKey[];
@@ -54,6 +59,7 @@ export interface GlobalConfig {
   services: ServicesConfig;
   hetzner: HetznerConfig;
   autoDelete: AutoDeleteConfig;
+  customCloudInit: CustomCloudInitConfig;
 }
 
 export interface Profile {

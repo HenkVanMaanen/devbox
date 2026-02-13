@@ -12,6 +12,7 @@ import {
   type ThemeColors,
   type TerminalColors,
 } from './cloudinit-builders';
+import YAML from 'yaml';
 
 interface CloudInitConfig {
   package_update: boolean;
@@ -48,6 +49,14 @@ export function generateCloudInit(
     terminalColors?: TerminalColors;
   } = {}
 ): string {
+  // Handle replace mode: return user YAML directly
+  const customYaml = config.customCloudInit?.yaml?.trim() ?? '';
+  const customMode = config.customCloudInit?.mode ?? 'merge';
+
+  if (customYaml && customMode === 'replace') {
+    return customYaml.startsWith('#cloud-config') ? customYaml : '#cloud-config\n' + customYaml;
+  }
+
   const sshKeys = config.ssh?.keys ?? [];
   const credential = config.git?.credential;
 
@@ -223,12 +232,90 @@ export function generateCloudInit(
 
   cloudInit.runcmd = runcmd;
 
+  // Merge custom cloud-init if provided
+  if (customYaml) {
+    const merged = mergeCustomCloudInit(cloudInit as unknown as Record<string, unknown>, customYaml);
+    return toYAML(merged);
+  }
+
   // Convert to YAML
-  return toYAML(cloudInit);
+  return toYAML(cloudInit as unknown as Record<string, unknown>);
+}
+
+// Keys that custom cloud-init is not allowed to override
+export const BLOCKED_CUSTOM_KEYS = new Set(['users', 'apt', 'package_update', 'package_upgrade']);
+
+// Merge user-provided cloud-init YAML into the generated base config
+export function mergeCustomCloudInit(
+  baseConfig: Record<string, unknown>,
+  customYaml: string
+): Record<string, unknown> {
+  let parsed: unknown;
+  try {
+    parsed = YAML.parse(customYaml);
+  } catch {
+    return baseConfig;
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return baseConfig;
+  }
+
+  const custom = parsed as Record<string, unknown>;
+  const result: Record<string, unknown> = { ...baseConfig };
+
+  // Collect generated write_files paths for conflict detection
+  const writeFiles = result['write_files'];
+  const generatedPaths = new Set(
+    (Array.isArray(writeFiles) ? writeFiles : [])
+      .map((f: unknown) => (f as Record<string, unknown>)['path'])
+  );
+
+  for (const [key, value] of Object.entries(custom)) {
+    if (BLOCKED_CUSTOM_KEYS.has(key)) continue;
+
+    if (key === 'packages') {
+      if (!Array.isArray(value)) continue;
+      const existing = Array.isArray(result['packages']) ? result['packages'] as string[] : [];
+      const combined = [...existing, ...value.filter((p): p is string => typeof p === 'string')];
+      result['packages'] = [...new Set(combined)];
+    } else if (key === 'write_files') {
+      if (!Array.isArray(value)) continue;
+      const existing = Array.isArray(result['write_files']) ? result['write_files'] as unknown[] : [];
+      const newFiles = value.filter((f: unknown) => {
+        if (!f || typeof f !== 'object') return false;
+        const filePath = (f as Record<string, unknown>)['path'];
+        if (typeof filePath !== 'string' || !filePath) return false;
+        return !generatedPaths.has(filePath);
+      });
+      result['write_files'] = [...existing, ...newFiles];
+    } else if (key === 'runcmd') {
+      if (!Array.isArray(value)) continue;
+      const existing = Array.isArray(result['runcmd']) ? result['runcmd'] as unknown[] : [];
+      // Insert user commands before the final "devbox-progress ready" entry
+      const readyIndex = existing.findIndex(
+        (cmd) => typeof cmd === 'string' && cmd.includes('devbox-progress ready')
+      );
+      if (readyIndex >= 0) {
+        result['runcmd'] = [
+          ...existing.slice(0, readyIndex),
+          ...value,
+          ...existing.slice(readyIndex),
+        ];
+      } else {
+        result['runcmd'] = [...existing, ...value];
+      }
+    } else {
+      // Extra top-level keys: pass through
+      result[key] = value;
+    }
+  }
+
+  return result;
 }
 
 // Simple YAML serializer for cloud-init
-function toYAML(obj: CloudInitConfig, indent = 0, isRoot = true): string {
+function toYAML(obj: Record<string, unknown>, indent = 0, isRoot = true): string {
   const pad = '  '.repeat(indent);
   let yaml = isRoot ? '#cloud-config\n' : '';
 
@@ -247,7 +334,7 @@ function toYAML(obj: CloudInitConfig, indent = 0, isRoot = true): string {
           }
         } else if (typeof item === 'object' && item !== null) {
           yaml += `${pad}- `;
-          const lines = toYAML(item as unknown as CloudInitConfig, 0, false)
+          const lines = toYAML(item as unknown as Record<string, unknown>, 0, false)
             .split('\n')
             .filter((l) => l);
           yaml += lines[0] + '\n';
@@ -260,7 +347,7 @@ function toYAML(obj: CloudInitConfig, indent = 0, isRoot = true): string {
       }
     } else if (typeof value === 'object') {
       yaml += `${pad}${key}:\n`;
-      yaml += toYAML(value as unknown as CloudInitConfig, indent + 1, false);
+      yaml += toYAML(value as unknown as Record<string, unknown>, indent + 1, false);
     } else {
       yaml += `${pad}${key}: ${formatYAMLValue(value, indent)}\n`;
     }
