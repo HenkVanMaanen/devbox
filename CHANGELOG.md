@@ -4,10 +4,12 @@ All notable changes to Devbox will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [3.1.0] - 2026-02-13
+## [3.1.1] - 2026-02-13
 
 ### Fixed
 - Fix invalid regex in custom DNS domain input pattern for browsers using the `v` (unicodeSets) flag
+
+## [3.1.0] - 2026-02-13
 
 ### Added
 - SWR (Stale-While-Revalidate) caching for Hetzner API calls — cached data shows instantly from localStorage, then silently refreshes in background
