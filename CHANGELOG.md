@@ -4,6 +4,11 @@ All notable changes to Devbox will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [3.0.1] - 2026-02-13
+
+### Fixed
+- IP detection during cloud-init uses local network interface instead of unreliable external service (ifconfig.me)
+
 ## [3.0.0] - 2026-02-13
 
 ### Changed
@@ -22,7 +27,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - ADR 0023: chezmoi for Dotfile Management
 
 ### Fixed
-- IP detection during cloud-init uses local network interface instead of unreliable external service (ifconfig.me)
 - SSH key uniqueness error when key already exists in Hetzner (normalized comparison)
 - TypeScript type errors across multiple files (qrcode, servers, theme, config)
 
