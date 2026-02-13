@@ -4,372 +4,386 @@ All notable changes to Devbox will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [3.1.2] - 2026-02-13
+
+### Added
+
+- Add cloud-init progress tracking via Hetzner labels
+
+### CI/Build
+
+- Auto-generate CHANGELOG.md with git-cliff
 ## [3.1.1] - 2026-02-13
 
 ### Fixed
-- Fix invalid regex in custom DNS domain input pattern for browsers using the `v` (unicodeSets) flag
 
+- Escape dot and hyphen in DNS domain input pattern for v-flag regex
 ## [3.1.0] - 2026-02-13
 
 ### Added
-- SWR (Stale-While-Revalidate) caching for Hetzner API calls — cached data shows instantly from localStorage, then silently refreshes in background
-- Optimistic UI for server delete (instant removal) and create (instant addition)
-- Request deduplication prevents duplicate API calls when effects fire multiple times
-- Token-scoped cache invalidation when switching Hetzner accounts
-- Unit tests for SWR cache utility (15 test cases)
-- ADR 0024: SWR Caching for Hetzner API Calls
-- tsx devDependency for TypeScript test imports
 
-### Changed
-- Dashboard no longer shows loading spinner on page reload when cached data exists
-- Server delete no longer shows loading spinner (optimistic removal)
-- Dev server now allows all hosts
-
+- Add SWR caching for Hetzner API calls
 ## [3.0.1] - 2026-02-13
 
 ### Fixed
-- IP detection during cloud-init uses local network interface instead of unreliable external service (ifconfig.me)
 
-## [3.0.0] - 2026-02-13
-
-### Changed
-- Dev environment configuration (shell, packages, git user, Claude Code, env vars) is now managed by chezmoi dotfiles instead of cloud-init
-- Git credentials simplified to a single bootstrap credential (chezmoi manages additional credentials)
-- Repositories are now cloned by chezmoi run scripts instead of cloud-init
-- Cloud-init is now minimal: installs chezmoi, writes bootstrap credential and age key, runs `chezmoi init --apply`
-- Services simplified to always-on terminal (ttyd); removed code-server and service toggles
-- Removed mise from cloud-init (chezmoi manages runtimes)
-- Removed nodejs apt source (uses default system packages for daemon only)
+- Use local network interface for IP detection instead of ifconfig.me
+## [3.0.0] - 2026-02-12
 
 ### Added
-- Chezmoi dotfiles configuration with repo URL and age key for secret decryption
-- Age key written to `~/.config/chezmoi/key.txt` for encrypted dotfiles
-- mosh installed on provisioned servers with UDP ports 60000-61000 open
-- ADR 0023: chezmoi for Dotfile Management
 
-### Fixed
-- SSH key uniqueness error when key already exists in Hetzner (normalized comparison)
-- TypeScript type errors across multiple files (qrcode, servers, theme, config)
+- Replace UI config with chezmoi dotfile management
 
-### Removed
-- Shell configuration UI (shell selection, starship toggle)
-- Package management UI (mise tools, APT packages)
-- Claude Code configuration UI (API key, theme, credentials, skip permissions)
-- Environment variables UI
-- Git user settings UI (name, email)
-- Code-server and VS Code integration
-- Service toggle checkboxes (terminal, code-server, Claude terminal)
-- Repository list UI (chezmoi handles repo cloning)
+### Chore
 
+- Add mosh back to changelog
+- Remove mosh from changelog
 ## [2.6.0] - 2026-02-10
 
 ### Added
-- Custom domain support for DNS services (delegate your domain to sslip.io nameservers)
-- traefik.me as additional wildcard DNS option
 
-### Changed
-- Caddy configuration is now domain-agnostic: servers accept requests from any DNS service (sslip.io, nip.io, traefik.me, custom domains) simultaneously
-- Changing DNS service setting no longer breaks existing servers
-
+- Domain-agnostic Caddy configuration with custom domain support
 ## [2.5.1] - 2026-02-09
 
 ### Fixed
-- Servers with simplified names now appear in UI (filter by label instead of name prefix)
 
+- Filter servers by label instead of name prefix
 ## [2.5.0] - 2026-02-09
 
-### Changed
-- Server names are now just two words (e.g., `happy-hedgehog`) without prefix or suffix
+### Added
 
+- Simplify server names to just two words
 ## [2.4.0] - 2026-02-09
 
-### Changed
-- DNS service URLs now use hex IP format (e.g., `c0a80164.sslip.io`) instead of dashed decimal for shorter, cleaner URLs
+### Added
 
+- Use hex IP format for DNS service URLs
 ## [2.3.0] - 2026-02-06
 
-### Changed
-- Changelog modal now renders markdown with proper formatting (headings, lists, links)
+### Added
 
+- Render changelog markdown at build time
 ## [2.2.0] - 2026-02-06
 
 ### Added
-- Clickable version number in navigation shows changelog in a modal
-- Modal component now supports custom max-width via `maxWidth` prop
 
+- Add changelog modal on version click
 ## [2.1.0] - 2026-02-06
 
 ### Added
-- Environment variables support for server provisioning
-- Cost estimation display for server configurations
+
+- Add environment variables and cost estimation
 
 ### Changed
-- Removed old vanilla JavaScript app (migration to Svelte 5 complete)
-- Updated documentation to reflect Svelte 5 + TypeScript architecture
 
+- Remove old vanilla JS app
 ## [2.0.19] - 2026-02-06
 
 ### Added
-- Claude credentials file can now be overridden per-profile
 
+- Add Claude credentials upload to profile settings
 ## [2.0.18] - 2026-02-06
 
-### Changed
-- All settings can now be overridden per-profile including:
-  - Git settings (username, email)
-  - SSH keys
-  - Git credentials
-  - Repositories
-  - Claude Code settings (API key, theme, skip permissions, settings JSON)
-- Simplified Config page by moving all form fields to shared ConfigForm component
+### Added
 
+- Add all settings to ConfigForm for per-profile override
 ## [2.0.17] - 2026-02-05
 
 ### Changed
-- Extracted shared ConfigForm component used by both Global Config and Profile Edit pages
-- ACME email and EAB credentials can now be overridden per-profile
-- Shared dropdown options (shell, DNS, ACME providers) moved to dedicated module
 
-### Fixed
-- Custom package inputs (mise tools, APT packages) now available in profile edit
-
+- Extract shared ConfigForm component for Config and ProfileEdit
 ## [2.0.16] - 2026-02-05
 
-### Changed
-- Profile editing now uses a dedicated page instead of a modal
-- Profile edit page mirrors Global Config structure with override toggles for each field
-- All settings can now be overridden per-profile (Hetzner, Shell, Services, Auto-Delete, Packages)
+### Added
 
+- Replace profile edit modal with dedicated page
+
+### Documentation
+
+- Restore ADR index in ADR README
+- Remove ADR list from README, update tech stack
+- Simplify ADR README by removing index table
+- Add ADRs for Svelte 5 migration and update superseded decisions
 ## [2.0.15] - 2026-02-05
 
 ### Fixed
-- Edit profile modal now shows content instead of empty popup
-- Set Default button now correctly updates only the selected profile
 
+- Resolve profile editing and default selection bugs
 ## [2.0.14] - 2026-02-03
 
 ### Fixed
-- Overview page, tmux, zellij, and xterm now use the same theme colors as the UI
 
+- Use UI theme for overview page, tmux, zellij, and xterm
 ## [2.0.13] - 2026-02-03
 
 ### Fixed
-- Corrected Actalis ACME directory URL to https://acme-api.actalis.com/acme/directory
 
+- Correct Actalis ACME directory URL
 ## [2.0.12] - 2026-02-03
 
 ### Added
-- Profile selector on Dashboard for choosing configuration before server creation
-- Configuration summary preview showing server type, location, packages, repos
-- Refresh button on Cloud-Init page to regenerate with new access token
-- Profile selector on Cloud-Init page for previewing different profiles
-- Claude credentials.json upload with account info display (email, org, expiry)
-- Clear All Data button on Credentials page with confirmation modal
 
+- Add missing Svelte features for parity with vanilla JS
 ## [2.0.11] - 2026-02-03
 
 ### Fixed
-- Cloud-init now matches original vanilla JS output size
-- Shell terminal (ttyd) uses configured shell instead of hardcoded bash
-- Repository clones use shallow `--depth 1` for faster provisioning
-- Mise tool installs now run in parallel for speed
-- Claude theme setting now included in settings.json
-- Per-host gitconfigs restored for credentials with custom identity
-- Repository URLs validated and SSH URLs converted to HTTPS
 
+- Restore missing cloud-init features from vanilla JS version
 ## [2.0.10] - 2026-02-03
 
 ### Added
-- Cloud-Init preview page with copy/download functionality
-- Size indicator showing proximity to Hetzner's 32KB limit
-- Import/export now includes server access tokens
 
-### Fixed
-- Server card now shows Overview link when access token is available
-
+- Add cloud-init preview page and fix server tokens
 ## [2.0.9] - 2026-02-03
 
 ### Added
-- Edit functionality for SSH keys, Git credentials, and Repositories
-- Import/export now includes Hetzner API token and theme
 
-### Fixed
-- Config import now supports both old (globalConfig) and new (config) formats
-- Export includes both formats for backwards compatibility
-
+- Add edit functionality for lists and import token/theme
 ## [2.0.8] - 2026-02-03
 
 ### Fixed
-- Config import now supports both old (globalConfig) and new (config) formats
-- Export includes both formats for backwards compatibility
 
+- Support both old and new config import formats
 ## [2.0.7] - 2026-02-03
 
 ### Added
-- Shell selection (Fish, Zsh, Bash) with proper shell config files
-- DNS service selection (sslip.io, nip.io)
-- ACME provider selection (ZeroSSL, Let's Encrypt, Buypass, Actalis, Custom)
-- Conditional EAB credentials for ZeroSSL, Actalis, and Custom ACME
-- Package management with mise tools (Node, Python, Go, Rust, etc.)
-- Package management with APT packages (categorized: Build Tools, Editors, etc.)
-- Custom package input for both mise and apt
-- Repositories list to clone on server creation
-- Claude Code theme selection
-- Claude Code skip-permissions flag
-- Copy buttons for service URLs (Overview, Terminal, VS Code)
-- URL copy buttons use configured DNS service
-- QR code for quick mobile access to server overview
 
-### Changed
-- Cloud-init now uses configured shell (fish/zsh/bash) as default
-- Cloud-init installs user-selected apt packages
-- Cloud-init installs user-selected mise tools
-- Cloud-init clones specified repositories
-- Caddyfile uses configured DNS service and ACME provider
-
+- Add comprehensive configuration options
 ## [2.0.6] - 2026-02-03
 
 ### Added
-- Theme selector with 6 themes (Default Dark/Light, Nord Dark, Dracula, Solarized Dark, One Dark)
-- SSH key validation with real-time feedback
-- Detects private keys and invalid key formats
-- Auto-extract SSH key name from comment
-- Help text for form fields
 
+- Add theme selector and SSH key validation
 ## [2.0.5] - 2026-02-03
 
 ### Added
-- Profiles page with full UI for create, edit, delete, duplicate profiles
-- Profile overrides for Hetzner, Services, Shell, Auto-Delete settings
-- Export/Import configuration to/from JSON files
-- Full cloud-init generation with daemon, Caddy, services setup
 
+- Add Profiles page, Export/Import, and full cloud-init
 ## [2.0.4] - 2026-02-03
 
 ### Fixed
-- Add crypto.randomUUID fallback for older browsers
 
+- Add crypto.randomUUID fallback for older browsers
 ## [2.0.3] - 2026-02-03
 
 ### Fixed
-- Fix Svelte 5 proxy cloning error (structuredClone incompatible with reactive proxies)
 
+- Use JSON clone for Svelte 5 proxy compatibility
 ## [2.0.2] - 2026-02-03
 
 ### Fixed
-- Use Node.js test runner for legacy tests (vitest incompatible)
-- Remove package-lock.json (using pnpm)
 
+- Use Node.js test runner for legacy tests
 ## [2.0.1] - 2026-02-03
 
-### Changed
-- Switch to pnpm package manager
-- Add .mise.toml for node 22 and pnpm 10
+### Chore
 
+- Add mise config for node and pnpm
+- Switch to pnpm package manager
 ## [2.0.0] - 2026-02-03
 
-### Changed
-- Complete rewrite using Svelte 5 + TypeScript
-- Replaced manual state management with reactive stores
-- Replaced event delegation with Svelte event handlers
-- Replaced JSON.parse/stringify with structuredClone
-
 ### Added
-- Full TypeScript support with strictest settings
-- Typed Hetzner API client
-- Component library (Button, Input, Card, Modal, Toast)
-- Vite for fast development and optimized builds
 
-### Fixed
-- All re-render loop issues (Svelte's fine-grained reactivity)
-- All form focus issues (native Svelte binding)
-- All accessibility warnings (proper label associations)
-
+- Add Svelte 5 + TypeScript implementation
 ## [1.0.11] - 2026-02-03
 
 ### Fixed
-- Discard button no longer triggers file upload dialog
-- Removed duplicate Save Configuration button (floating bar replaces it)
 
+- Discard button triggering file picker, remove duplicate Save
 ## [1.0.10] - 2026-02-03
 
 ### Fixed
-- Fixed infinite re-render loop causing inputs to lose focus
 
+- Stop infinite re-render loop in form tracking
 ## [1.0.9] - 2026-02-03
 
 ### Fixed
-- Form inputs now properly receive focus on click
 
+- Allow form inputs to receive focus on click
 ## [1.0.8] - 2026-02-03
 
 ### Fixed
-- Input fields no longer lose focus while typing (dirty tracking fix)
 
+- Prevent re-render when tracking dirty form state
 ## [1.0.7] - 2026-02-03
 
 ### Fixed
-- Clipboard copy now works on HTTP (fallback for non-secure contexts)
-- Fixed "matches is not a function" error from browser extensions
-- Added favicon
 
+- Console errors - clipboard fallback, matches() guard, favicon
 ## [1.0.6] - 2026-02-03
 
 ### Fixed
-- Fetch git tags in deploy workflow for correct version display
 
+- Fetch git tags in deploy workflow
 ## [1.0.5] - 2026-02-03
 
 ### Fixed
-- GitHub Pages deployment now shows correct version from latest git tag
 
+- Set APP_VERSION from latest git tag in deploy workflow
 ## [1.0.4] - 2026-02-03
 
 ### Fixed
-- Version now correctly derived from git tag (shows "dev" locally)
 
+- Use APP_VERSION env var instead of package.json for version
 ## [1.0.3] - 2026-02-03
 
 ### Added
-- Version display in navigation bar
-- Automated version injection from git tag during release build
-- Pre-built dist zip attached to GitHub releases
 
+- Add version display with automated release versioning
 ## [1.0.2] - 2026-02-03
 
-### Added
-- GitHub Actions workflow for automatic releases on tag push
+### Documentation
 
-### Fixed
-- Replace inline onclick handlers with event delegation for CSP compliance
+- Add contributing guidelines, changelog, and templates
+## [1.0.1] - 2026-02-03
 
+### Documentation
+
+- Add v1.0.1 to changelog
 ## [1.0.0] - 2026-02-03
 
 ### Added
-- Hetzner Cloud integration (list, create, rebuild, delete servers)
-- Cloud-init generator with configurable profiles
-- Profile management system with global config + overrides
-- QR code export for cloud-init scripts
-- 7 themes with WCAG AAA accessibility (7:1 contrast)
-- Zero-backend architecture (browser-only, localStorage)
-- ttyd terminal integration with theme-matched colors
-- Caddy reverse proxy with automatic HTTPS
-- mise runtime version management
-- Claude Code configuration support
-- Funny alliterative server name generator
-- Auto-delete functionality for ephemeral servers
-- Copy to clipboard buttons for server IPs and service URLs
-- SSH key validation with auto-name extraction from key comments
-- Floating save/discard bar for unsaved form changes
-- Unsaved changes warning on page navigation
-- Tooltips with help text for settings fields
-- Comprehensive documentation (architecture, security, user guide)
-- 13 Architecture Decision Records (ADRs)
-- AGENTS.md with AI assistant guidelines
-- CONTRIBUTING.md with contribution guidelines
 
-### Security
-- Content Security Policy without unsafe-inline
-- frame-ancestors 'none' to prevent clickjacking
-- X-Content-Type-Options: nosniff header
-- Input validation and HTML escaping throughout
+- Add UX enhancements for forms and clipboard
+- Add smooth scrolling to ttyd terminal
+- Add ANSI terminal colors to all themes
+- Generate funny alliterative server names
+- Add theme-matching configs for tmux and zellij
+- Match ttyd terminal colors to user's selected theme
+- Add skip permissions option for Claude Code
+- Pre-warm TLS certificates when services are discovered
+- Change default base image to Ubuntu 24.04 LTS
+- Add @latest version option to all mise tools
+- Add useful default packages for Claude Code users
+- Replace NodeSource apt repo with mise for node
+- Use wildcard Caddy route for dynamic services
+- Add system-wide PATH for mise-installed tools
+
+### CI/Build
+
+- Add GitHub Actions workflow for automatic releases
+
+### Changed
+
+- Simplify terminal setup and rename index to overview
+- Simplify domain format to {port}.{ip}.{dns}
+
+### Chore
+
+- Add local files to .gitignore
+- Remove accidentally committed local files
+
+### Documentation
+
+- Update changelog for v1.0.0 release
+- Add contributing guidelines, changelog, and templates
+- Make AGENTS.md generic for all AI assistants
+- Rename to AGENTS.md with CLAUDE.md reference
+- Add CLAUDE.md with AI assistant guidelines
+- Convert ASCII diagrams to Mermaid
+- Add comprehensive documentation and ADRs
+
+### Fixed
+
+- Replace inline onclick handlers with event delegation for CSP compliance
+- Strengthen CSP and add security headers
+- Quote ttyd theme JSON in systemd service file
+- Run devbox-daemon as dev user for mise trust
+- Prevent infinite Hetzner API retry loop on invalid token
+
+### Other
+
+- Add multiple SSH keys support and inline editing for list fields
+
+- Convert SSH keys from single pubKey string to array of {name, pubKey}
+- Add sshKeys field type with add/edit/remove UI
+- Add inline editing for both SSH keys and git credentials lists
+- Sanitize SSH key names for Hetzner API compatibility
+- Update cloud-init to map multiple keys to ssh_authorized_keys
+- Add editingListItem state for tracking inline edit mode
+- Add comprehensive tests for new functionality
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+- Add automatic port-based service discovery with Caddy Admin API
+
+Rename devbox-autodelete to devbox-daemon with expanded functionality:
+- Scan localhost ports every 10s and detect process names via ss -tlnp
+- Auto-create Caddy routes for discovered services with basic auth
+- Expose services at <port>.<domain> subdomains
+- Clean up stale routes on startup and when services stop
+- Enable daemon when services OR autodelete is enabled
+
+Update index page to show process names and use globe icon for
+auto-discovered services.
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+- Use high ports (65531-65534) for internal services and add ufw firewall
+
+- Change internal service ports to highest available range:
+  - 8081 → 65531 (Autodelete Daemon API)
+  - 8090 → 65532 (Code Server)
+  - 7681 → 65533 (Claude Terminal)
+  - 7682 → 65534 (Shell Terminal)
+
+- Add ufw firewall with default-deny policy:
+  - Install ufw package automatically
+  - Configure firewall as first runcmd entry
+  - Allow only SSH (22), HTTP (80), HTTPS (443)
+  - Use --force to skip interactive prompt
+
+- Add tests for firewall configuration and ufw package
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+- Add per-credential git identity (name/email)
+
+Allow each git credential to optionally specify a custom name and email.
+When working with repos from that host, commits use the credential's
+identity instead of the global git config.
+
+Uses Git's includeIf "hasconfig:remote.*.url:..." conditional includes
+(Git 2.36+) to generate per-host gitconfig files that are automatically
+included when working with repos from that host.
+
+Changes:
+- Add name/email inputs to git credentials UI in settings
+- Generate .gitconfig file instead of runcmd git config commands
+- Generate per-host .gitconfig-{host} files for credentials with identity
+- Add escapeGitConfig helper for proper gitconfig value escaping
+- Move SSH key and git credentials into global/profile config
+
+Consolidate SSH public key and git credentials from the separate
+Credentials page into the global config system, making them
+profile-overridable. The Hetzner token remains on its own page,
+renamed from "Credentials" to "API Token".
+
+- Add ssh.pubKey and git.credentials to DEFAULT_GLOBAL_CONFIG
+- Add SSH section and gitCredentials field type to settings
+- Add git credential handlers for global and profile modes
+- Remove old standalone credential functions from storage.js
+- Update cloudinit.js to read credentials from config
+- Update all "Credentials" text references to "API Token"
+- Add comprehensive tests for new handlers
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+- Fix deploy workflow: use main branch and dist output dir
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+- Add esbuild bundling with content-hashed assets and Tailwind PostCSS integration
+
+Replace standalone Tailwind CLI with esbuild + @tailwindcss/postcss for a unified
+build pipeline. Production builds output to dist/ with hashed filenames for cache
+busting. Dev server uses esbuild's watch + serve with live reload via SSE.
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+- Replace Tailwind CDN with v4 build step, add CI/CD and project files
+
+Move from runtime Tailwind CDN to a local Tailwind CSS v4 build using
+@tailwindcss/cli. Extract inline config and styles into web/src/input.css
+with @theme inline for runtime CSS variable theming. Update utility
+classes for v4 compatibility (outline-hidden, --text-* namespace).
+
+Add GitHub Actions workflow for automated GitHub Pages deployment,
+pnpm lockfile, LICENSE (MIT), and README.
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+
