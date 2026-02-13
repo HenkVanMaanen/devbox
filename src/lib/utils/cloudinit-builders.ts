@@ -82,9 +82,9 @@ const IGNORED_PORTS=new Set([22,80,443,2019,65531]);
 let last=Date.now(),warn=false,services=new Map(),ipHex;
 
 function loadConfig(){
-  // Get IP hex from metadata or calculate from public IP
+  // Get public IP from network interface (no external dependency)
   try{
-    const ip=execSync('curl -4 -s --connect-timeout 5 ifconfig.me',{encoding:'utf8',timeout:10000}).trim();
+    const ip=execSync("ip -4 -o addr show scope global | awk '{print $4}' | cut -d/ -f1 | head -1",{encoding:'utf8',timeout:5000}).trim();
     const parts=ip.split('.');
     if(parts.length===4){
       return parts.map(p=>parseInt(p).toString(16).padStart(2,'0')).join('');

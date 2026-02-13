@@ -4,7 +4,7 @@ All notable changes to Devbox will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [2.7.0] - 2026-02-13
 
 ### Changed
 - Dev environment configuration (shell, packages, git user, Claude Code, env vars) is now managed by chezmoi dotfiles instead of cloud-init
@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - ADR 0023: chezmoi for Dotfile Management
 
 ### Fixed
+- IP detection during cloud-init uses local network interface instead of unreliable external service (ifconfig.me)
 - SSH key uniqueness error when key already exists in Hetzner (normalized comparison)
 - TypeScript type errors across multiple files (qrcode, servers, theme, config)
 
