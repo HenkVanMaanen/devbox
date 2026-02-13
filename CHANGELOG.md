@@ -4,7 +4,7 @@ All notable changes to Devbox will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [2.7.0] - 2026-02-13
+## [3.0.0] - 2026-02-13
 
 ### Changed
 - Dev environment configuration (shell, packages, git user, Claude Code, env vars) is now managed by chezmoi dotfiles instead of cloud-init
