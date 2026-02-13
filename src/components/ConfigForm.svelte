@@ -421,7 +421,7 @@
             disabled={isDisabled('services.customDnsDomain')}
             placeholder="dev.example.com"
             required
-            pattern="[a-z0-9][a-z0-9.-]*[a-z0-9]\.[a-z]&#123;2,&#125;"
+            pattern="[a-z0-9][a-z0-9\.\-]*[a-z0-9]\.[a-z]&#123;2,&#125;"
             class="w-full min-h-[44px] px-3 py-2 text-base bg-background border-2 border-border rounded-md
                    focus:outline-none focus:ring-3 focus:ring-focus focus:border-primary
                    disabled:opacity-50 disabled:cursor-not-allowed"
