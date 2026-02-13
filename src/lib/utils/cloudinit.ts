@@ -84,6 +84,13 @@ export function generateCloudInit(
 
   // ========== WRITE_FILES ==========
 
+  // Progress reporting script (must exist before runcmd runs, so no defer)
+  cloudInit.write_files.push({
+    path: '/usr/local/bin/devbox-progress',
+    permissions: '0755',
+    content: `#!/bin/bash\nSID=$(curl -s -H "Metadata-Flavor:hetzner" http://169.254.169.254/hetzner/v1/metadata/instance-id)\ncurl -sf -X PUT \\\n  -H "Authorization: Bearer ${shellEscape(hetznerToken)}" \\\n  -H "Content-Type: application/json" \\\n  -d "{\\"labels\\":{\\"managed\\":\\"devbox\\",\\"progress\\":\\"$1\\"}}" \\\n  "https://api.hetzner.cloud/v1/servers/$SID" > /dev/null 2>&1 || true\n`,
+  });
+
   // Git credentials
   const gitCredsContent = credential ? buildGitCredentials(credential) : '';
   if (gitCredsContent) {
@@ -176,6 +183,9 @@ export function generateCloudInit(
   // ========== RUNCMD ==========
   const runcmd: Array<string | string[]> = [];
 
+  // Report progress: packages installed, now configuring
+  runcmd.push('/usr/local/bin/devbox-progress configuring');
+
   // Configure firewall
   runcmd.push(
     'ufw default deny incoming && ufw default allow outgoing && ufw allow 22 && ufw allow 80 && ufw allow 443 && ufw allow 60000:61000/udp && ufw --force enable'
@@ -207,6 +217,9 @@ export function generateCloudInit(
   // Cleanup and fix ownership
   runcmd.push('apt-get clean && rm -rf /var/lib/apt/lists/* || true');
   runcmd.push('touch /home/dev/.devbox-ready && chown -R dev:dev /home/dev');
+
+  // Report progress: all done
+  runcmd.push('/usr/local/bin/devbox-progress ready');
 
   cloudInit.runcmd = runcmd;
 

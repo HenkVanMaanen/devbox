@@ -93,7 +93,7 @@
           location: config.hetzner.location,
           sshKeys: sshKeyIds,
           userData,
-          labels: { managed: 'devbox' },
+          labels: { managed: 'devbox', progress: 'provisioning' },
         },
         config.services.accessToken
       );

@@ -14,6 +14,10 @@ import {
 const filterDevbox = (allServers: Server[]): Server[] =>
   allServers.filter((s) => s.labels?.['managed'] === 'devbox');
 
+const POLL_INTERVAL = 5000;
+const POLL_MAX_DURATION = 15 * 60 * 1000; // 15 minutes
+const POLL_MAX_FAILURES = 3;
+
 function createServersStore() {
   let servers = $state<Server[]>([]);
   let serverTypes = $state<ServerType[]>([]);
@@ -26,6 +30,51 @@ function createServersStore() {
 
   // Server tokens stored separately (not visible in Hetzner API)
   let serverTokens = $state<Record<string, string>>(load('serverTokens') ?? {});
+
+  // Progress polling timers
+  const pollingTimers = new Map<number, { interval: ReturnType<typeof setInterval>; timeout: ReturnType<typeof setTimeout> }>();
+
+  function startProgressPolling(token: string, serverId: number): void {
+    if (pollingTimers.has(serverId)) return;
+
+    let failures = 0;
+
+    const interval = setInterval(async () => {
+      try {
+        const updated = await hetzner.getServer(token, serverId);
+        failures = 0;
+        servers = servers.map((s) => (s.id === serverId ? updated : s));
+        if (updated.labels?.['progress'] === 'ready') {
+          stopProgressPolling(serverId);
+        }
+      } catch {
+        failures++;
+        if (failures >= POLL_MAX_FAILURES) {
+          stopProgressPolling(serverId);
+        }
+      }
+    }, POLL_INTERVAL);
+
+    const timeout = setTimeout(() => {
+      stopProgressPolling(serverId);
+    }, POLL_MAX_DURATION);
+
+    pollingTimers.set(serverId, { interval, timeout });
+  }
+
+  function stopProgressPolling(serverId: number): void {
+    const entry = pollingTimers.get(serverId);
+    if (!entry) return;
+    clearInterval(entry.interval);
+    clearTimeout(entry.timeout);
+    pollingTimers.delete(serverId);
+  }
+
+  function stopAllPolling(): void {
+    for (const id of [...pollingTimers.keys()]) {
+      stopProgressPolling(id);
+    }
+  }
 
   return {
     get servers() {
@@ -100,7 +149,14 @@ function createServersStore() {
           token,
           fetcher: () => hetzner.listServers(token),
           onData: (allServers) => {
-            servers = filterDevbox(allServers);
+            const devbox = filterDevbox(allServers);
+            servers = devbox;
+            // Start polling for any server still provisioning
+            for (const s of devbox) {
+              if (s.labels?.['progress'] && s.labels['progress'] !== 'ready') {
+                startProgressPolling(token, s.id);
+              }
+            }
           },
         });
       } catch (e) {
@@ -160,14 +216,18 @@ function createServersStore() {
         createProgress = 'Provisioning server...';
         const server = await hetzner.createServer(token, opts);
 
+        // Save access token and show server card immediately
+        this.saveServerToken(server.name, accessToken);
+        servers = [...servers.filter((s) => s.id !== server.id), server];
+
         createProgress = 'Waiting for server to start...';
         const running = await hetzner.waitForRunning(token, server.id);
 
-        // Save access token locally
-        this.saveServerToken(running.name, accessToken);
+        // Update with running server data
+        servers = servers.map((s) => (s.id === running.id ? running : s));
 
-        // Optimistic: add server to list directly
-        servers = [...servers, running];
+        // Start polling for cloud-init progress
+        startProgressPolling(token, running.id);
 
         // Sync cache with API reality in background
         backgroundRefresh({
@@ -175,7 +235,13 @@ function createServersStore() {
           token,
           fetcher: () => hetzner.listServers(token),
           onData: (allServers) => {
-            servers = filterDevbox(allServers);
+            const devbox = filterDevbox(allServers);
+            servers = devbox;
+            for (const s of devbox) {
+              if (s.labels?.['progress'] && s.labels['progress'] !== 'ready') {
+                startProgressPolling(token, s.id);
+              }
+            }
           },
         });
 
@@ -194,6 +260,7 @@ function createServersStore() {
 
       try {
         await hetzner.deleteServer(token, id);
+        stopProgressPolling(id);
         this.removeServerToken(name);
 
         // Sync cache with API reality in background
@@ -214,6 +281,7 @@ function createServersStore() {
 
     // Clear options (e.g., when token changes)
     clearOptions(): void {
+      stopAllPolling();
       serverTypes = [];
       locations = [];
       images = [];

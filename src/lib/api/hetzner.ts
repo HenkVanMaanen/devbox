@@ -84,6 +84,11 @@ export async function rebuildServer(token: string, id: number, image: string): P
   });
 }
 
+export async function getServer(token: string, serverId: number): Promise<Server> {
+  const data = await request<{ server: Server }>(token, `/servers/${serverId}`);
+  return data.server;
+}
+
 export async function waitForRunning(
   token: string,
   serverId: number,
@@ -91,9 +96,9 @@ export async function waitForRunning(
   interval = 2000
 ): Promise<Server> {
   for (let i = 0; i < maxAttempts; i++) {
-    const data = await request<{ server: Server }>(token, `/servers/${serverId}`);
-    if (data.server.status === 'running') {
-      return data.server;
+    const server = await getServer(token, serverId);
+    if (server.status === 'running') {
+      return server;
     }
     await new Promise((resolve) => setTimeout(resolve, interval));
   }

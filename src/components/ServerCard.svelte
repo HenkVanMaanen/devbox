@@ -39,6 +39,18 @@
     }
   });
 
+  // Progress tracking
+  const progress = $derived(server.labels['progress'] ?? '');
+  const isProvisioning = $derived(progress !== '' && progress !== 'ready');
+
+  const provisioningSteps = ['Starting', 'Installing', 'Configuring', 'Ready'];
+  const currentStep = $derived.by(() => {
+    if (progress === 'ready') return 3;
+    if (progress === 'configuring') return 2;
+    if (server.status === 'running') return 1;
+    return 0;
+  });
+
   const statusColors: Record<string, string> = {
     running: 'bg-success/30 text-success',
     starting: 'bg-warning/30 text-warning',
@@ -46,6 +58,16 @@
     off: 'bg-muted text-muted-foreground',
     initializing: 'bg-primary/30 text-primary',
   };
+
+  // Badge: "not ready" / "ready" during provisioning, otherwise server status
+  const badgeLabel = $derived(
+    progress === '' ? server.status : isProvisioning ? 'not ready' : 'ready'
+  );
+  const badgeColor = $derived(
+    progress === '' ? (statusColors[server.status] ?? statusColors['off'])
+    : isProvisioning ? 'bg-warning/30 text-warning'
+    : 'bg-success/30 text-success'
+  );
 
   async function copyToClipboard(text: string, label: string) {
     try {
@@ -74,8 +96,8 @@
     <div>
       <h3 class="text-lg font-semibold">{server.name}</h3>
       <div class="flex items-center gap-2 mt-1">
-        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold {statusColors[server.status] ?? statusColors['off']}">
-          {server.status}
+        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold {badgeColor}">
+          {badgeLabel}
         </span>
         <span class="text-sm text-muted-foreground">
           {server.server_type.name} &middot; {server.datacenter.location.city}
@@ -87,6 +109,27 @@
       Delete
     </Button>
   </div>
+
+  {#if isProvisioning}
+    <div class="mt-3" role="group" aria-label="Server provisioning steps">
+      <div class="flex items-center">
+        {#each provisioningSteps as _, i}
+          {#if i > 0}
+            <div class="flex-1 h-0.5 transition-colors duration-500 {i <= currentStep ? 'bg-primary' : 'bg-muted'}"></div>
+          {/if}
+          <div
+            class="w-2.5 h-2.5 rounded-full flex-shrink-0 transition-colors duration-500
+              {i < currentStep ? 'bg-primary' : i === currentStep ? 'bg-primary animate-pulse' : 'bg-muted'}"
+          ></div>
+        {/each}
+      </div>
+      <div class="flex justify-between mt-1.5">
+        {#each provisioningSteps as step, i}
+          <span class="text-[10px] leading-tight {i === currentStep ? 'text-foreground font-medium' : i < currentStep ? 'text-muted-foreground' : 'text-muted-foreground/50'}">{step}</span>
+        {/each}
+      </div>
+    </div>
+  {/if}
 
   {#if server.status === 'running'}
     <div class="mt-4 space-y-2">
