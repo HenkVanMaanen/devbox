@@ -4,6 +4,22 @@ All notable changes to Devbox will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [3.1.0] - 2026-02-13
+
+### Added
+- SWR (Stale-While-Revalidate) caching for Hetzner API calls — cached data shows instantly from localStorage, then silently refreshes in background
+- Optimistic UI for server delete (instant removal) and create (instant addition)
+- Request deduplication prevents duplicate API calls when effects fire multiple times
+- Token-scoped cache invalidation when switching Hetzner accounts
+- Unit tests for SWR cache utility (15 test cases)
+- ADR 0024: SWR Caching for Hetzner API Calls
+- tsx devDependency for TypeScript test imports
+
+### Changed
+- Dashboard no longer shows loading spinner on page reload when cached data exists
+- Server delete no longer shows loading spinner (optimistic removal)
+- Dev server now allows all hosts
+
 ## [3.0.1] - 2026-02-13
 
 ### Fixed

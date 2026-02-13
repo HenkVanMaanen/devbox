@@ -46,6 +46,15 @@ export function remove(key: keyof typeof STORAGE_KEYS): void {
 
 export function clearAll(): void {
   Object.values(STORAGE_KEYS).forEach(key => localStorage.removeItem(key));
+  // Also clear SWR cache entries
+  const keysToRemove: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key?.startsWith('devbox_cache_')) {
+      keysToRemove.push(key);
+    }
+  }
+  keysToRemove.forEach(key => localStorage.removeItem(key));
 }
 
 // Deep clone utility - uses JSON for compatibility with Svelte 5 reactive proxies

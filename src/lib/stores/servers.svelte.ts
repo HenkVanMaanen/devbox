@@ -3,6 +3,16 @@
 import type { Server, ServerType, Location, Image } from '$lib/types';
 import * as hetzner from '$lib/api/hetzner';
 import { load, save } from '$lib/utils/storage';
+import {
+  swrFetch,
+  backgroundRefresh,
+  peekCache,
+  clearSwrCache,
+  CACHE_KEYS,
+} from '$lib/utils/swr-cache';
+
+const filterDevbox = (allServers: Server[]): Server[] =>
+  allServers.filter((s) => s.labels?.['managed'] === 'devbox');
 
 function createServersStore() {
   let servers = $state<Server[]>([]);
@@ -78,12 +88,21 @@ function createServersStore() {
         return;
       }
 
-      loading = true;
+      // Only show loading spinner when there's no cached data
+      if (!peekCache(CACHE_KEYS.servers, token)) {
+        loading = true;
+      }
       error = null;
 
       try {
-        const allServers = await hetzner.listServers(token);
-        servers = allServers.filter((s) => s.labels?.['managed'] === 'devbox');
+        await swrFetch({
+          key: CACHE_KEYS.servers,
+          token,
+          fetcher: () => hetzner.listServers(token),
+          onData: (allServers) => {
+            servers = filterDevbox(allServers);
+          },
+        });
       } catch (e) {
         error = e instanceof Error ? e.message : 'Failed to load servers';
         servers = [];
@@ -97,14 +116,32 @@ function createServersStore() {
       if (!token || serverTypes.length > 0) return;
 
       try {
-        const [types, locs, imgs] = await Promise.all([
-          hetzner.listServerTypes(token),
-          hetzner.listLocations(token),
-          hetzner.listImages(token),
+        await Promise.all([
+          swrFetch({
+            key: CACHE_KEYS.serverTypes,
+            token,
+            fetcher: () => hetzner.listServerTypes(token),
+            onData: (types) => {
+              serverTypes = types;
+            },
+          }),
+          swrFetch({
+            key: CACHE_KEYS.locations,
+            token,
+            fetcher: () => hetzner.listLocations(token),
+            onData: (locs) => {
+              locations = locs;
+            },
+          }),
+          swrFetch({
+            key: CACHE_KEYS.images,
+            token,
+            fetcher: () => hetzner.listImages(token),
+            onData: (imgs) => {
+              images = imgs;
+            },
+          }),
         ]);
-        serverTypes = types;
-        locations = locs;
-        images = imgs;
       } catch (e) {
         console.error('Failed to load Hetzner options:', e);
       }
@@ -129,8 +166,18 @@ function createServersStore() {
         // Save access token locally
         this.saveServerToken(running.name, accessToken);
 
-        // Refresh server list
-        await this.load(token);
+        // Optimistic: add server to list directly
+        servers = [...servers, running];
+
+        // Sync cache with API reality in background
+        backgroundRefresh({
+          key: CACHE_KEYS.servers,
+          token,
+          fetcher: () => hetzner.listServers(token),
+          onData: (allServers) => {
+            servers = filterDevbox(allServers);
+          },
+        });
 
         return running;
       } finally {
@@ -139,15 +186,29 @@ function createServersStore() {
       }
     },
 
-    // Delete a server
+    // Delete a server (optimistic)
     async delete(token: string, id: number, name: string): Promise<void> {
-      loading = true;
+      // Optimistic: remove server from UI immediately
+      const previousServers = [...servers];
+      servers = servers.filter((s) => s.id !== id);
+
       try {
         await hetzner.deleteServer(token, id);
         this.removeServerToken(name);
-        await this.load(token);
-      } finally {
-        loading = false;
+
+        // Sync cache with API reality in background
+        backgroundRefresh({
+          key: CACHE_KEYS.servers,
+          token,
+          fetcher: () => hetzner.listServers(token),
+          onData: (allServers) => {
+            servers = filterDevbox(allServers);
+          },
+        });
+      } catch (e) {
+        // Rollback: restore previous server list
+        servers = previousServers;
+        throw e;
       }
     },
 
@@ -156,6 +217,7 @@ function createServersStore() {
       serverTypes = [];
       locations = [];
       images = [];
+      clearSwrCache(Object.values(CACHE_KEYS));
     },
   };
 }

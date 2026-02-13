@@ -37,6 +37,7 @@ ADRs capture important architectural decisions along with their context and cons
 | [021](./0021-tailwind-css-v4.md) | Tailwind CSS v4 | Accepted | Utility-first CSS with runtime theming |
 | [022](./0022-pnpm-package-manager.md) | pnpm Package Manager | Accepted | Disk-efficient, strict package management |
 | [023](./0023-chezmoi-dotfile-management.md) | chezmoi for Dotfile Management | Accepted | Personal dev config managed via dotfiles repo, not UI |
+| [024](./0024-swr-caching.md) | SWR Caching for API Calls | Accepted | Cache-then-revalidate pattern for instant UI with background refresh |
 
 ## ADR Template
 
