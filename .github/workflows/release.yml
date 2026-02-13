@@ -14,6 +14,29 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version from tag
+        run: |
+          # Extract version from tag (v1.0.3 -> 1.0.3)
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Generate full changelog
+        uses: orhun/git-cliff-action@v4
+        id: changelog
+        with:
+          config: cliff.toml
+          args: --output CHANGELOG.md
+
+      - name: Generate release notes
+        uses: orhun/git-cliff-action@v4
+        id: release-notes
+        with:
+          config: cliff.toml
+          args: --latest --strip header
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -22,13 +45,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-
-      - name: Extract version from tag
-        run: |
-          # Extract version from tag (v1.0.3 -> 1.0.3)
-          VERSION=${GITHUB_REF#refs/tags/v}
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Install dependencies
         run: pnpm install
@@ -41,28 +57,30 @@ jobs:
           cd dist
           zip -r ../devbox-${{ env.VERSION }}.zip .
 
-      - name: Generate release notes
+      - name: Commit changelog to main
         run: |
-          cat << 'EOF' > release-notes.md
-          ## What's New
+          # Save generated changelog before switching branches
+          cp CHANGELOG.md /tmp/CHANGELOG.md
 
-          See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          ## Quick Start
+          # Switch to main branch
+          git checkout main
 
-          ```bash
-          git clone https://github.com/${{ github.repository }}.git
-          cd devbox
-          npm install
-          npm run dev
-          ```
+          # Restore generated changelog
+          cp /tmp/CHANGELOG.md CHANGELOG.md
 
-          Or download the pre-built `devbox-${{ env.VERSION }}.zip` below and serve the files with any static web server.
-          EOF
+          # Commit and push if changed
+          git add CHANGELOG.md
+          if ! git diff --staged --quiet; then
+            git commit -m "chore: update changelog for v${{ env.VERSION }}"
+            git push origin main
+          fi
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
-          body_path: release-notes.md
-          generate_release_notes: true
+          body: ${{ steps.release-notes.outputs.content }}
           files: devbox-${{ env.VERSION }}.zip
