@@ -4,6 +4,11 @@ All notable changes to Devbox will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [3.2.0] - 2026-02-13
+
+### Added
+
+- Add custom cloud-init support with merge and replace modes
 ## [3.1.2] - 2026-02-13
 
 ### Added
