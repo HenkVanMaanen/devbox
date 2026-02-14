@@ -67,6 +67,7 @@ Look for issues labeled `good first issue` - these are suitable for newcomers.
 ### Feature Requests
 
 Before implementing a large feature:
+
 1. Check existing issues to avoid duplicates
 2. Open an issue to discuss the approach
 3. Wait for feedback before investing significant time

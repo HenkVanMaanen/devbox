@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { profilesStore } from '$lib/stores/profiles.svelte';
-  import { toast } from '$lib/stores/toast.svelte';
   import Button from '$components/ui/Button.svelte';
   import Card from '$components/ui/Card.svelte';
   import Input from '$components/ui/Input.svelte';
   import Modal from '$components/ui/Modal.svelte';
+  import { profilesStore } from '$lib/stores/profiles.svelte';
+  import { toast } from '$lib/stores/toast.svelte';
 
   // New profile form
   let newProfileName = $state('');
@@ -75,7 +75,7 @@
     showDeleteModal = false;
   }
 
-  function setDefault(profileId: string | null) {
+  function setDefault(profileId: null | string) {
     profilesStore.setDefault(profileId);
     toast.success(profileId ? 'Default profile set' : 'Default profile cleared');
   }
@@ -84,14 +84,17 @@
     if (typeof value === 'boolean') return value ? 'Yes' : 'No';
     if (Array.isArray(value)) return `${value.length} items`;
     if (value === null || value === undefined) return '-';
-    return String(value);
+    if (typeof value === 'object') return JSON.stringify(value);
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number') return value.toString();
+    return '-';
   }
 
   function formatPath(path: string): string {
     // Convert 'hetzner.serverType' to 'Server Type'
     const parts = path.split('.');
-    const last = parts[parts.length - 1] ?? path;
-    return last.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase());
+    const last = parts.at(-1) ?? path;
+    return last.replaceAll(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase());
   }
 </script>
 
@@ -102,13 +105,13 @@
   </div>
 
   <p class="text-muted-foreground">
-    Profiles let you override global settings for different use cases. Create profiles for different projects,
-    server sizes, or configurations.
+    Profiles let you override global settings for different use cases. Create profiles for different projects, server
+    sizes, or configurations.
   </p>
 
   {#if profilesStore.profileList.length === 0}
     <Card>
-      <div class="text-center py-8">
+      <div class="py-8 text-center">
         <p class="text-muted-foreground mb-4">No profiles yet. Create one to get started.</p>
         <Button onclick={() => (showCreateModal = true)}>Create Your First Profile</Button>
       </div>
@@ -120,33 +123,65 @@
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
               <div>
-                <h3 class="font-semibold text-lg">{profile.name}</h3>
-                <p class="text-sm text-muted-foreground">
-                  {Object.keys(profile.overrides).length} override{Object.keys(profile.overrides).length !== 1 ? 's' : ''}
+                <h3 class="text-lg font-semibold">{profile.name}</h3>
+                <p class="text-muted-foreground text-sm">
+                  {Object.keys(profile.overrides).length} override{Object.keys(profile.overrides).length !== 1
+                    ? 's'
+                    : ''}
                   {#if profilesStore.defaultProfileId === profile.id}
-                    <span class="ml-2 px-2 py-0.5 bg-primary/20 text-primary rounded text-xs font-medium">Default</span>
+                    <span class="bg-primary/20 text-primary ml-2 rounded px-2 py-0.5 text-xs font-medium">Default</span>
                   {/if}
                 </p>
               </div>
             </div>
             <div class="flex items-center gap-2">
               {#if profilesStore.defaultProfileId !== profile.id}
-                <Button variant="ghost" size="sm" onclick={() => setDefault(profile.id)}>Set Default</Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onclick={() => {
+                    setDefault(profile.id);
+                  }}>Set Default</Button
+                >
               {:else}
-                <Button variant="ghost" size="sm" onclick={() => setDefault(null)}>Clear Default</Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onclick={() => {
+                    setDefault(null);
+                  }}>Clear Default</Button
+                >
               {/if}
-              <Button variant="secondary" size="sm" onclick={() => editProfile(profile.id)}>Edit</Button>
-              <Button variant="ghost" size="sm" onclick={() => openDuplicateModal(profile.id)}>Duplicate</Button>
-              <Button variant="destructive" size="sm" onclick={() => openDeleteModal(profile.id)}>Delete</Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onclick={() => {
+                  editProfile(profile.id);
+                }}>Edit</Button
+              >
+              <Button
+                variant="ghost"
+                size="sm"
+                onclick={() => {
+                  openDuplicateModal(profile.id);
+                }}>Duplicate</Button
+              >
+              <Button
+                variant="destructive"
+                size="sm"
+                onclick={() => {
+                  openDeleteModal(profile.id);
+                }}>Delete</Button
+              >
             </div>
           </div>
 
           {#if Object.keys(profile.overrides).length > 0}
-            <div class="mt-4 pt-4 border-t border-border">
-              <p class="text-sm font-medium text-muted-foreground mb-2">Overrides:</p>
+            <div class="border-border mt-4 border-t pt-4">
+              <p class="text-muted-foreground mb-2 text-sm font-medium">Overrides:</p>
               <div class="flex flex-wrap gap-2">
-                {#each Object.entries(profile.overrides) as [path, value]}
-                  <span class="px-2 py-1 bg-muted rounded text-sm">
+                {#each Object.entries(profile.overrides) as [path, value] (path)}
+                  <span class="bg-muted rounded px-2 py-1 text-sm">
                     {formatPath(path)}: {formatValue(value)}
                   </span>
                 {/each}

@@ -4,24 +4,30 @@ import assert from 'node:assert';
 // Mock localStorage before importing the module
 const store = {};
 globalThis.localStorage = {
-  getItem(key) { return store[key] ?? null; },
-  setItem(key, value) { store[key] = value; },
-  removeItem(key) { delete store[key]; },
-  clear() { for (const k of Object.keys(store)) delete store[k]; },
-  get length() { return Object.keys(store).length; },
-  key(i) { return Object.keys(store)[i] ?? null; },
+  getItem(key) {
+    return store[key] ?? null;
+  },
+  setItem(key, value) {
+    store[key] = value;
+  },
+  removeItem(key) {
+    delete store[key];
+  },
+  clear() {
+    for (const k of Object.keys(store)) delete store[k];
+  },
+  get length() {
+    return Object.keys(store).length;
+  },
+  key(i) {
+    return Object.keys(store)[i] ?? null;
+  },
 };
 
 // Suppress console.warn noise from SWR cache error handling
 console.warn = () => {};
 
-import {
-  swrFetch,
-  backgroundRefresh,
-  peekCache,
-  clearSwrCache,
-  CACHE_KEYS,
-} from '../src/lib/utils/swr-cache.ts';
+import { swrFetch, backgroundRefresh, peekCache, clearSwrCache, CACHE_KEYS } from '../src/lib/utils/swr-cache.ts';
 
 describe('CACHE_KEYS', () => {
   it('exports expected cache key constants', () => {
@@ -136,13 +142,14 @@ describe('swrFetch', () => {
 
   it('no cache + API failure: error propagates to caller', async () => {
     await assert.rejects(
-      () => swrFetch({
-        key: CACHE_KEYS.servers,
-        token: 'test-token',
-        fetcher: () => Promise.reject(new Error('API down')),
-        onData: () => {},
-      }),
-      { message: 'API down' }
+      () =>
+        swrFetch({
+          key: CACHE_KEYS.servers,
+          token: 'test-token',
+          fetcher: () => Promise.reject(new Error('API down')),
+          onData: () => {},
+        }),
+      { message: 'API down' },
     );
   });
 

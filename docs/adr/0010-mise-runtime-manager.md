@@ -90,6 +90,7 @@ The Devbox UI allows selecting runtimes in profile configuration:
 ### asdf
 
 The original polyglot version manager:
+
 - Mature, widely used
 - But slower (bash-based)
 - mise is API-compatible anyway
@@ -99,6 +100,7 @@ Rejected because mise is faster with the same interface.
 ### Individual Tools (nvm, pyenv, rbenv)
 
 Separate managers per language:
+
 - More familiar to some users
 - But inconsistent interfaces
 - More setup complexity
@@ -109,6 +111,7 @@ Rejected for configuration complexity and inconsistency.
 ### System Packages
 
 Use apt/dnf packages:
+
 - Simplest installation
 - But often outdated versions
 - Harder to get specific versions
@@ -119,6 +122,7 @@ Rejected because version flexibility is important for development.
 ### Docker/Containers
 
 Run runtimes in containers:
+
 - Complete isolation
 - But adds complexity
 - Overkill for dev environment

@@ -1,9 +1,9 @@
-import { defineConfig, type Plugin } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import tailwindcss from '@tailwindcss/vite';
-import { fileURLToPath } from 'url';
-import { dirname, resolve } from 'path';
 import { parse } from 'marked';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { defineConfig, type Plugin } from 'vite';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -19,23 +19,23 @@ function markdownHtml(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [markdownHtml(), svelte(), tailwindcss()],
-  resolve: {
-    alias: {
-      $lib: resolve(__dirname, './src/lib'),
-      $components: resolve(__dirname, './src/components'),
-      $pages: resolve(__dirname, './src/pages'),
-    },
+  build: {
+    outDir: 'dist',
   },
   define: {
     __APP_VERSION__: JSON.stringify(process.env['APP_VERSION'] ?? 'dev'),
   },
-  build: {
-    outDir: 'dist',
+  plugins: [markdownHtml(), svelte(), tailwindcss()],
+  resolve: {
+    alias: {
+      $components: resolve(__dirname, './src/components'),
+      $lib: resolve(__dirname, './src/lib'),
+      $pages: resolve(__dirname, './src/pages'),
+    },
   },
   server: {
-    port: 8080,
-    host: '0.0.0.0',
     allowedHosts: true,
+    host: '0.0.0.0',
+    port: 8080,
   },
 });

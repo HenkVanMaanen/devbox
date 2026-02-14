@@ -54,17 +54,18 @@ import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert';
 
 describe('myFunction', () => {
-    beforeEach(() => {
-        // Setup
-    });
+  beforeEach(() => {
+    // Setup
+  });
 
-    it('does something', () => {
-        assert.equal(actual, expected);
-    });
+  it('does something', () => {
+    assert.equal(actual, expected);
+  });
 });
 ```
 
 Run tests:
+
 ```bash
 node --test 'tests/*.test.mjs'
 ```
@@ -74,11 +75,19 @@ node --test 'tests/*.test.mjs'
 ```javascript
 // Mock localStorage
 globalThis.localStorage = {
-    store: {},
-    getItem(key) { return this.store[key] || null; },
-    setItem(key, value) { this.store[key] = value; },
-    removeItem(key) { delete this.store[key]; },
-    clear() { this.store = {}; }
+  store: {},
+  getItem(key) {
+    return this.store[key] || null;
+  },
+  setItem(key, value) {
+    this.store[key] = value;
+  },
+  removeItem(key) {
+    delete this.store[key];
+  },
+  clear() {
+    this.store = {};
+  },
 };
 ```
 
@@ -87,6 +96,7 @@ globalThis.localStorage = {
 ### Jest
 
 Most popular test framework:
+
 - Rich features (snapshots, mocking, coverage)
 - But heavy dependency tree
 - Slower startup
@@ -97,6 +107,7 @@ Rejected because we don't need advanced features and want minimal dependencies.
 ### Vitest
 
 Modern, fast, Jest-compatible:
+
 - Great DX with Vite integration
 - But we don't use Vite
 - Additional dependency
@@ -106,6 +117,7 @@ Rejected because we don't use Vite.
 ### Playwright
 
 Browser-based E2E testing:
+
 - Tests real browser behavior
 - But slower, more complex setup
 - Overkill for unit testing logic

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "project": ["src/**/*.{ts,svelte}"],
+  "ignore": ["src/lib/utils/qrcode.ts", "src/vite-env.d.ts"],
+  "paths": {
+    "$lib/*": ["src/lib/*"],
+    "$components/*": ["src/components/*"],
+    "$pages/*": ["src/pages/*"]
+  },
+  "ignoreDependencies": ["tailwindcss", "vitest", "playwright"],
+  "ignoreExportsUsedInFile": true,
+  "rules": {
+    "unlisted": "error",
+    "binaries": "error",
+    "unresolved": "error",
+    "exports": "warn",
+    "types": "warn"
+  }
+}

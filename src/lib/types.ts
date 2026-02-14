@@ -1,65 +1,62 @@
 // Core type definitions for Devbox
 
-export interface SSHKey {
-  name: string;
-  pubKey: string;
-}
-
-export interface GitCredential {
-  host: string;
-  username: string;
-  token: string;
-}
-
-export interface ChezmoiConfig {
-  repoUrl: string;
-  ageKey: string;
-}
-
-export interface HetznerConfig {
-  serverType: string;
-  location: string;
-  baseImage: string;
-}
-
-export interface ServicesConfig {
-  accessToken: string;
-  dnsService: 'sslip.io' | 'nip.io' | 'traefik.me' | 'custom';
-  customDnsDomain: string;
-  acmeProvider: 'zerossl' | 'letsencrypt' | 'buypass' | 'actalis' | 'custom';
-  acmeEmail: string;
-  zerosslEabKeyId: string;
-  zerosslEabKey: string;
-  actalisEabKeyId: string;
-  actalisEabKey: string;
-  customAcmeUrl: string;
-  customEabKeyId: string;
-  customEabKey: string;
-}
-
 export interface AutoDeleteConfig {
   enabled: boolean;
   timeoutMinutes: number;
   warningMinutes: number;
 }
 
+export interface ChezmoiConfig {
+  ageKey: string;
+  repoUrl: string;
+}
+
 export interface CustomCloudInitConfig {
-  yaml: string;
   mode: 'merge' | 'replace';
+  yaml: string;
+}
+
+export interface GitCredential {
+  host: string;
+  token: string;
+  username: string;
 }
 
 export interface GlobalConfig {
-  ssh: {
-    keys: SSHKey[];
-  };
+  autoDelete: AutoDeleteConfig;
+  chezmoi: ChezmoiConfig;
+  customCloudInit: CustomCloudInitConfig;
   git: {
     credential: GitCredential;
   };
-  chezmoi: ChezmoiConfig;
-  services: ServicesConfig;
   hetzner: HetznerConfig;
-  autoDelete: AutoDeleteConfig;
-  customCloudInit: CustomCloudInitConfig;
+  services: ServicesConfig;
+  ssh: {
+    keys: SSHKey[];
+  };
+}
+
+export interface HetznerConfig {
+  baseImage: string;
+  location: string;
+  serverType: string;
+}
+
+export interface Image {
+  description: string;
+  id: number;
+  name: string;
+  os_flavor: string;
+  os_version: string;
+  type: 'app' | 'backup' | 'snapshot' | 'system';
+}
+
+export interface Location {
+  city: string;
+  country: string;
+  description: string;
+  id: number;
+  name: string;
 }
 
 export interface Profile {
@@ -68,69 +65,79 @@ export interface Profile {
   overrides: Record<string, unknown>;
 }
 
-export interface Profiles {
-  [id: string]: Profile;
-}
+export type Profiles = Record<string, Profile>;
 
 export interface Server {
+  created: string;
+  datacenter: {
+    location: {
+      city: string;
+      country: string;
+    };
+    name: string;
+  };
   id: number;
+  labels: Record<string, string>;
   name: string;
-  status: 'running' | 'starting' | 'stopping' | 'off' | 'initializing' | 'migrating' | 'rebuilding' | 'deleting' | 'unknown';
   public_net: {
     ipv4: { ip: string };
     ipv6: { ip: string };
   };
   server_type: {
-    name: string;
-    description: string;
     cores: number;
-    memory: number;
+    description: string;
     disk: number;
-  };
-  datacenter: {
+    memory: number;
     name: string;
-    location: {
-      city: string;
-      country: string;
-    };
   };
-  created: string;
-  labels: Record<string, string>;
+  status:
+    | 'deleting'
+    | 'initializing'
+    | 'migrating'
+    | 'off'
+    | 'rebuilding'
+    | 'running'
+    | 'starting'
+    | 'stopping'
+    | 'unknown';
 }
 
 export interface ServerType {
-  id: number;
-  name: string;
-  description: string;
   cores: number;
-  memory: number;
+  description: string;
   disk: number;
-  prices: Array<{
+  id: number;
+  memory: number;
+  name: string;
+  prices: {
     location: string;
     price_hourly: { gross: string };
     price_monthly: { gross: string };
-  }>;
+  }[];
 }
 
-export interface Location {
-  id: number;
-  name: string;
-  description: string;
-  country: string;
-  city: string;
+export interface ServicesConfig {
+  accessToken: string;
+  acmeEmail: string;
+  acmeProvider: 'actalis' | 'buypass' | 'custom' | 'letsencrypt' | 'zerossl';
+  actalisEabKey: string;
+  actalisEabKeyId: string;
+  customAcmeUrl: string;
+  customDnsDomain: string;
+  customEabKey: string;
+  customEabKeyId: string;
+  dnsService: 'custom' | 'nip.io' | 'sslip.io' | 'traefik.me';
+  zerosslEabKey: string;
+  zerosslEabKeyId: string;
 }
 
-export interface Image {
-  id: number;
+export interface SSHKey {
   name: string;
-  description: string;
-  type: 'system' | 'snapshot' | 'backup' | 'app';
-  os_flavor: string;
-  os_version: string;
+  pubKey: string;
 }
 
 export interface Toast {
   id: string;
   message: string;
-  type: 'success' | 'error' | 'info';
+  type: 'error' | 'info' | 'success';
 }

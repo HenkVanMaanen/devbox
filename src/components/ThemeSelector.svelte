@@ -19,12 +19,13 @@
 
 <div class="relative">
   <button
+    type="button"
     onclick={() => (isOpen = !isOpen)}
-    class="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground rounded-md hover:bg-muted transition-colors"
+    class="text-muted-foreground hover:text-foreground hover:bg-muted flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors"
     aria-expanded={isOpen}
     aria-haspopup="true"
   >
-    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path
         stroke-linecap="round"
         stroke-linejoin="round"
@@ -43,25 +44,25 @@
       onkeydown={(e) => e.key === 'Escape' && (isOpen = false)}
     ></div>
     <div
-      class="absolute right-0 top-full mt-2 w-48 bg-card border-2 border-border rounded-lg shadow-xl z-50 py-1 max-h-80 overflow-y-auto"
+      class="bg-card border-border absolute top-full right-0 z-50 mt-2 max-h-80 w-48 overflow-y-auto rounded-lg border-2 py-1 shadow-xl"
       role="menu"
     >
-      {#each themeStore.themes as theme}
+      {#each themeStore.themes as theme (theme.id)}
         <button
-          onclick={() => selectTheme(theme.id)}
-          class="w-full px-4 py-2 text-left text-sm hover:bg-muted flex items-center gap-2 {theme.id ===
+          type="button"
+          onclick={() => {
+            selectTheme(theme.id);
+          }}
+          class="hover:bg-muted flex w-full items-center gap-2 px-4 py-2 text-left text-sm {theme.id ===
           themeStore.themeId
             ? 'text-primary font-medium'
             : 'text-foreground'}"
           role="menuitem"
         >
-          <span
-            class="w-4 h-4 rounded-full border border-border"
-            style="background: {theme.colors.background}"
-          ></span>
+          <span class="border-border h-4 w-4 rounded-full border" style="background: {theme.colors.background}"></span>
           {theme.name}
           {#if theme.id === themeStore.themeId}
-            <svg class="w-4 h-4 ml-auto" fill="currentColor" viewBox="0 0 20 20">
+            <svg class="ml-auto h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
               <path
                 fill-rule="evenodd"
                 d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"

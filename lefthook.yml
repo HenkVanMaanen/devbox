@@ -1,0 +1,22 @@
+pre-commit:
+  parallel: true
+  commands:
+    prettier:
+      glob: '*.{ts,svelte,css,js,mjs,json,md,yml,yaml,html}'
+      run: pnpm exec prettier --check {staged_files}
+    eslint:
+      glob: '*.{ts,svelte,js,mjs}'
+      run: pnpm exec eslint {staged_files}
+    stylelint:
+      glob: '*.{css,svelte}'
+      run: pnpm exec stylelint {staged_files}
+    typecheck:
+      run: pnpm check:types
+    cspell:
+      glob: '*.{ts,svelte,js,mjs,md,css}'
+      run: pnpm exec cspell --no-progress {staged_files}
+
+commit-msg:
+  commands:
+    commitlint:
+      run: pnpm exec commitlint --edit {1}

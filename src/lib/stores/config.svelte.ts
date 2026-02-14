@@ -1,76 +1,62 @@
 // Global configuration store using Svelte 5 runes
 
 import type { GlobalConfig } from '$lib/types';
-import { load, save, clone, deepMerge, getNestedValue, setNestedValue, uuid } from '$lib/utils/storage';
+
+import { clone, deepMerge, getNestedValue, load, save, setNestedValue, uuid } from '$lib/utils/storage';
 
 const DEFAULT_CONFIG: GlobalConfig = {
-  ssh: {
-    keys: [],
-  },
-  git: {
-    credential: { host: 'github.com', username: '', token: '' },
-  },
-  chezmoi: {
-    repoUrl: '',
-    ageKey: '',
-  },
-  services: {
-    accessToken: uuid().slice(0, 8),
-    dnsService: 'sslip.io',
-    customDnsDomain: '',
-    acmeProvider: 'zerossl',
-    acmeEmail: '',
-    zerosslEabKeyId: '',
-    zerosslEabKey: '',
-    actalisEabKeyId: '',
-    actalisEabKey: '',
-    customAcmeUrl: '',
-    customEabKeyId: '',
-    customEabKey: '',
-  },
-  hetzner: {
-    serverType: 'cx22',
-    location: 'fsn1',
-    baseImage: 'ubuntu-24.04',
-  },
   autoDelete: {
     enabled: true,
     timeoutMinutes: 90,
     warningMinutes: 5,
   },
+  chezmoi: {
+    ageKey: '',
+    repoUrl: '',
+  },
   customCloudInit: {
-    yaml: '',
     mode: 'merge',
+    yaml: '',
+  },
+  git: {
+    credential: { host: 'github.com', token: '', username: '' },
+  },
+  hetzner: {
+    baseImage: 'ubuntu-24.04',
+    location: 'fsn1',
+    serverType: 'cx22',
+  },
+  services: {
+    accessToken: uuid().slice(0, 8),
+    acmeEmail: '',
+    acmeProvider: 'zerossl',
+    actalisEabKey: '',
+    actalisEabKeyId: '',
+    customAcmeUrl: '',
+    customDnsDomain: '',
+    customEabKey: '',
+    customEabKeyId: '',
+    dnsService: 'sslip.io',
+    zerosslEabKey: '',
+    zerosslEabKeyId: '',
+  },
+  ssh: {
+    keys: [],
   },
 };
 
 function createConfigStore() {
   const stored = load<GlobalConfig>('config');
-  let config = $state<GlobalConfig>(
-    stored ? deepMerge(DEFAULT_CONFIG, stored) : clone(DEFAULT_CONFIG)
-  );
+  let config = $state<GlobalConfig>(stored ? deepMerge(DEFAULT_CONFIG, stored) : clone(DEFAULT_CONFIG));
 
   return {
-    get value() {
-      return config;
-    },
-    set value(newConfig: GlobalConfig) {
-      config = newConfig;
-    },
-
     // Get a nested value by path
-    get<T>(path: string): T | undefined {
-      return getNestedValue<T>(config as unknown as Record<string, unknown>, path);
+    get(path: string): unknown {
+      return getNestedValue(config as unknown as Record<string, unknown>, path);
     },
-
-    // Set a nested value by path
-    set(path: string, value: unknown): void {
-      setNestedValue(config as unknown as Record<string, unknown>, path, value);
-    },
-
-    // Save to localStorage
-    save(): void {
-      save('config', config);
+    // Check if config differs from snapshot
+    isDirty(snapshot: GlobalConfig): boolean {
+      return JSON.stringify(config) !== JSON.stringify(snapshot);
     },
 
     // Reset to defaults
@@ -79,19 +65,32 @@ function createConfigStore() {
       save('config', config);
     },
 
+    // Restore from snapshot
+    restore(snapshot: GlobalConfig): void {
+      config = clone(snapshot);
+    },
+
+    // Save to localStorage
+    save(): void {
+      save('config', config);
+    },
+
+    // Set a nested value by path
+    set(path: string, value: unknown): void {
+      setNestedValue(config as unknown as Record<string, unknown>, path, value);
+    },
+
     // Create a snapshot for dirty tracking
     snapshot(): GlobalConfig {
       return clone(config);
     },
 
-    // Check if config differs from snapshot
-    isDirty(snapshot: GlobalConfig): boolean {
-      return JSON.stringify(config) !== JSON.stringify(snapshot);
+    get value() {
+      return config;
     },
 
-    // Restore from snapshot
-    restore(snapshot: GlobalConfig): void {
-      config = clone(snapshot);
+    set value(newConfig: GlobalConfig) {
+      config = newConfig;
     },
   };
 }

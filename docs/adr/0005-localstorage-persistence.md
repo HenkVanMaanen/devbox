@@ -60,6 +60,7 @@ export function setGlobalConfig(config) {
 ```
 
 Storage keys:
+
 - `hetznerToken` — Hetzner API token
 - `globalConfig` — Global configuration object
 - `profiles` — Array of saved profiles
@@ -70,6 +71,7 @@ Storage keys:
 ### IndexedDB
 
 More powerful database API:
+
 - Better for large/structured data
 - Async-only API adds complexity
 - Overkill for our simple key-value needs
@@ -79,6 +81,7 @@ Rejected because localStorage is simpler and sufficient.
 ### IndexedDB with Wrapper (Dexie, idb)
 
 Libraries that simplify IndexedDB:
+
 - Still more complex than localStorage
 - Additional dependency
 - No clear benefit for our use case
@@ -88,6 +91,7 @@ Rejected for same reasons.
 ### Export/Import Only
 
 No automatic persistence, users manually save/load configs:
+
 - Too much friction
 - Poor UX for frequent use
 

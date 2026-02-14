@@ -77,12 +77,12 @@ The strictest possible TypeScript configuration is used:
 
 ### Key Strict Options Explained
 
-| Option | Purpose |
-|--------|---------|
-| `noUncheckedIndexedAccess` | Array/object access returns `T \| undefined` |
-| `exactOptionalPropertyTypes` | `prop?: string` means `string \| undefined`, not `string \| undefined \| null` |
-| `noPropertyAccessFromIndexSignature` | Forces bracket notation for dynamic keys |
-| `useUnknownInCatchVariables` | Catch blocks get `unknown`, not `any` |
+| Option                               | Purpose                                                                        |
+| ------------------------------------ | ------------------------------------------------------------------------------ |
+| `noUncheckedIndexedAccess`           | Array/object access returns `T \| undefined`                                   |
+| `exactOptionalPropertyTypes`         | `prop?: string` means `string \| undefined`, not `string \| undefined \| null` |
+| `noPropertyAccessFromIndexSignature` | Forces bracket notation for dynamic keys                                       |
+| `useUnknownInCatchVariables`         | Catch blocks get `unknown`, not `any`                                          |
 
 ### Type Definitions
 
@@ -125,6 +125,7 @@ Components use typed props via `$props()`:
 ### Keep Plain JavaScript
 
 Continue without types:
+
 - Simpler setup
 - But bugs kept appearing that types would catch
 - IDE support was poor
@@ -135,6 +136,7 @@ Rejected because the codebase complexity warranted type safety.
 ### TypeScript with Relaxed Settings
 
 Use TypeScript but with fewer strict options:
+
 - Easier migration
 - But defeats the purpose
 - "Strict" catches real bugs
@@ -145,6 +147,7 @@ Rejected because if we're using TypeScript, we should use it properly.
 ### JSDoc Type Annotations
 
 Add types via comments:
+
 - No build step for types
 - But verbose and not enforced
 - Doesn't integrate as well with Svelte

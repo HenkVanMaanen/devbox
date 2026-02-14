@@ -1,25 +1,25 @@
 <script lang="ts">
-  import { serversStore } from '$lib/stores/servers.svelte';
+  import ServerCard from '$components/ServerCard.svelte';
+  import Button from '$components/ui/Button.svelte';
+  import Card from '$components/ui/Card.svelte';
+  import Modal from '$components/ui/Modal.svelte';
+  import * as hetzner from '$lib/api/hetzner';
   import { credentialsStore } from '$lib/stores/credentials.svelte';
   import { profilesStore } from '$lib/stores/profiles.svelte';
+  import { serversStore } from '$lib/stores/servers.svelte';
   import { themeStore } from '$lib/stores/theme.svelte';
   import { toast } from '$lib/stores/toast.svelte';
   import { generateCloudInit } from '$lib/utils/cloudinit';
   import { generateServerName } from '$lib/utils/names';
-  import * as hetzner from '$lib/api/hetzner';
-  import Button from '$components/ui/Button.svelte';
-  import Card from '$components/ui/Card.svelte';
-  import Modal from '$components/ui/Modal.svelte';
-  import ServerCard from '$components/ServerCard.svelte';
 
-  let deleteModal = $state({ open: false, server: null as { id: number; name: string } | null });
-  let selectedProfileId = $state<string | null>(profilesStore.defaultProfileId);
+  let deleteModal = $state({ open: false, server: null as null | { id: number; name: string } });
+  let selectedProfileId = $state<null | string>(profilesStore.defaultProfileId);
 
   // Load servers and options on mount
   $effect(() => {
     if (credentialsStore.hasToken) {
-      serversStore.load(credentialsStore.token);
-      serversStore.loadOptions(credentialsStore.token);
+      void serversStore.load(credentialsStore.token);
+      void serversStore.loadOptions(credentialsStore.token);
     }
   });
 
@@ -29,24 +29,24 @@
   // Build configuration summary
   const configSummary = $derived.by(() => {
     const parts: string[] = [];
-    const serverType = serversStore.serverTypes.find(t => t.name === selectedConfig.hetzner.serverType);
+    const serverType = serversStore.serverTypes.find((t) => t.name === selectedConfig.hetzner.serverType);
     if (serverType) {
       parts.push(`${serverType.name} (${serverType.cores} vCPU, ${serverType.memory}GB RAM)`);
     }
-    const location = serversStore.locations.find(l => l.name === selectedConfig.hetzner.location);
+    const location = serversStore.locations.find((l) => l.name === selectedConfig.hetzner.location);
     if (location) {
       parts.push(location.city);
     }
     // Add price estimation
     if (serverType && selectedConfig.hetzner.location) {
-      const priceInfo = serverType.prices.find(p => p.location === selectedConfig.hetzner.location);
+      const priceInfo = serverType.prices.find((p) => p.location === selectedConfig.hetzner.location);
       if (priceInfo) {
-        const hourly = parseFloat(priceInfo.price_hourly.gross);
-        const monthly = parseFloat(priceInfo.price_monthly.gross);
+        const hourly = Number.parseFloat(priceInfo.price_hourly.gross);
+        const monthly = Number.parseFloat(priceInfo.price_monthly.gross);
         parts.push(`€${hourly.toFixed(4)}/hr (~€${monthly.toFixed(2)}/mo)`);
       }
     }
-    if (selectedConfig.chezmoi?.repoUrl) {
+    if (selectedConfig.chezmoi.repoUrl) {
       parts.push('chezmoi');
     }
     return parts.join(' • ');
@@ -67,40 +67,36 @@
       const sshKeyIds: number[] = [];
       for (const key of config.ssh.keys) {
         if (key.pubKey) {
-          const safeName = key.name.replace(/[^a-zA-Z0-9_-]/g, '-').replace(/-+/g, '-') || 'key';
-          const hetznerKey = await hetzner.ensureSSHKey(
-            credentialsStore.token,
-            `devbox-${safeName}`,
-            key.pubKey
-          );
+          const safeName = key.name.replaceAll(/[^a-zA-Z0-9_-]/g, '-').replaceAll(/-+/g, '-') || 'key';
+          const hetznerKey = await hetzner.ensureSSHKey(credentialsStore.token, `devbox-${safeName}`, key.pubKey);
           sshKeyIds.push(hetznerKey.id);
         }
       }
 
       // Generate cloud-init with current theme
       const userData = generateCloudInit(serverName, credentialsStore.token, config, {
-        themeColors: themeStore.theme.colors,
         terminalColors: themeStore.theme.terminal,
+        themeColors: themeStore.theme.colors,
       });
 
       // Create server
       await serversStore.create(
         credentialsStore.token,
         {
+          image: config.hetzner.baseImage,
+          labels: { managed: 'devbox', progress: 'provisioning' },
+          location: config.hetzner.location,
           name: serverName,
           serverType: config.hetzner.serverType,
-          image: config.hetzner.baseImage,
-          location: config.hetzner.location,
           sshKeys: sshKeyIds,
           userData,
-          labels: { managed: 'devbox', progress: 'provisioning' },
         },
-        config.services.accessToken
+        config.services.accessToken,
       );
 
       toast.success('Server created successfully!');
-    } catch (e) {
-      toast.error(`Failed to create server: ${e instanceof Error ? e.message : 'Unknown error'}`);
+    } catch (error) {
+      toast.error(`Failed to create server: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -110,8 +106,8 @@
     try {
       await serversStore.delete(credentialsStore.token, deleteModal.server.id, deleteModal.server.name);
       toast.success('Server deleted');
-    } catch (e) {
-      toast.error(`Failed to delete: ${e instanceof Error ? e.message : 'Unknown error'}`);
+    } catch (error) {
+      toast.error(`Failed to delete: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       deleteModal = { open: false, server: null };
     }
@@ -130,13 +126,13 @@
 
         {#if profilesStore.profileList.length > 0}
           <div>
-            <label for="profile-select" class="block text-sm font-medium mb-1.5">Profile</label>
+            <label for="profile-select" class="mb-1.5 block text-sm font-medium">Profile</label>
             <select
               id="profile-select"
               bind:value={selectedProfileId}
-              class="w-full min-h-[44px] px-3 py-2 text-base bg-background border-2 border-border rounded-md
-                     focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary
-                     transition-colors duration-150"
+              class="bg-background border-border focus:ring-ring focus:border-primary min-h-[44px] w-full rounded-md border-2 px-3
+                     py-2 text-base transition-colors duration-150
+                     focus:ring-2 focus:outline-none"
             >
               <option value={null}>Use global config (no profile)</option>
               {#each profilesStore.profileList as profile (profile.id)}
@@ -151,8 +147,8 @@
 
         {#if configSummary}
           <div class="bg-muted/30 rounded-md p-4">
-            <p class="text-sm font-medium mb-1">Configuration Summary</p>
-            <p class="text-sm text-muted-foreground">{configSummary}</p>
+            <p class="mb-1 text-sm font-medium">Configuration Summary</p>
+            <p class="text-muted-foreground text-sm">{configSummary}</p>
           </div>
         {/if}
 
@@ -176,9 +172,7 @@
   {:else if serversStore.error}
     <Card>
       <p class="text-destructive">Error: {serversStore.error}</p>
-      <Button variant="secondary" class="mt-4" onclick={() => serversStore.load(credentialsStore.token)}>
-        Retry
-      </Button>
+      <Button variant="secondary" class="mt-4" onclick={() => serversStore.load(credentialsStore.token)}>Retry</Button>
     </Card>
   {:else if serversStore.devboxServers.length === 0}
     <Card>
@@ -194,19 +188,11 @@
   {/if}
 </div>
 
-<Modal
-  bind:open={deleteModal.open}
-  title="Delete Server"
-  onClose={() => (deleteModal = { open: false, server: null })}
->
+<Modal bind:open={deleteModal.open} title="Delete Server" onClose={() => (deleteModal = { open: false, server: null })}>
   <p>Are you sure you want to delete <strong>{deleteModal.server?.name}</strong>? This action cannot be undone.</p>
 
   {#snippet actions()}
-    <Button variant="secondary" onclick={() => (deleteModal = { open: false, server: null })}>
-      Cancel
-    </Button>
-    <Button variant="destructive" onclick={confirmDelete}>
-      Delete
-    </Button>
+    <Button variant="secondary" onclick={() => (deleteModal = { open: false, server: null })}>Cancel</Button>
+    <Button variant="destructive" onclick={confirmDelete}>Delete</Button>
   {/snippet}
 </Modal>

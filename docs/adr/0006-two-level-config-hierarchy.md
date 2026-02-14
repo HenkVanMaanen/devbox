@@ -16,6 +16,7 @@ Users need to configure many settings for their development servers:
 - Editor/IDE settings
 
 Different projects or use cases may need different configurations. For example:
+
 - A Node.js project needs different packages than a Python project
 - A client project might need different Git credentials than personal work
 - Experimentation might need minimal config, production-like work needs full setup
@@ -65,6 +66,7 @@ The `deepMerge` function recursively combines objects, with profile values takin
 ### Example
 
 Global config:
+
 ```json
 {
   "ssh": { "keys": ["ssh-ed25519 AAAA..."] },
@@ -74,6 +76,7 @@ Global config:
 ```
 
 Profile "nodejs" overrides:
+
 ```json
 {
   "packages": { "mise": ["node@lts"] }
@@ -81,6 +84,7 @@ Profile "nodejs" overrides:
 ```
 
 Effective config:
+
 ```json
 {
   "ssh": { "keys": ["ssh-ed25519 AAAA..."] },
@@ -94,6 +98,7 @@ Effective config:
 ### Flat Profiles Only
 
 Each profile is completely independent:
+
 - Simpler mental model
 - But requires duplicating common settings across profiles
 - Changes to shared settings must be made in every profile
@@ -103,6 +108,7 @@ Rejected because duplication leads to inconsistency.
 ### Unlimited Inheritance Chain
 
 Profiles can inherit from other profiles:
+
 - Maximum flexibility
 - But complex to understand and debug
 - Overkill for typical use cases
@@ -112,6 +118,7 @@ Rejected as over-engineering. Two levels covers the common cases.
 ### Template Strings
 
 Global config with placeholders filled by profiles:
+
 - Powerful but complex
 - Harder to implement and maintain
 

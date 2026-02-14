@@ -105,27 +105,29 @@ No class changes needed - Tailwind utilities reference the variables.
 
 ### Available Themes
 
-| Theme | Description |
-|-------|-------------|
-| `dark` | Default dark theme with indigo accent |
-| `light` | Light theme for bright environments |
-| `nord` | Nord color palette |
-| `dracula` | Dracula color palette |
-| `solarized-dark` | Solarized dark variant |
-| `solarized-light` | Solarized light variant |
+| Theme             | Description                           |
+| ----------------- | ------------------------------------- |
+| `dark`            | Default dark theme with indigo accent |
+| `light`           | Light theme for bright environments   |
+| `nord`            | Nord color palette                    |
+| `dracula`         | Dracula color palette                 |
+| `solarized-dark`  | Solarized dark variant                |
+| `solarized-light` | Solarized light variant               |
 
 All themes maintain WCAG AAA contrast ratios.
 
 ### Component Usage
 
 ```svelte
-<button class="
-  px-4 py-2
+<button
+  class="
   bg-primary text-primary-foreground
-  hover:bg-primary-hover
+  hover:bg-primary-hover focus:ring-focus
   rounded-md
-  focus:ring-3 focus:ring-focus
-">
+  px-4
+  py-2 focus:ring-3
+"
+>
   Click me
 </button>
 ```
@@ -134,18 +136,18 @@ All themes maintain WCAG AAA contrast ratios.
 
 Colors are named by purpose, not appearance:
 
-| Variable | Purpose |
-|----------|---------|
-| `background` | Page background |
-| `foreground` | Primary text |
-| `card` | Card/panel backgrounds |
-| `muted` | Secondary backgrounds |
-| `muted-foreground` | Secondary text |
-| `border` | Border color |
-| `primary` | Primary actions |
-| `destructive` | Dangerous actions |
-| `success` | Success states |
-| `warning` | Warning states |
+| Variable           | Purpose                |
+| ------------------ | ---------------------- |
+| `background`       | Page background        |
+| `foreground`       | Primary text           |
+| `card`             | Card/panel backgrounds |
+| `muted`            | Secondary backgrounds  |
+| `muted-foreground` | Secondary text         |
+| `border`           | Border color           |
+| `primary`          | Primary actions        |
+| `destructive`      | Dangerous actions      |
+| `success`          | Success states         |
+| `warning`          | Warning states         |
 
 ## Accessibility
 
@@ -162,7 +164,9 @@ Colors are named by purpose, not appearance:
 
 ```css
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
@@ -174,6 +178,7 @@ Colors are named by purpose, not appearance:
 ### CSS Modules
 
 Scoped CSS per component:
+
 - Good encapsulation
 - But requires more boilerplate
 - No design system built-in
@@ -184,6 +189,7 @@ Rejected because Tailwind provides better DX for our use case.
 ### Styled Components / Emotion
 
 CSS-in-JS solutions:
+
 - Dynamic styling
 - But runtime overhead
 - Less common in Svelte ecosystem
@@ -194,6 +200,7 @@ Rejected due to runtime cost and Svelte's native scoped styles.
 ### Tailwind v3
 
 Previous stable version:
+
 - More documentation
 - But v4 has better CSS variable support
 - Native @theme directive
@@ -204,6 +211,7 @@ Rejected in favor of v4's improvements for theming.
 ### Plain CSS with Variables
 
 No framework, just CSS:
+
 - Simplest approach
 - But no utility classes
 - More CSS to write

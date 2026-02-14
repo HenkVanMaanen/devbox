@@ -52,12 +52,12 @@ Use esbuild for all build tasks.
 import * as esbuild from 'esbuild';
 
 await esbuild.build({
-    entryPoints: ['web/js/app.js'],
-    bundle: true,
-    outdir: 'dist',
-    format: 'esm',
-    sourcemap: true,
-    minify: process.env.NODE_ENV === 'production',
+  entryPoints: ['web/js/app.js'],
+  bundle: true,
+  outdir: 'dist',
+  format: 'esm',
+  sourcemap: true,
+  minify: process.env.NODE_ENV === 'production',
 });
 ```
 
@@ -66,6 +66,7 @@ await esbuild.build({
 ### Vite
 
 Modern, fast development experience:
+
 - Better HMR than esbuild
 - But adds complexity (Rollup for prod, Vite for dev)
 - More dependencies
@@ -76,6 +77,7 @@ Rejected because esbuild is simpler and fast enough.
 ### Webpack
 
 Industry standard:
+
 - Most plugins and loaders
 - But complex configuration
 - Slower builds
@@ -86,6 +88,7 @@ Rejected because we don't need its advanced features.
 ### No Bundler
 
 Serve ES modules directly:
+
 - Simplest approach
 - But no minification or cache busting
 - Many HTTP requests in production

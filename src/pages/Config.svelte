@@ -1,16 +1,17 @@
 <script lang="ts">
+  import type { GlobalConfig, Profiles } from '$lib/types';
+
+  import ConfigForm from '$components/ConfigForm.svelte';
+  import FloatingActions from '$components/FloatingActions.svelte';
+  import Button from '$components/ui/Button.svelte';
+  import Card from '$components/ui/Card.svelte';
   import { configStore } from '$lib/stores/config.svelte';
+  import { credentialsStore } from '$lib/stores/credentials.svelte';
   import { profilesStore } from '$lib/stores/profiles.svelte';
   import { serversStore } from '$lib/stores/servers.svelte';
-  import { credentialsStore } from '$lib/stores/credentials.svelte';
   import { themeStore } from '$lib/stores/theme.svelte';
   import { toast } from '$lib/stores/toast.svelte';
   import { clone } from '$lib/utils/storage';
-  import type { GlobalConfig, Profiles } from '$lib/types';
-  import Button from '$components/ui/Button.svelte';
-  import Card from '$components/ui/Card.svelte';
-  import FloatingActions from '$components/FloatingActions.svelte';
-  import ConfigForm from '$components/ConfigForm.svelte';
 
   // Snapshot for dirty tracking
   let snapshot = $state<GlobalConfig>(clone(configStore.value));
@@ -19,7 +20,7 @@
   // Load Hetzner options for dropdowns
   $effect(() => {
     if (credentialsStore.hasToken) {
-      serversStore.loadOptions(credentialsStore.token);
+      void serversStore.loadOptions(credentialsStore.token);
     }
   });
 
@@ -35,26 +36,33 @@
   }
 
   // getValue/setValue for ConfigForm in global mode
-  function getValue<T>(path: string): T {
+  function getValue(path: string): unknown {
     const keys = path.split('.');
     let current: unknown = configStore.value;
     for (const key of keys) {
       current = (current as Record<string, unknown>)[key];
     }
-    return current as T;
+    return current;
   }
 
   function setValue(path: string, value: unknown) {
     const keys = path.split('.');
     let current: Record<string, unknown> = configStore.value as unknown as Record<string, unknown>;
     for (let i = 0; i < keys.length - 1; i++) {
-      current = current[keys[i]!] as Record<string, unknown>;
+      const k = keys[i];
+      if (k === undefined) {
+        continue;
+      }
+      current = current[k] as Record<string, unknown>;
     }
-    current[keys[keys.length - 1]!] = value;
+    const lastKey = keys.at(-1);
+    if (lastKey !== undefined) {
+      current[lastKey] = value;
+    }
   }
 
   // Toast helper for ConfigForm
-  function showToast(message: string, type: 'success' | 'error' | 'info') {
+  function showToast(message: string, type: 'error' | 'info' | 'success') {
     if (type === 'success') toast.success(message);
     else if (type === 'error') toast.error(message);
     else toast.info(message);
@@ -65,18 +73,18 @@
 
   function exportConfig() {
     const exportData = {
-      version: 1,
-      exportedAt: new Date().toISOString(),
       // New format
       config: configStore.value,
-      profiles: profilesStore.profiles,
+      defaultProfile: profilesStore.defaultProfileId,
       defaultProfileId: profilesStore.defaultProfileId,
-      hetznerToken: credentialsStore.token,
-      theme: themeStore.themeId,
-      serverTokens: serversStore.serverTokens,
+      exportedAt: new Date().toISOString(),
       // Old format (for backwards compatibility)
       globalConfig: configStore.value,
-      defaultProfile: profilesStore.defaultProfileId,
+      hetznerToken: credentialsStore.token,
+      profiles: profilesStore.profiles,
+      serverTokens: serversStore.serverTokens,
+      theme: themeStore.themeId,
+      version: 1,
     };
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
@@ -84,9 +92,9 @@
     const a = document.createElement('a');
     a.href = url;
     a.download = `devbox-config-${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(a);
+    document.body.append(a);
     a.click();
-    document.body.removeChild(a);
+    a.remove();
     URL.revokeObjectURL(url);
     toast.success('Configuration exported');
   }
@@ -100,26 +108,26 @@
     const file = input.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
+    void file.text().then((text) => {
       try {
-        const data = JSON.parse(e.target?.result as string);
+        const data = JSON.parse(text) as Record<string, unknown>;
 
         // Support both new format (config) and old format (globalConfig)
-        const rawConfig = data.config || data.globalConfig;
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- intentional: falsy check
+        const rawConfig = data['config'] || data['globalConfig'];
         if (!rawConfig) {
           toast.error('Invalid config file: missing config or globalConfig');
           return;
         }
 
         // Import config (merge with defaults to handle missing fields)
-        configStore.value = { ...configStore.value, ...rawConfig } as GlobalConfig;
+        configStore.value = { ...configStore.value, ...(rawConfig as Partial<GlobalConfig>) } as GlobalConfig;
         configStore.save();
         snapshot = clone(configStore.value);
 
         // Import profiles if present
-        if (data.profiles) {
-          const profiles = data.profiles as Profiles;
+        if (data['profiles']) {
+          const profiles = data['profiles'] as Profiles;
           for (const [id, profile] of Object.entries(profiles)) {
             if (!profilesStore.get(id)) {
               profilesStore.profiles[id] = profile;
@@ -129,36 +137,36 @@
         }
 
         // Set default profile if present (support both formats)
-        const defaultProfileId = data.defaultProfileId || data.defaultProfile;
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- intentional: falsy check
+        const defaultProfileId = (data['defaultProfileId'] || data['defaultProfile']) as string | undefined;
         if (defaultProfileId) {
           profilesStore.setDefault(defaultProfileId);
         }
 
         // Import Hetzner token if present
-        if (data.hetznerToken) {
-          credentialsStore.token = data.hetznerToken;
+        if (data['hetznerToken']) {
+          credentialsStore.token = data['hetznerToken'] as string;
           credentialsStore.save();
         }
 
         // Import theme if present
-        if (data.theme) {
-          themeStore.setTheme(data.theme);
+        if (data['theme']) {
+          themeStore.setTheme(data['theme'] as string);
         }
 
         // Import server tokens if present
-        if (data.serverTokens) {
-          for (const [name, token] of Object.entries(data.serverTokens)) {
-            serversStore.saveServerToken(name, token as string);
+        if (data['serverTokens']) {
+          for (const [name, token] of Object.entries(data['serverTokens'] as Record<string, string>)) {
+            serversStore.saveServerToken(name, token);
           }
         }
 
         toast.success('Configuration imported successfully');
-      } catch (err) {
+      } catch (error) {
         toast.error('Failed to parse config file');
-        console.error('Import error:', err);
+        console.error('Import error:', error);
       }
-    };
-    reader.readAsText(file);
+    });
 
     // Reset input so the same file can be imported again
     input.value = '';
@@ -172,19 +180,13 @@
   <ConfigForm mode="global" {getValue} {setValue} {showToast} idPrefix="global-" />
 
   <Card title="Backup & Restore">
-    <p class="text-sm text-muted-foreground mb-4">
+    <p class="text-muted-foreground mb-4 text-sm">
       Export your configuration and profiles to a JSON file, or import a previously exported configuration.
     </p>
     <div class="flex gap-3">
       <Button variant="secondary" onclick={exportConfig}>Export Configuration</Button>
       <Button variant="secondary" onclick={triggerImport}>Import Configuration</Button>
-      <input
-        bind:this={fileInputRef}
-        type="file"
-        accept=".json"
-        class="hidden"
-        onchange={handleImport}
-      />
+      <input bind:this={fileInputRef} type="file" accept=".json" class="hidden" onchange={handleImport} />
     </div>
   </Card>
 </div>

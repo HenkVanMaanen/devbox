@@ -93,11 +93,13 @@ Each service gets its own subdomain:
 ### nginx
 
 Industry standard reverse proxy:
+
 - More configuration required
 - Manual certificate management (or certbot)
 - Syntax more verbose
 
 Example equivalent config:
+
 ```nginx
 server {
     listen 443 ssl http2;
@@ -120,6 +122,7 @@ Rejected because Caddy achieves the same with less configuration.
 ### Traefik
 
 Cloud-native, great for Docker/Kubernetes:
+
 - More complex configuration
 - Designed for dynamic service discovery
 - Overkill for static service setup
@@ -129,6 +132,7 @@ Rejected because we have static, known services.
 ### No Reverse Proxy
 
 Direct HTTPS on each service:
+
 - Each service needs certificate management
 - Multiple ports exposed
 - Inconsistent security configuration

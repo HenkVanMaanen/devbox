@@ -1,67 +1,39 @@
 // Cloud-init builder helpers - Caddyfile, index page, autodelete daemon
 
-import type { GlobalConfig, GitCredential } from '$lib/types';
-
-// Escape a string for safe embedding in a single-quoted JS string literal
-function escapeSingleQuotedJS(s: string): string {
-  if (!s) return '';
-  return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/<\//g, '<\\/');
-}
-
-// Escape shell metacharacters in double-quoted strings
-export function shellEscape(s: string): string {
-  if (!s) return '';
-  return s.replace(/[\\"$`!]/g, '\\$&').replace(/\n/g, '');
-}
-
-// Convert standard base64 to base64url (for Actalis EAB keys)
-export function toBase64URL(s: string): string {
-  if (!s) return '';
-  return s.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-// Build git credentials file content
-export function buildGitCredentials(credential: GitCredential): string {
-  if (!credential || !credential.host || !credential.username || !credential.token) return '';
-  const username = encodeURIComponent(credential.username);
-  const token = encodeURIComponent(credential.token);
-  // Validate host to prevent injection (only allow valid hostname chars)
-  const host = credential.host.replace(/[^a-zA-Z0-9._-]/g, '');
-  return `https://${username}:${token}@${host}\n`;
-}
-
-export interface ThemeColors {
-  background: string;
-  foreground: string;
-  card: string;
-  border: string;
-  primary: string;
-  muted: string;
-  mutedForeground: string;
-  success: string;
-  warning: string;
-  destructive: string;
-  focus: string;
-  [key: string]: string; // Allow extra properties from theme store
-}
+import type { GitCredential, GlobalConfig } from '$lib/types';
 
 export interface TerminalColors {
   black?: string;
-  red?: string;
-  green?: string;
-  yellow?: string;
   blue?: string;
-  magenta?: string;
-  cyan?: string;
-  white?: string;
   brightBlack?: string;
-  brightRed?: string;
-  brightGreen?: string;
-  brightYellow?: string;
   brightBlue?: string;
-  brightMagenta?: string;
   brightCyan?: string;
+  brightGreen?: string;
+  brightMagenta?: string;
+  brightRed?: string;
   brightWhite?: string;
+  brightYellow?: string;
+  cyan?: string;
+  green?: string;
+  magenta?: string;
+  red?: string;
+  white?: string;
+  yellow?: string;
+}
+
+export interface ThemeColors {
+  [key: string]: string; // Allow extra properties from theme store
+  background: string;
+  border: string;
+  card: string;
+  destructive: string;
+  focus: string;
+  foreground: string;
+  muted: string;
+  mutedForeground: string;
+  primary: string;
+  success: string;
+  warning: string;
 }
 
 // Build devbox daemon script with port scanning and autodelete
@@ -69,9 +41,10 @@ export function buildDaemonScript(config: GlobalConfig, hetznerToken: string): s
   const timeout = config.autoDelete.timeoutMinutes;
   const warning = config.autoDelete.warningMinutes;
   // Get DNS service for URL generation (custom domain or standard service)
-  const dnsService = config.services.dnsService === 'custom'
-    ? (config.services.customDnsDomain || 'sslip.io')
-    : (config.services.dnsService || 'sslip.io');
+  const dnsService =
+    config.services.dnsService === 'custom'
+      ? config.services.customDnsDomain || 'sslip.io'
+      : config.services.dnsService;
 
   return `#!/usr/bin/env node
 const http=require('http'),fs=require('fs'),https=require('https'),{execSync}=require('child_process');
@@ -136,10 +109,10 @@ function prewarmCert(port){
 function verifyDomain(domain){
   if(!domain)return false;
   // Pattern 1: {ipHex}.{any-suffix} - base domain for overview page
-  const basePattern=new RegExp(\`^\${ipHex}\\\\.[a-z0-9.-]+\$\`,'i');
+  const basePattern=new RegExp(\`^\${ipHex}\\\\.[a-z0-9.-]+$\`,'i');
   if(basePattern.test(domain))return true;
   // Pattern 2: {port}.{ipHex}.{any-suffix} - service subdomain
-  const svcPattern=new RegExp(\`^(\\\\d+)\\\\.\${ipHex}\\\\.[a-z0-9.-]+\$\`,'i');
+  const svcPattern=new RegExp(\`^(\\\\d+)\\\\.\${ipHex}\\\\.[a-z0-9.-]+$\`,'i');
   const match=domain.match(svcPattern);
   if(!match)return false;
   const port=parseInt(match[1]);
@@ -179,12 +152,44 @@ main();
 `;
 }
 
+// Build git credentials file content
+export function buildGitCredentials(credential: GitCredential): string {
+  if (credential.host === '' || credential.username === '' || credential.token === '') return '';
+  const username = encodeURIComponent(credential.username);
+  const token = encodeURIComponent(credential.token);
+  // Validate host to prevent injection (only allow valid hostname chars)
+  const host = credential.host.replaceAll(/[^a-zA-Z0-9._-]/g, '');
+  return `https://${username}:${token}@${host}\n`;
+}
+
+// Escape shell metacharacters in double-quoted strings
+export function shellEscape(s: string): string {
+  if (s.length === 0) return '';
+  return s.replaceAll(/[\\"$`!]/g, String.raw`\$&`).replaceAll('\n', '');
+}
+
+// Convert standard base64 to base64url (for Actalis EAB keys)
+export function toBase64URL(s: string): string {
+  if (!s) return '';
+  return s.replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
+}
+
+// Escape a string for safe embedding in a single-quoted JS string literal
+function escapeSingleQuotedJS(s: string): string {
+  if (!s) return '';
+  return s
+    .replaceAll('\\', '\\\\')
+    .replaceAll("'", String.raw`\'`)
+    .replaceAll('\n', String.raw`\n`)
+    .replaceAll('</', String.raw`<\/`);
+}
+
 // ACME provider configurations
 const ACME_PROVIDERS: Record<string, { ca: string; requiresEab?: boolean }> = {
+  actalis: { ca: 'https://acme-api.actalis.com/acme/directory', requiresEab: true },
+  buypass: { ca: 'https://api.buypass.com/acme/directory' },
   letsencrypt: { ca: 'https://acme-v02.api.letsencrypt.org/directory' },
   zerossl: { ca: 'https://acme.zerossl.com/v2/DV90', requiresEab: true },
-  buypass: { ca: 'https://api.buypass.com/acme/directory' },
-  actalis: { ca: 'https://acme-api.actalis.com/acme/directory', requiresEab: true },
 };
 
 // Build Caddyfile for services (domain-agnostic)
@@ -198,7 +203,7 @@ export function buildCaddyConfig(config: GlobalConfig): string {
   }
 
   // ACME provider configuration
-  const acmeProvider = config.services.acmeProvider || 'zerossl';
+  const acmeProvider = config.services.acmeProvider;
   if (acmeProvider === 'custom' && config.services.customAcmeUrl) {
     caddyfile += '  acme_ca ' + config.services.customAcmeUrl + '\n';
     if (config.services.customEabKeyId && config.services.customEabKey) {
@@ -231,13 +236,13 @@ export function buildCaddyConfig(config: GlobalConfig): string {
 `;
 
   // Single HTTPS listener - domain-agnostic routing via header matching
-  caddyfile += `:443 {
+  caddyfile += String.raw`:443 {
   tls {
     on_demand
   }
 ${authBlock}
   # Base domain: {ipHex}.{any-suffix} - serves overview page
-  @base header_regexp basehost Host (?i)^__IP__\\.[a-z0-9.-]+$
+  @base header_regexp basehost Host (?i)^__IP__\.[a-z0-9.-]+$
   handle @base {
     route /api/* {
       uri strip_prefix /api
@@ -248,7 +253,7 @@ ${authBlock}
   }
 
   # Service subdomain: {port}.{ipHex}.{any-suffix} - proxies to port
-  @service header_regexp svchost Host (?i)^(\\d+)\\.__IP__\\.[a-z0-9.-]+$
+  @service header_regexp svchost Host (?i)^(\d+)\.__IP__\.[a-z0-9.-]+$
   handle @service {
     reverse_proxy localhost:{re.svchost.1}
   }
@@ -267,39 +272,39 @@ ${authBlock}
 export function buildOverviewPage(config: GlobalConfig, serverName: string, themeColors: ThemeColors): string {
   const colors = themeColors;
 
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="${colors.background}"><title>${serverName}</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:${colors.background};min-height:100vh;color:${colors.foreground};padding:1.5rem;font-size:16px;line-height:1.6}.c{max-width:600px;margin:0 auto}h1{font-size:1.5rem;color:${colors.foreground};margin-bottom:.25rem}.sub{color:${colors.mutedForeground};font-size:1rem;margin-bottom:1.5rem}.card{background:${colors.card};border-radius:.5rem;padding:1.5rem;margin-bottom:1rem;border:2px solid ${colors.border}}.hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}.ttl{font-size:1rem;color:${colors.mutedForeground}}.ind{display:flex;align-items:center;gap:.5rem}.dot{width:10px;height:10px;border-radius:50%;background:${colors.success};animation:p 2s infinite}.dot.w{background:${colors.warning}}.dot.e{background:${colors.destructive};animation:none}@keyframes p{0%,100%{opacity:1}50%{opacity:.5}}#cd{font-size:2rem;font-weight:600;color:${colors.foreground}}.lbl{font-size:1rem;color:${colors.mutedForeground};margin-top:.25rem}.svcs{display:grid;gap:.75rem}.svc{display:flex;align-items:center;gap:1rem;background:${colors.card};border:2px solid ${colors.border};border-radius:.5rem;padding:1rem;min-height:60px;text-decoration:none;color:inherit;transition:background .15s}.svc:hover{background:${colors.muted}}.svc:focus{outline:3px solid ${colors.focus};outline-offset:2px}.svc.inactive{opacity:.5}.ico{width:44px;height:44px;border-radius:.375rem;display:flex;align-items:center;justify-content:center;font-size:1.25rem;background:${colors.muted}}.inf{flex:1}.nm{font-weight:600;font-size:1rem;color:${colors.foreground}}.ds{font-size:1rem;color:${colors.mutedForeground}}.sdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}.sdot.active{background:${colors.success}}.sdot.inactive{background:${colors.destructive}}</style></head><body><div class="c"><h1>${serverName}</h1><p class="sub">Devbox</p><div class="card"><div class="hdr"><span class="ttl">Auto-shutdown</span><div class="ind"><div id="d" class="dot" role="status" aria-label="Server status indicator"></div><span id="s">Active</span></div></div><div id="cd" aria-live="polite">--:--</div><div class="lbl">until idle shutdown</div></div><nav class="svcs" id="svcs" aria-label="Services"></nav></div><script>const token='${escapeSingleQuotedJS(config.services.accessToken)}';const d=document.getElementById('d'),s=document.getElementById('s'),cd=document.getElementById('cd'),svcsEl=document.getElementById('svcs');let r=-1,w=0;function f(x){if(x<0)return'--:--';return String(Math.floor(x/60)).padStart(2,'0')+':'+String(x%60).padStart(2,'0')}function up(){cd.textContent=f(r);d.className=w?'dot w':r<=0?'dot e':'dot';s.textContent=w?'Warning':r<=0?'Shutting down':'Active'}async function getStatus(){try{const x=await(await fetch(location.origin+'/api/status')).json();r=x.remaining||x.remaining_seconds||0;w=x.warn||x.warning_active;up()}catch{d.className='dot e';s.textContent='Error'}}async function getServices(){try{const svcs=await(await fetch(location.origin+'/api/services')).json();renderServices(svcs)}catch{}}function renderServices(svcs){svcsEl.innerHTML='';for(const svc of svcs){const url='https://devbox:'+encodeURIComponent(token)+'@'+new URL(svc.url).host+'/';const a=document.createElement('a');a.href=url;a.className='svc'+(svc.active?'':' inactive');a.innerHTML='<div class="ico" aria-hidden="true">'+getIcon(svc.name)+'</div><div class="inf"><div class="nm">'+esc(svc.name)+'</div><div class="ds">'+(svc.active?'Active':'Inactive')+(svc.port?' &middot; port '+svc.port:'')+'</div></div><div class="sdot '+(svc.active?'active':'inactive')+'"></div>';svcsEl.appendChild(a)}}function getIcon(name){const m={'Terminal':'$_'};return m[name]||'\\ud83c\\udf10'}function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}function t(){if(r>0){r--;up()}}getStatus();getServices();setInterval(getStatus,10000);setInterval(getServices,10000);setInterval(t,1000)</script></body></html>`;
+  return String.raw`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="${colors.background}"><title>${serverName}</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:${colors.background};min-height:100vh;color:${colors.foreground};padding:1.5rem;font-size:16px;line-height:1.6}.c{max-width:600px;margin:0 auto}h1{font-size:1.5rem;color:${colors.foreground};margin-bottom:.25rem}.sub{color:${colors.mutedForeground};font-size:1rem;margin-bottom:1.5rem}.card{background:${colors.card};border-radius:.5rem;padding:1.5rem;margin-bottom:1rem;border:2px solid ${colors.border}}.hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}.ttl{font-size:1rem;color:${colors.mutedForeground}}.ind{display:flex;align-items:center;gap:.5rem}.dot{width:10px;height:10px;border-radius:50%;background:${colors.success};animation:p 2s infinite}.dot.w{background:${colors.warning}}.dot.e{background:${colors.destructive};animation:none}@keyframes p{0%,100%{opacity:1}50%{opacity:.5}}#cd{font-size:2rem;font-weight:600;color:${colors.foreground}}.lbl{font-size:1rem;color:${colors.mutedForeground};margin-top:.25rem}.svcs{display:grid;gap:.75rem}.svc{display:flex;align-items:center;gap:1rem;background:${colors.card};border:2px solid ${colors.border};border-radius:.5rem;padding:1rem;min-height:60px;text-decoration:none;color:inherit;transition:background .15s}.svc:hover{background:${colors.muted}}.svc:focus{outline:3px solid ${colors.focus};outline-offset:2px}.svc.inactive{opacity:.5}.ico{width:44px;height:44px;border-radius:.375rem;display:flex;align-items:center;justify-content:center;font-size:1.25rem;background:${colors.muted}}.inf{flex:1}.nm{font-weight:600;font-size:1rem;color:${colors.foreground}}.ds{font-size:1rem;color:${colors.mutedForeground}}.sdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}.sdot.active{background:${colors.success}}.sdot.inactive{background:${colors.destructive}}</style></head><body><div class="c"><h1>${serverName}</h1><p class="sub">Devbox</p><div class="card"><div class="hdr"><span class="ttl">Auto-shutdown</span><div class="ind"><div id="d" class="dot" role="status" aria-label="Server status indicator"></div><span id="s">Active</span></div></div><div id="cd" aria-live="polite">--:--</div><div class="lbl">until idle shutdown</div></div><nav class="svcs" id="svcs" aria-label="Services"></nav></div><script>const token='${escapeSingleQuotedJS(config.services.accessToken)}';const d=document.getElementById('d'),s=document.getElementById('s'),cd=document.getElementById('cd'),svcsEl=document.getElementById('svcs');let r=-1,w=0;function f(x){if(x<0)return'--:--';return String(Math.floor(x/60)).padStart(2,'0')+':'+String(x%60).padStart(2,'0')}function up(){cd.textContent=f(r);d.className=w?'dot w':r<=0?'dot e':'dot';s.textContent=w?'Warning':r<=0?'Shutting down':'Active'}async function getStatus(){try{const x=await(await fetch(location.origin+'/api/status')).json();r=x.remaining||x.remaining_seconds||0;w=x.warn||x.warning_active;up()}catch{d.className='dot e';s.textContent='Error'}}async function getServices(){try{const svcs=await(await fetch(location.origin+'/api/services')).json();renderServices(svcs)}catch{}}function renderServices(svcs){svcsEl.innerHTML='';for(const svc of svcs){const url='https://devbox:'+encodeURIComponent(token)+'@'+new URL(svc.url).host+'/';const a=document.createElement('a');a.href=url;a.className='svc'+(svc.active?'':' inactive');a.innerHTML='<div class="ico" aria-hidden="true">'+getIcon(svc.name)+'</div><div class="inf"><div class="nm">'+esc(svc.name)+'</div><div class="ds">'+(svc.active?'Active':'Inactive')+(svc.port?' &middot; port '+svc.port:'')+'</div></div><div class="sdot '+(svc.active?'active':'inactive')+'"></div>';svcsEl.appendChild(a)}}function getIcon(name){const m={'Terminal':'$_'};return m[name]||'\ud83c\udf10'}function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}function t(){if(r>0){r--;up()}}getStatus();getServices();setInterval(getStatus,10000);setInterval(getServices,10000);setInterval(t,1000)</script></body></html>`;
 }
 
 // Default theme colors (dark theme)
 export const defaultThemeColors: ThemeColors = {
   background: '#0d0d0d',
-  foreground: '#f5f5f5',
-  card: '#171717',
   border: '#333333',
-  primary: '#6366f1',
-  muted: '#262626',
-  mutedForeground: '#a3a3a3',
-  success: '#22c55e',
-  warning: '#f59e0b',
+  card: '#171717',
   destructive: '#ef4444',
   focus: 'rgba(99,102,241,0.5)',
+  foreground: '#f5f5f5',
+  muted: '#262626',
+  mutedForeground: '#a3a3a3',
+  primary: '#6366f1',
+  success: '#22c55e',
+  warning: '#f59e0b',
 };
 
 export const defaultTerminalColors: TerminalColors = {
   black: '#0d0d0d',
-  red: '#ef4444',
-  green: '#22c55e',
-  yellow: '#f59e0b',
   blue: '#3b82f6',
-  magenta: '#a855f7',
-  cyan: '#06b6d4',
-  white: '#f5f5f5',
   brightBlack: '#404040',
-  brightRed: '#f87171',
-  brightGreen: '#4ade80',
-  brightYellow: '#fbbf24',
   brightBlue: '#60a5fa',
-  brightMagenta: '#c084fc',
   brightCyan: '#22d3ee',
+  brightGreen: '#4ade80',
+  brightMagenta: '#c084fc',
+  brightRed: '#f87171',
   brightWhite: '#ffffff',
+  brightYellow: '#fbbf24',
+  cyan: '#06b6d4',
+  green: '#22c55e',
+  magenta: '#a855f7',
+  red: '#ef4444',
+  white: '#f5f5f5',
+  yellow: '#f59e0b',
 };

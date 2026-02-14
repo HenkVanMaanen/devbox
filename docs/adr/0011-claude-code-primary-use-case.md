@@ -82,6 +82,7 @@ The UI prioritizes the happy path:
 ### General Remote Development
 
 Compete with Gitpod, GitHub Codespaces, etc.:
+
 - Larger market
 - But more competition
 - Less differentiation
@@ -92,6 +93,7 @@ Rejected because the market is crowded and requires more resources.
 ### Team/Enterprise Focus
 
 Multi-user features, shared environments:
+
 - Higher revenue potential
 - But requires backend (authentication, access control)
 - Contradicts zero-backend architecture
@@ -101,6 +103,7 @@ Rejected because it conflicts with core architectural decisions.
 ### No Specific Focus
 
 General-purpose tool for any development:
+
 - Maximum flexibility
 - But unclear value proposition
 - Harder to make design decisions

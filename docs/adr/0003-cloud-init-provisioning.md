@@ -61,6 +61,7 @@ The cloud-init generator in `cloudinit.js`:
 ### Ansible via Backend
 
 Would require:
+
 - A backend server to run Ansible
 - SSH key management
 - Waiting for server boot before running playbooks
@@ -70,6 +71,7 @@ Rejected because it contradicts the zero-backend architecture.
 ### Pre-Built Images
 
 Custom Hetzner snapshots with everything pre-installed:
+
 - Faster boot times
 - But requires maintaining images
 - Less flexible for per-server customization
@@ -79,6 +81,7 @@ May be worth exploring for common configurations in the future.
 ### SSH Scripts After Boot
 
 Run scripts via SSH after the server is accessible:
+
 - Maximum flexibility
 - But requires a backend to initiate SSH
 - Slower overall provisioning time

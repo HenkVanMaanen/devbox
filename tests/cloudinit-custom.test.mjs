@@ -74,12 +74,18 @@ describe('mergeCustomCloudInit', () => {
     const base = makeBaseConfig();
     const result = mergeCustomCloudInit(base, 'write_files:\n  - path: /etc/custom.conf\n    content: hello');
     const files = result.write_files;
-    assert.ok(files.some((f) => f.path === '/etc/custom.conf'), 'should include custom file');
+    assert.ok(
+      files.some((f) => f.path === '/etc/custom.conf'),
+      'should include custom file',
+    );
   });
 
   it('skips user write_files with conflicting paths', () => {
     const base = makeBaseConfig();
-    const result = mergeCustomCloudInit(base, 'write_files:\n  - path: /usr/local/bin/devbox-progress\n    content: hacked');
+    const result = mergeCustomCloudInit(
+      base,
+      'write_files:\n  - path: /usr/local/bin/devbox-progress\n    content: hacked',
+    );
     const files = result.write_files;
     // The conflicting entry should be skipped
     const progressFiles = files.filter((f) => f.path === '/usr/local/bin/devbox-progress');
@@ -89,7 +95,10 @@ describe('mergeCustomCloudInit', () => {
 
   it('ignores blocked keys (users, apt, package_update, package_upgrade)', () => {
     const base = makeBaseConfig();
-    const result = mergeCustomCloudInit(base, 'users:\n  - name: hacker\napt:\n  sources: {}\npackage_update: false\npackage_upgrade: false');
+    const result = mergeCustomCloudInit(
+      base,
+      'users:\n  - name: hacker\napt:\n  sources: {}\npackage_update: false\npackage_upgrade: false',
+    );
     // users should remain unchanged
     assert.deepStrictEqual(result.users, base.users, 'users should not be modified');
     assert.deepStrictEqual(result.apt, base.apt, 'apt should not be modified');
@@ -99,7 +108,10 @@ describe('mergeCustomCloudInit', () => {
 
   it('passes through extra top-level keys', () => {
     const base = makeBaseConfig();
-    const result = mergeCustomCloudInit(base, 'bootcmd:\n  - echo boot\nsnap:\n  commands:\n    - snap install something');
+    const result = mergeCustomCloudInit(
+      base,
+      'bootcmd:\n  - echo boot\nsnap:\n  commands:\n    - snap install something',
+    );
     assert.ok(Array.isArray(result.bootcmd), 'should include bootcmd');
     assert.ok(result.snap, 'should include snap');
   });

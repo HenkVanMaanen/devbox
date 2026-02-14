@@ -43,12 +43,12 @@ Adopt a **trusted user, trusted machine, untrusted network** threat model:
 
 ### Accepted Tradeoffs
 
-| Decision | Security Impact | UX Benefit |
-|----------|-----------------|------------|
-| Plain text localStorage | Credentials readable by extensions/malware | No password prompts, persistent config |
-| Tokens in URLs | Visible in history/logs | Simple auth, works with any HTTP client |
-| Credentials in cloud-init | Visible on server filesystem | Stateless provisioning, no secrets manager needed |
-| `unsafe-inline` for styles | Style injection possible | Dynamic styling (theme previews, progress bars) |
+| Decision                   | Security Impact                            | UX Benefit                                        |
+| -------------------------- | ------------------------------------------ | ------------------------------------------------- |
+| Plain text localStorage    | Credentials readable by extensions/malware | No password prompts, persistent config            |
+| Tokens in URLs             | Visible in history/logs                    | Simple auth, works with any HTTP client           |
+| Credentials in cloud-init  | Visible on server filesystem               | Stateless provisioning, no secrets manager needed |
+| `unsafe-inline` for styles | Style injection possible                   | Dynamic styling (theme previews, progress bars)   |
 
 ## Consequences
 

@@ -29,31 +29,22 @@ describe('cloud-init progress tracking', () => {
   const output = generateCloudInit('test-server', 'hcloud-test-token', minimalConfig);
 
   it('includes devbox-progress script in write_files', () => {
-    assert.ok(
-      output.includes('/usr/local/bin/devbox-progress'),
-      'should contain devbox-progress script path'
-    );
+    assert.ok(output.includes('/usr/local/bin/devbox-progress'), 'should contain devbox-progress script path');
   });
 
   it('embeds the Hetzner token in the progress script', () => {
-    assert.ok(
-      output.includes('hcloud-test-token'),
-      'should contain the Hetzner API token'
-    );
+    assert.ok(output.includes('hcloud-test-token'), 'should contain the Hetzner API token');
   });
 
   it('includes devbox-progress configuring in runcmd', () => {
     assert.ok(
       output.includes('/usr/local/bin/devbox-progress configuring'),
-      'should have configuring runcmd call with full path'
+      'should have configuring runcmd call with full path',
     );
   });
 
   it('includes devbox-progress ready as last runcmd', () => {
-    assert.ok(
-      output.includes('/usr/local/bin/devbox-progress ready'),
-      'should have ready runcmd call with full path'
-    );
+    assert.ok(output.includes('/usr/local/bin/devbox-progress ready'), 'should have ready runcmd call with full path');
     // Verify "ready" comes after "configuring"
     const configuringIdx = output.indexOf('/usr/local/bin/devbox-progress configuring');
     const readyIdx = output.indexOf('/usr/local/bin/devbox-progress ready');

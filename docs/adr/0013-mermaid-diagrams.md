@@ -51,17 +51,17 @@ Use Mermaid for all diagrams in documentation.
 
 ### Supported Diagram Types
 
-| Type | Use Case | Example |
-|------|----------|---------|
-| `flowchart` | Architecture, data flows | System components |
-| `sequenceDiagram` | API interactions | Request/response flows |
-| `classDiagram` | Object relationships | Module dependencies |
-| `stateDiagram` | State machines | UI states |
-| `erDiagram` | Data models | Database schemas |
+| Type              | Use Case                 | Example                |
+| ----------------- | ------------------------ | ---------------------- |
+| `flowchart`       | Architecture, data flows | System components      |
+| `sequenceDiagram` | API interactions         | Request/response flows |
+| `classDiagram`    | Object relationships     | Module dependencies    |
+| `stateDiagram`    | State machines           | UI states              |
+| `erDiagram`       | Data models              | Database schemas       |
 
 ### Syntax Example
 
-```markdown
+````markdown
 ```mermaid
 flowchart TD
     A[Start] --> B{Decision}
@@ -70,6 +70,7 @@ flowchart TD
     C --> E[End]
     D --> E
 ```
+````
 
 ### Style Guidelines
 

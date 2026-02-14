@@ -64,6 +64,7 @@ A standalone, pure TypeScript module with no Svelte dependency:
 ### Service Worker cache
 
 Full request-level caching via Service Worker:
+
 - More powerful (intercepts all fetches)
 - But significantly more complex to implement and debug
 - Overkill for 4 API endpoints
@@ -73,6 +74,7 @@ Rejected: too much complexity for the benefit.
 ### In-memory only (no localStorage)
 
 Cache in module-level variables, lost on reload:
+
 - Simpler implementation
 - But no benefit on page reload (still shows spinner)
 
@@ -81,6 +83,7 @@ Rejected: localStorage persistence is the main UX win.
 ### Time-based staleness (TTL)
 
 Skip API call if cache is fresh enough:
+
 - Reduces API calls
 - But adds complexity (what's the right TTL?) and risks showing truly stale data
 

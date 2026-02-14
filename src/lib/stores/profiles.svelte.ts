@@ -1,35 +1,45 @@
 // Profiles store using Svelte 5 runes
 
-import type { Profile, Profiles, GlobalConfig } from '$lib/types';
-import { load, save, clone, getNestedValue, uuid } from '$lib/utils/storage';
+import type { GlobalConfig, Profile, Profiles } from '$lib/types';
+
+import { clone, getNestedValue, load, save, uuid } from '$lib/utils/storage';
+
 import { configStore } from './config.svelte';
 
 function createProfilesStore() {
-  let profiles = $state<Profiles>(load('profiles') ?? {});
-  let defaultProfileId = $state<string | null>(load('defaultProfile'));
+  const profiles = $state<Profiles>(load('profiles') ?? {});
+  let defaultProfileId = $state<null | string>(load('defaultProfile'));
 
   return {
-    get profiles() {
-      return profiles;
-    },
-    get defaultProfileId() {
-      return defaultProfileId;
-    },
-    get profileList() {
-      return Object.values(profiles);
-    },
-
-    // Get a profile by ID
-    get(id: string): Profile | undefined {
-      return profiles[id];
-    },
-
     // Create a new profile
     create(name: string): string {
       const id = uuid();
       profiles[id] = { id, name, overrides: {} };
       this.save();
       return id;
+    },
+    get defaultProfileId() {
+      return defaultProfileId;
+    },
+    // Delete a profile
+    delete(id: string): void {
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+      delete profiles[id];
+      if (defaultProfileId === id) {
+        defaultProfileId = null;
+        save('defaultProfile', null);
+      }
+      this.save();
+    },
+
+    // Disable an override for a profile
+    disableOverride(profileId: string, path: string): void {
+      const profile = profiles[profileId];
+      if (!profile) return;
+
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+      delete profile.overrides[path];
+      this.save();
     },
 
     // Duplicate a profile
@@ -47,55 +57,23 @@ function createProfilesStore() {
       return id;
     },
 
-    // Update a profile
-    update(id: string, updates: Partial<Profile>): void {
-      const profile = profiles[id];
-      if (!profile) return;
-
-      Object.assign(profile, updates);
-      this.save();
-    },
-
-    // Delete a profile
-    delete(id: string): void {
-      delete profiles[id];
-      if (defaultProfileId === id) {
-        defaultProfileId = null;
-        save('defaultProfile', null);
-      }
-      this.save();
-    },
-
-    // Set default profile
-    setDefault(id: string | null): void {
-      defaultProfileId = id;
-      save('defaultProfile', id);
-    },
-
     // Enable an override for a profile
     enableOverride(profileId: string, path: string): void {
       const profile = profiles[profileId];
       if (!profile) return;
 
-      const globalValue = getNestedValue(
-        configStore.value as unknown as Record<string, unknown>,
-        path
-      );
+      const globalValue = getNestedValue(configStore.value as unknown as Record<string, unknown>, path);
       profile.overrides[path] = clone(globalValue);
       this.save();
     },
 
-    // Disable an override for a profile
-    disableOverride(profileId: string, path: string): void {
-      const profile = profiles[profileId];
-      if (!profile) return;
-
-      delete profile.overrides[path];
-      this.save();
+    // Get a profile by ID
+    get(id: string): Profile | undefined {
+      return profiles[id];
     },
 
     // Get merged config for a profile
-    getConfigForProfile(profileId?: string | null): GlobalConfig {
+    getConfigForProfile(profileId?: null | string): GlobalConfig {
       const baseConfig = clone(configStore.value);
       const id = profileId ?? defaultProfileId;
       if (!id) return baseConfig;
@@ -114,7 +92,7 @@ function createProfilesStore() {
           current = current[key] as Record<string, unknown>;
         }
 
-        const lastKey = keys[keys.length - 1];
+        const lastKey = keys.at(-1);
         if (lastKey !== undefined) {
           current[lastKey] = clone(value);
         }
@@ -123,9 +101,32 @@ function createProfilesStore() {
       return baseConfig;
     },
 
+    get profileList() {
+      return Object.values(profiles);
+    },
+
+    get profiles() {
+      return profiles;
+    },
+
     // Save to localStorage
     save(): void {
       save('profiles', profiles);
+    },
+
+    // Set default profile
+    setDefault(id: null | string): void {
+      defaultProfileId = id;
+      save('defaultProfile', id);
+    },
+
+    // Update a profile
+    update(id: string, updates: Partial<Profile>): void {
+      const profile = profiles[id];
+      if (!profile) return;
+
+      Object.assign(profile, updates);
+      this.save();
     },
   };
 }

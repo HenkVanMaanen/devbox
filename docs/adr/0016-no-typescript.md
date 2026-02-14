@@ -78,6 +78,7 @@ Consider adding TypeScript if:
 ### TypeScript
 
 Full static typing:
+
 - Better for large teams
 - Better for complex codebases
 - But adds build complexity
@@ -88,6 +89,7 @@ Rejected because simplicity is more valuable at current scale.
 ### JSDoc Type Annotations
 
 Type hints in comments:
+
 - No build step
 - IDE support via TypeScript language server
 - But verbose, not enforced
@@ -97,6 +99,7 @@ Could be added incrementally if needed.
 ### Flow
 
 Facebook's type checker:
+
 - Similar to TypeScript
 - But less popular, smaller ecosystem
 - Additional tooling required

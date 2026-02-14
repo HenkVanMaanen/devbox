@@ -39,14 +39,14 @@ flowchart LR
 
 ### Storage
 
-| Credential | Storage Location | Encryption | Justification |
-|------------|------------------|------------|---------------|
-| Hetzner API token | localStorage | None | User-controlled, trusted machine assumed |
-| Git credential | localStorage | None | Bootstrap credential for chezmoi/repo cloning |
-| SSH public keys | localStorage | N/A | Public data |
-| Access tokens | localStorage | None | Per-server, ephemeral |
-| Age key | localStorage | None | For chezmoi secret decryption |
-| ACME EAB keys | localStorage | None | Optional, user-provided |
+| Credential        | Storage Location | Encryption | Justification                                 |
+| ----------------- | ---------------- | ---------- | --------------------------------------------- |
+| Hetzner API token | localStorage     | None       | User-controlled, trusted machine assumed      |
+| Git credential    | localStorage     | None       | Bootstrap credential for chezmoi/repo cloning |
+| SSH public keys   | localStorage     | N/A        | Public data                                   |
+| Access tokens     | localStorage     | None       | Per-server, ephemeral                         |
+| Age key           | localStorage     | None       | For chezmoi secret decryption                 |
+| ACME EAB keys     | localStorage     | None       | Optional, user-provided                       |
 
 **Why no encryption at rest?**
 
@@ -76,12 +76,12 @@ https://devbox:TOKEN@terminal.example.com/
 
 **Exposure vectors:**
 
-| Vector | Risk | Mitigation |
-|--------|------|------------|
-| Browser history | Low | Ephemeral servers, tokens invalid after deletion |
-| Referrer header | Medium | Services are terminal endpoints, unlikely to have external links |
-| Server logs | Low | User controls the server |
-| Shoulder surfing | Low | Trusted machine assumption |
+| Vector           | Risk   | Mitigation                                                       |
+| ---------------- | ------ | ---------------------------------------------------------------- |
+| Browser history  | Low    | Ephemeral servers, tokens invalid after deletion                 |
+| Referrer header  | Medium | Services are terminal endpoints, unlikely to have external links |
+| Server logs      | Low    | User controls the server                                         |
+| Shoulder surfing | Low    | Trusted machine assumption                                       |
 
 **Why this approach?**
 
@@ -127,13 +127,12 @@ All user input embedded in cloud-init is escaped:
 ```javascript
 // Shell context (double-quoted strings)
 function shellEscape(s) {
-    return s.replace(/[\\"$`!]/g, '\\$&').replace(/\n/g, '');
+  return s.replace(/[\\"$`!]/g, '\\$&').replace(/\n/g, '');
 }
 
 // JavaScript string context (single-quoted)
 function escapeSingleQuotedJS(s) {
-    return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
-            .replace(/\n/g, '\\n').replace(/<\//g, '<\\/');
+  return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/<\//g, '<\\/');
 }
 ```
 
@@ -145,12 +144,12 @@ All dynamic content is escaped before rendering:
 
 ```javascript
 export function escapeHtml(str) {
-    return str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 ```
 
@@ -159,7 +158,9 @@ export function escapeHtml(str) {
 ### Content Security Policy
 
 ```html
-<meta http-equiv="Content-Security-Policy" content="
+<meta
+  http-equiv="Content-Security-Policy"
+  content="
     default-src 'none';
     script-src 'self';
     style-src 'self' 'unsafe-inline';
@@ -169,26 +170,29 @@ export function escapeHtml(str) {
     base-uri 'self';
     form-action 'self';
     frame-ancestors 'none';
-">
+"
+/>
 ```
 
-| Directive | Value | Purpose |
-|-----------|-------|---------|
-| `default-src` | `'none'` | Deny everything by default |
-| `script-src` | `'self'` | Only allow scripts from same origin (no inline) |
-| `style-src` | `'self' 'unsafe-inline'` | Allow own styles + dynamic inline styles |
-| `connect-src` | `'self' https://api.hetzner.cloud` | Restrict API calls |
-| `img-src` | `'self' data:` | Allow images + QR code data URIs |
-| `frame-ancestors` | `'none'` | Prevent clickjacking (cannot be embedded in iframes) |
+| Directive         | Value                              | Purpose                                              |
+| ----------------- | ---------------------------------- | ---------------------------------------------------- |
+| `default-src`     | `'none'`                           | Deny everything by default                           |
+| `script-src`      | `'self'`                           | Only allow scripts from same origin (no inline)      |
+| `style-src`       | `'self' 'unsafe-inline'`           | Allow own styles + dynamic inline styles             |
+| `connect-src`     | `'self' https://api.hetzner.cloud` | Restrict API calls                                   |
+| `img-src`         | `'self' data:`                     | Allow images + QR code data URIs                     |
+| `frame-ancestors` | `'none'`                           | Prevent clickjacking (cannot be embedded in iframes) |
 
 **Why `unsafe-inline` for styles?**
 
 Dynamic inline styles are required for:
+
 - Theme preview color swatches (dynamic background colors)
 - Progress bars (dynamic width percentages)
 - Combobox filtering (show/hide via display property)
 
 These cannot use CSS classes because the values are computed at runtime. The security impact is limited because:
+
 1. All user input is escaped before rendering
 2. Style injection alone cannot execute JavaScript
 3. The threat model assumes a trusted machine
@@ -196,7 +200,7 @@ These cannot use CSS classes because the values are computed at runtime. The sec
 **Additional Security Headers**
 
 ```html
-<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<meta http-equiv="X-Content-Type-Options" content="nosniff" />
 ```
 
 This prevents browsers from MIME-sniffing responses away from the declared content-type.
@@ -205,16 +209,16 @@ This prevents browsers from MIME-sniffing responses away from the declared conte
 
 ```javascript
 export function setNestedValue(obj, path, value) {
-    const keys = path.split('.');
-    const lastKey = keys.pop();
-    const target = keys.reduce((o, k) => {
-        if (k === '__proto__' || k === 'constructor' || k === 'prototype') return {};
-        if (!o[k]) o[k] = {};
-        return o[k];
-    }, obj);
+  const keys = path.split('.');
+  const lastKey = keys.pop();
+  const target = keys.reduce((o, k) => {
+    if (k === '__proto__' || k === 'constructor' || k === 'prototype') return {};
+    if (!o[k]) o[k] = {};
+    return o[k];
+  }, obj);
 
-    if (lastKey === '__proto__' || lastKey === 'constructor' || lastKey === 'prototype') return;
-    target[lastKey] = value;
+  if (lastKey === '__proto__' || lastKey === 'constructor' || lastKey === 'prototype') return;
+  target[lastKey] = value;
 }
 ```
 
@@ -224,7 +228,7 @@ export function setNestedValue(obj, path, value) {
 
 ```javascript
 if (!/^(https?:\/\/|git@)[\w.@:\/~-]+$/.test(value)) {
-    // Reject
+  // Reject
 }
 ```
 
@@ -261,12 +265,12 @@ Caddy obtains certificates automatically via ACME:
 
 ```javascript
 function verifyDomain(domain) {
-    // Only issue certs for domains matching expected pattern
-    // AND where the corresponding port is actively listening
-    const expected = new RegExp(`^(\\d+)\\.${baseDomain}$`);
-    const match = domain.match(expected);
-    if (!match) return false;
-    return isPortListening(parseInt(match[1]));
+  // Only issue certs for domains matching expected pattern
+  // AND where the corresponding port is actively listening
+  const expected = new RegExp(`^(\\d+)\\.${baseDomain}$`);
+  const match = domain.match(expected);
+  if (!match) return false;
+  return isPortListening(parseInt(match[1]));
 }
 ```
 
@@ -293,6 +297,7 @@ Browser extensions can read localStorage and intercept requests. This is an acce
 npm dependencies could be compromised.
 
 **Mitigations:**
+
 - Minimal dependencies (5 packages)
 - Lock file (`pnpm-lock.yaml`) pins versions
 - Regular updates and audits
@@ -300,6 +305,7 @@ npm dependencies could be compromised.
 ### DNS/Subdomain Security
 
 If using wildcard DNS for services:
+
 - Ensure DNS records are removed when servers are deleted
 - Consider using IP-based URLs instead of subdomains for ephemeral servers
 

@@ -45,6 +45,7 @@ Devbox runs entirely in the browser with no backend server. The browser makes AP
 ### Traditional Backend (Node.js/Python API)
 
 Would provide more flexibility but adds:
+
 - Server hosting costs
 - Security responsibility for user credentials
 - Operational complexity (monitoring, updates, backups)
@@ -57,6 +58,7 @@ Rejected because the added complexity wasn't worth it for the target use case of
 A minimal backend that just proxies API calls without storing credentials.
 
 Rejected because:
+
 - Still requires hosting infrastructure
 - Doesn't provide significant benefits over direct browser calls
 - Hetzner's API already supports CORS

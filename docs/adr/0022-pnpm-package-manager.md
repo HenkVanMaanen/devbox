@@ -69,13 +69,13 @@ pnpm install
 
 ### Common Commands
 
-| Task | Command |
-|------|---------|
-| Install dependencies | `pnpm install` |
-| Add a dependency | `pnpm add <package>` |
-| Add a dev dependency | `pnpm add -D <package>` |
-| Run a script | `pnpm run <script>` or `pnpm <script>` |
-| Update dependencies | `pnpm update` |
+| Task                 | Command                                |
+| -------------------- | -------------------------------------- |
+| Install dependencies | `pnpm install`                         |
+| Add a dependency     | `pnpm add <package>`                   |
+| Add a dev dependency | `pnpm add -D <package>`                |
+| Run a script         | `pnpm run <script>` or `pnpm <script>` |
+| Update dependencies  | `pnpm update`                          |
 
 ### CI/CD
 
@@ -107,6 +107,7 @@ Combined with `packageManager` in package.json, this ensures consistent environm
 ### npm
 
 Node.js built-in package manager:
+
 - Universal availability
 - But slower installs
 - Less strict (phantom dependencies possible)
@@ -117,6 +118,7 @@ Rejected because pnpm's strictness catches dependency issues.
 ### Yarn (Classic v1)
 
 Original Yarn:
+
 - Fast, reliable
 - But maintenance mode
 - node_modules same as npm
@@ -127,6 +129,7 @@ Rejected in favor of more modern alternatives.
 ### Yarn (Berry v2+)
 
 Modern Yarn with Plug'n'Play:
+
 - Zero-installs possible
 - But PnP can break tooling
 - Complex migration
@@ -137,6 +140,7 @@ Rejected because PnP compatibility issues outweigh benefits.
 ### Bun
 
 Fast JavaScript runtime with built-in package manager:
+
 - Extremely fast
 - But less mature
 - Not all npm packages compatible

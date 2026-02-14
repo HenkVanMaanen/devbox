@@ -79,6 +79,7 @@ export default defineConfig({
 ### Keep esbuild
 
 Continue with esbuild + community Svelte plugin:
+
 - Faster builds
 - But less mature Svelte integration
 - No official HMR support
@@ -89,6 +90,7 @@ Rejected because Svelte integration is critical.
 ### SvelteKit
 
 Full-featured Svelte meta-framework:
+
 - Built-in routing, SSR, adapters
 - But adds complexity we don't need
 - We're a simple SPA, not a multi-page app
@@ -99,6 +101,7 @@ Rejected because it's overkill for our use case (see also ADR 0004 on hash-based
 ### Rollup Directly
 
 Use Rollup without Vite:
+
 - More control over bundling
 - But no dev server built-in
 - More configuration required

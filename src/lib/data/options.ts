@@ -1,16 +1,16 @@
 // Shared dropdown options used across Config and ProfileEdit pages
 
 export const dnsServices = [
-  { value: 'sslip.io', label: 'sslip.io', description: 'Wildcard DNS for any IP' },
-  { value: 'nip.io', label: 'nip.io', description: 'Dead simple wildcard DNS' },
-  { value: 'traefik.me', label: 'traefik.me', description: 'Traefik project DNS (less common)' },
-  { value: 'custom', label: 'Custom domain', description: 'Your domain delegated to sslip.io' },
+  { description: 'Wildcard DNS for any IP', label: 'sslip.io', value: 'sslip.io' },
+  { description: 'Dead simple wildcard DNS', label: 'nip.io', value: 'nip.io' },
+  { description: 'Traefik project DNS (less common)', label: 'traefik.me', value: 'traefik.me' },
+  { description: 'Your domain delegated to sslip.io', label: 'Custom domain', value: 'custom' },
 ] as const;
 
 export const acmeProviders = [
-  { value: 'zerossl', label: 'ZeroSSL', description: 'No rate limits, recommended for testing' },
-  { value: 'letsencrypt', label: "Let's Encrypt", description: 'Most popular CA' },
-  { value: 'buypass', label: 'Buypass', description: 'Norwegian CA' },
-  { value: 'actalis', label: 'Actalis', description: 'Italian CA' },
-  { value: 'custom', label: 'Custom ACME', description: 'Self-hosted or other CA' },
+  { description: 'No rate limits, recommended for testing', label: 'ZeroSSL', value: 'zerossl' },
+  { description: 'Most popular CA', label: "Let's Encrypt", value: 'letsencrypt' },
+  { description: 'Norwegian CA', label: 'Buypass', value: 'buypass' },
+  { description: 'Italian CA', label: 'Actalis', value: 'actalis' },
+  { description: 'Self-hosted or other CA', label: 'Custom ACME', value: 'custom' },
 ] as const;

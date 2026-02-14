@@ -71,14 +71,14 @@ function createExampleStore() {
     },
 
     remove(id: string) {
-      items = items.filter(i => i.id !== id);
+      items = items.filter((i) => i.id !== id);
       this.save();
     },
 
     // Persistence
     save() {
       save('items', items);
-    }
+    },
   };
 }
 
@@ -87,14 +87,14 @@ export const exampleStore = createExampleStore();
 
 ### Store Files
 
-| Store | Purpose | Persisted |
-|-------|---------|-----------|
-| `config.svelte.ts` | Global configuration settings | Yes |
-| `profiles.svelte.ts` | Named config overrides | Yes |
-| `servers.svelte.ts` | Server list and status | No (fetched from API) |
-| `credentials.svelte.ts` | API tokens, SSH keys | Yes |
-| `theme.svelte.ts` | Current theme selection | Yes |
-| `toast.svelte.ts` | Notification queue | No |
+| Store                   | Purpose                       | Persisted             |
+| ----------------------- | ----------------------------- | --------------------- |
+| `config.svelte.ts`      | Global configuration settings | Yes                   |
+| `profiles.svelte.ts`    | Named config overrides        | Yes                   |
+| `servers.svelte.ts`     | Server list and status        | No (fetched from API) |
+| `credentials.svelte.ts` | API tokens, SSH keys          | Yes                   |
+| `theme.svelte.ts`       | Current theme selection       | Yes                   |
+| `toast.svelte.ts`       | Notification queue            | No                    |
 
 ### Usage in Components
 
@@ -110,9 +110,7 @@ export const exampleStore = createExampleStore();
   let profiles = $derived(profilesStore.profileList);
 </script>
 
-<select value={serverType} onchange={(e) => configStore.set('hetzner.serverType', e.target.value)}>
-  ...
-</select>
+<select value={serverType} onchange={(e) => configStore.set('hetzner.serverType', e.target.value)}> ... </select>
 ```
 
 ### Derived State
@@ -179,8 +177,8 @@ Use getters for values that should be computed on access:
 ```typescript
 return {
   get profileList() {
-    return Object.values(profiles);  // Fresh array each time
-  }
+    return Object.values(profiles); // Fresh array each time
+  },
 };
 ```
 
@@ -189,6 +187,7 @@ return {
 ### Svelte 4 Stores
 
 Traditional `writable`/`readable` stores:
+
 - More familiar to existing Svelte devs
 - But being phased out in Svelte 5
 - Less intuitive than runes
@@ -199,6 +198,7 @@ Rejected because runes are the future of Svelte.
 ### External State Library (Zustand, Jotai)
 
 Framework-agnostic state management:
+
 - Works across frameworks
 - But adds dependencies
 - Doesn't integrate as well with Svelte
@@ -209,6 +209,7 @@ Rejected because Svelte's built-in solution is sufficient.
 ### Context API
 
 Svelte's context for dependency injection:
+
 - Good for component trees
 - But awkward for global state
 - Requires provider components
@@ -219,6 +220,7 @@ Rejected for global state; may use for component-scoped state later.
 ### Redux Pattern
 
 Actions, reducers, immutable updates:
+
 - Predictable state changes
 - But verbose boilerplate
 - Overkill for small app

@@ -1,10 +1,11 @@
 // Toast notifications store
 
 import type { Toast } from '$lib/types';
+
 import { uuid } from '$lib/utils/storage';
 
 function createToastStore() {
-  let toasts = $state<Toast[]>([]);
+  const toasts = $state<Toast[]>([]);
 
   function add(message: string, type: Toast['type'], duration = 3000): void {
     const id = uuid();
@@ -23,14 +24,6 @@ function createToastStore() {
   }
 
   return {
-    get toasts() {
-      return toasts;
-    },
-
-    success(message: string, duration?: number): void {
-      add(message, 'success', duration);
-    },
-
     error(message: string, duration?: number): void {
       add(message, 'error', duration ?? 5000);
     },
@@ -40,6 +33,14 @@ function createToastStore() {
     },
 
     remove,
+
+    success(message: string, duration?: number): void {
+      add(message, 'success', duration);
+    },
+
+    get toasts() {
+      return toasts;
+    },
   };
 }
 

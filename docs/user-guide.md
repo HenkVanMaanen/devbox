@@ -40,11 +40,11 @@ Profiles let you override specific global settings for different projects or use
 
 **Example profiles:**
 
-| Profile | Purpose | Overrides |
-|---------|---------|-----------|
-| `eu-server` | European location | `hetzner.location: "fsn1"` |
-| `heavy` | Resource-intensive work | `hetzner.serverType: "cx42"` |
-| `long-running` | Extended sessions | `autoDelete.timeoutMinutes: 480` |
+| Profile        | Purpose                 | Overrides                        |
+| -------------- | ----------------------- | -------------------------------- |
+| `eu-server`    | European location       | `hetzner.location: "fsn1"`       |
+| `heavy`        | Resource-intensive work | `hetzner.serverType: "cx42"`     |
+| `long-running` | Extended sessions       | `autoDelete.timeoutMinutes: 480` |
 
 ### Creating a Profile
 
@@ -152,11 +152,11 @@ Useful to avoid forgetting to delete servers.
 
 ## Keyboard Shortcuts
 
-| Key | Action |
-|-----|--------|
-| `Ctrl+Enter` | Submit current form |
-| `Escape` | Close modal |
-| `Tab` | Navigate between fields |
+| Key          | Action                  |
+| ------------ | ----------------------- |
+| `Ctrl+Enter` | Submit current form     |
+| `Escape`     | Close modal             |
+| `Tab`        | Navigate between fields |
 
 ## Troubleshooting
 

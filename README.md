@@ -56,15 +56,15 @@ pnpm run dev
 
 ## Tech Stack
 
-| Component | Technology |
-|-----------|------------|
-| Framework | Svelte 5 |
-| Language | TypeScript (strict) |
-| Styling | Tailwind CSS v4 |
-| Build | Vite |
-| Testing | Node.js native test runner |
-| Package Manager | pnpm |
-| Deployment | GitHub Pages |
+| Component       | Technology                 |
+| --------------- | -------------------------- |
+| Framework       | Svelte 5                   |
+| Language        | TypeScript (strict)        |
+| Styling         | Tailwind CSS v4            |
+| Build           | Vite                       |
+| Testing         | Node.js native test runner |
+| Package Manager | pnpm                       |
+| Deployment      | GitHub Pages               |
 
 ## Development
 

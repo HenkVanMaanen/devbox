@@ -91,6 +91,7 @@ src/
 ### React
 
 Most popular framework:
+
 - Large ecosystem and community
 - But heavier runtime (~40KB)
 - JSX less intuitive than Svelte templates
@@ -101,6 +102,7 @@ Rejected due to bundle size and complexity.
 ### Vue 3
 
 Similar reactive model:
+
 - Composition API is powerful
 - But larger runtime than Svelte
 - Less seamless TypeScript integration
@@ -111,6 +113,7 @@ Rejected because Svelte's compilation model is more aligned with our goals.
 ### Solid.js
 
 Similar compilation approach:
+
 - Very fast, small runtime
 - But smaller community
 - Less mature tooling
@@ -121,6 +124,7 @@ Rejected due to ecosystem maturity.
 ### Keep Vanilla JS
 
 Continue without a framework:
+
 - No dependencies
 - But increasingly difficult to maintain
 - Manual state management is error-prone

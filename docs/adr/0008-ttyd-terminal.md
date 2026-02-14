@@ -81,6 +81,7 @@ ttyd supports xterm.js themes. Devbox generates theme configuration that matches
 ### Wetty
 
 Node.js web terminal:
+
 - More resource-heavy (Node.js runtime)
 - Similar functionality to ttyd
 - Less commonly used
@@ -90,6 +91,7 @@ Rejected because ttyd is lighter and sufficient.
 ### GoTTY
 
 Go-based terminal sharing:
+
 - Similar to ttyd but less actively maintained
 - Fewer configuration options
 
@@ -98,6 +100,7 @@ Rejected for lower activity and fewer features.
 ### code-server (VS Code in browser)
 
 Full IDE with integrated terminal:
+
 - Much heavier resource usage
 - More complex setup
 - Includes features we don't need
@@ -107,6 +110,7 @@ Rejected because Claude Code is the primary interface, not VS Code. ttyd provide
 ### Custom xterm.js Solution
 
 Build a custom terminal backend:
+
 - Maximum control
 - But significant development effort
 - Reinventing the wheel

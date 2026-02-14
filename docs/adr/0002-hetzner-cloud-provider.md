@@ -49,6 +49,7 @@ The architecture allows adding additional providers. Each would require:
 3. Provider-specific configuration options
 
 Likely candidates for future support:
+
 - DigitalOcean (similar API simplicity)
 - Vultr (good value)
 - AWS EC2 (enterprise users)
@@ -58,6 +59,7 @@ Likely candidates for future support:
 ### AWS EC2
 
 Most popular but:
+
 - More expensive for dev workloads
 - Complex IAM and networking setup
 - Overkill for ephemeral dev environments
@@ -65,6 +67,7 @@ Most popular but:
 ### DigitalOcean
 
 Good alternative, similar simplicity to Hetzner:
+
 - Slightly more expensive
 - Better US presence
 - Could be added as a second provider

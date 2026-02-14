@@ -22,7 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history and tags
+          fetch-depth: 0 # Fetch all history and tags
 
       - uses: pnpm/action-setup@v4
 
@@ -39,9 +39,9 @@ jobs:
           VERSION=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "dev")
           echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
 
-      - run: pnpm run build
+      - run: pnpm check
 
-      - run: pnpm test
+      - run: pnpm run build
 
       - uses: actions/configure-pages@v5
 

@@ -40,30 +40,30 @@ flowchart TB
 
 ### Core Modules
 
-| Module | Responsibility |
-|--------|----------------|
-| `src/App.svelte` | Root component, routing, layout |
-| `src/main.ts` | Entry point, mounts Svelte app |
+| Module                       | Responsibility                             |
+| ---------------------------- | ------------------------------------------ |
+| `src/App.svelte`             | Root component, routing, layout            |
+| `src/main.ts`                | Entry point, mounts Svelte app             |
 | `src/lib/stores/*.svelte.ts` | Reactive state stores using Svelte 5 runes |
-| `src/lib/api/hetzner.ts` | Hetzner Cloud API client |
-| `src/lib/utils/storage.ts` | localStorage wrapper |
+| `src/lib/api/hetzner.ts`     | Hetzner Cloud API client                   |
+| `src/lib/utils/storage.ts`   | localStorage wrapper                       |
 
 ### UI Components
 
-| Module | Responsibility |
-|--------|----------------|
-| `src/pages/*.svelte` | Page components (Dashboard, Config, Credentials, etc.) |
-| `src/components/*.svelte` | Reusable UI components (Nav, ServerCard, etc.) |
-| `src/components/ui/*.svelte` | Base UI components (Button, Card, Input, Modal) |
+| Module                       | Responsibility                                         |
+| ---------------------------- | ------------------------------------------------------ |
+| `src/pages/*.svelte`         | Page components (Dashboard, Config, Credentials, etc.) |
+| `src/components/*.svelte`    | Reusable UI components (Nav, ServerCard, etc.)         |
+| `src/components/ui/*.svelte` | Base UI components (Button, Card, Input, Modal)        |
 
 ### Generation Modules
 
-| Module | Responsibility |
-|--------|----------------|
-| `src/lib/utils/cloudinit.ts` | Cloud-init YAML generation engine |
+| Module                                | Responsibility                             |
+| ------------------------------------- | ------------------------------------------ |
+| `src/lib/utils/cloudinit.ts`          | Cloud-init YAML generation engine          |
 | `src/lib/utils/cloudinit-builders.ts` | Helper functions for cloud-init components |
-| `src/lib/utils/names.ts` | Funny alliterative server name generator |
-| `src/lib/utils/qrcode.ts` | QR code generation |
+| `src/lib/utils/names.ts`              | Funny alliterative server name generator   |
+| `src/lib/utils/qrcode.ts`             | QR code generation                         |
 
 ## Data Flow
 

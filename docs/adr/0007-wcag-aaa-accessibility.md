@@ -75,7 +75,9 @@ All themes in `themes.js` define colors that meet 7:1 contrast:
 All interactive elements have minimum dimensions:
 
 ```css
-button, a, input {
+button,
+a,
+input {
   min-height: 44px;
   min-width: 44px;
 }
@@ -85,7 +87,9 @@ button, a, input {
 
 ```css
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
@@ -97,6 +101,7 @@ button, a, input {
 ### WCAG AA Only
 
 Standard compliance level:
+
 - More design flexibility
 - But excludes users with more severe impairments
 - Less differentiation from other apps
@@ -106,6 +111,7 @@ Rejected because accessibility is a core value, and the constraints are manageab
 ### No Specific Target
 
 Design by feel without formal compliance:
+
 - Maximum creative freedom
 - But inconsistent accessibility
 - May exclude users unintentionally

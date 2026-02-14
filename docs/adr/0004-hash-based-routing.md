@@ -56,6 +56,7 @@ window.addEventListener('hashchange', () => {
 ```
 
 Routes are simple string matching:
+
 - `#/` or empty → Dashboard
 - `#/profiles` → Profiles list
 - `#/profile/edit/:id` → Profile editor
@@ -68,6 +69,7 @@ Routes are simple string matching:
 ### History API (pushState)
 
 Cleaner URLs like `/profiles`:
+
 - Requires server configuration to rewrite all paths to `index.html`
 - GitHub Pages doesn't support this without hacks (404.html redirect)
 - More complex implementation
@@ -77,6 +79,7 @@ Rejected because GitHub Pages deployment is a priority.
 ### No Routing (Single View)
 
 Everything on one page with show/hide:
+
 - Simpler implementation
 - But loses bookmarkability and browser back/forward
 - Poor UX for an app with multiple distinct views
