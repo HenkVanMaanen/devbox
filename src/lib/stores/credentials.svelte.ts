@@ -1,10 +1,12 @@
 // Credentials store for Hetzner API token
 
+import { z } from 'zod';
+
 import * as hetzner from '$lib/api/hetzner';
-import { load, remove, save } from '$lib/utils/storage';
+import { loadValidated, remove, save } from '$lib/utils/storage';
 
 function createCredentialsStore() {
-  let token = $state<string>(load('hetznerToken') ?? '');
+  let token = $state<string>(loadValidated('hetznerToken', z.string()) ?? '');
   let validating = $state(false);
 
   return {

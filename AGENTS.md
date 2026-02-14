@@ -35,6 +35,7 @@ Read these files first for context:
 
 - **Framework**: Svelte 5 with runes
 - **Language**: TypeScript (strict mode)
+- **Validation**: Zod (runtime validation for localStorage, API responses, config import)
 - **Build tool**: Vite 6
 - **CSS**: Tailwind CSS v4
 - **Package manager**: pnpm

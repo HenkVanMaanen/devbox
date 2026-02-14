@@ -87,7 +87,8 @@
     "WCAG",
     "Wetty",
     "xerus",
-    "zerossl"
+    "zerossl",
+    "zod"
   ],
   "dictionaries": ["typescript", "html", "css", "node", "bash"]
 }

@@ -1,11 +1,12 @@
 // Servers store using Svelte 5 runes
 
 import { SvelteMap } from 'svelte/reactivity';
+import { z } from 'zod';
 
 import type { Image, Location, Server, ServerType } from '$lib/types';
 
 import * as hetzner from '$lib/api/hetzner';
-import { load, save } from '$lib/utils/storage';
+import { loadValidated, save } from '$lib/utils/storage';
 import { backgroundRefresh, CACHE_KEYS, clearSwrCache, peekCache, swrFetch } from '$lib/utils/swr-cache';
 
 const filterDevbox = (allServers: Server[]): Server[] => allServers.filter((s) => s.labels['managed'] === 'devbox');
@@ -25,7 +26,9 @@ function createServersStore() {
   let error = $state<null | string>(null);
 
   // Server tokens stored separately (not visible in Hetzner API)
-  const serverTokens = $state<Record<string, string>>(load('serverTokens') ?? {});
+  const serverTokens = $state<Record<string, string>>(
+    loadValidated('serverTokens', z.record(z.string(), z.string())) ?? {},
+  );
 
   // Progress polling timers
   const pollingTimers = new SvelteMap<

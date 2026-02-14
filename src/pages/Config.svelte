@@ -1,5 +1,7 @@
 <script lang="ts">
-  import type { GlobalConfig, Profiles } from '$lib/types';
+  import { z } from 'zod';
+
+  import type { GlobalConfig } from '$lib/types';
 
   import ConfigForm from '$components/ConfigForm.svelte';
   import FloatingActions from '$components/FloatingActions.svelte';
@@ -11,7 +13,18 @@
   import { serversStore } from '$lib/stores/servers.svelte';
   import { themeStore } from '$lib/stores/theme.svelte';
   import { toast } from '$lib/stores/toast.svelte';
+  import { globalConfigSchema, profilesSchema } from '$lib/types';
   import { clone } from '$lib/utils/storage';
+
+  const importSchema = z.object({
+    config: globalConfigSchema.partial(),
+    defaultProfileId: z.string().optional(),
+    exportedAt: z.string().optional(),
+    hetznerToken: z.string().optional(),
+    profiles: profilesSchema.optional(),
+    serverTokens: z.record(z.string(), z.string()).optional(),
+    theme: z.string().optional(),
+  });
 
   // Snapshot for dirty tracking
   let snapshot = $state<GlobalConfig>(clone(configStore.value));
@@ -105,23 +118,25 @@
 
     void file.text().then((text) => {
       try {
-        const data = JSON.parse(text) as Record<string, unknown>;
+        const parsed: unknown = JSON.parse(text);
+        const result = importSchema.safeParse(parsed);
 
-        const rawConfig = data['config'];
-        if (!rawConfig) {
-          toast.error('Invalid config file: missing config');
+        if (!result.success) {
+          const fieldErrors = result.error.issues.map((i) => i.path.join('.')).join(', ');
+          toast.error(`Invalid config file: ${fieldErrors}`);
           return;
         }
 
+        const data = result.data;
+
         // Import config (merge with defaults to handle missing fields)
-        configStore.value = { ...configStore.value, ...(rawConfig as Partial<GlobalConfig>) } as GlobalConfig;
+        configStore.value = { ...configStore.value, ...data.config } as GlobalConfig;
         configStore.save();
         snapshot = clone(configStore.value);
 
         // Import profiles if present
-        if (data['profiles']) {
-          const profiles = data['profiles'] as Profiles;
-          for (const [id, profile] of Object.entries(profiles)) {
+        if (data.profiles) {
+          for (const [id, profile] of Object.entries(data.profiles)) {
             if (!profilesStore.get(id)) {
               profilesStore.profiles[id] = profile;
             }
@@ -129,25 +144,24 @@
           profilesStore.save();
         }
 
-        const defaultProfileId = data['defaultProfileId'] as string | undefined;
-        if (defaultProfileId) {
-          profilesStore.setDefault(defaultProfileId);
+        if (data.defaultProfileId) {
+          profilesStore.setDefault(data.defaultProfileId);
         }
 
         // Import Hetzner token if present
-        if (data['hetznerToken']) {
-          credentialsStore.token = data['hetznerToken'] as string;
+        if (data.hetznerToken) {
+          credentialsStore.token = data.hetznerToken;
           credentialsStore.save();
         }
 
         // Import theme if present
-        if (data['theme']) {
-          themeStore.setTheme(data['theme'] as string);
+        if (data.theme) {
+          themeStore.setTheme(data.theme);
         }
 
         // Import server tokens if present
-        if (data['serverTokens']) {
-          for (const [name, token] of Object.entries(data['serverTokens'] as Record<string, string>)) {
+        if (data.serverTokens) {
+          for (const [name, token] of Object.entries(data.serverTokens)) {
             serversStore.saveServerToken(name, token);
           }
         }

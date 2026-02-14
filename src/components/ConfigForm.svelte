@@ -4,7 +4,7 @@
   import Card from '$components/ui/Card.svelte';
   import { acmeProviders, dnsServices } from '$lib/data/options';
   import { serversStore } from '$lib/stores/servers.svelte';
-  import { extractSSHKeyName, validateSSHKey } from '$lib/utils/validation';
+  import { extractSSHKeyName, sshPublicKeySchema } from '$lib/utils/validation';
 
   interface Props {
     // For getting and setting values
@@ -37,8 +37,8 @@
 
   $effect(() => {
     if (newSSHKeyPubKey.trim()) {
-      const result = validateSSHKey(newSSHKeyPubKey);
-      sshKeyError = result.error ?? '';
+      const result = sshPublicKeySchema.safeParse(newSSHKeyPubKey);
+      sshKeyError = result.success ? '' : (result.error.issues[0]?.message ?? '');
     } else {
       sshKeyError = '';
     }
@@ -49,9 +49,9 @@
       notify('Please enter a public key', 'error');
       return;
     }
-    const validation = validateSSHKey(newSSHKeyPubKey);
-    if (!validation.valid) {
-      notify(validation.error ?? 'Invalid SSH key', 'error');
+    const validation = sshPublicKeySchema.safeParse(newSSHKeyPubKey);
+    if (!validation.success) {
+      notify(validation.error.issues[0]?.message ?? 'Invalid SSH key', 'error');
       return;
     }
     let name = newSSHKeyName.trim();

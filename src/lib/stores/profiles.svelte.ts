@@ -1,14 +1,17 @@
 // Profiles store using Svelte 5 runes
 
+import { z } from 'zod';
+
 import type { GlobalConfig, Profile, Profiles } from '$lib/types';
 
-import { clone, getNestedValue, load, save, uuid } from '$lib/utils/storage';
+import { profilesSchema } from '$lib/types';
+import { clone, getNestedValue, loadValidated, save, uuid } from '$lib/utils/storage';
 
 import { configStore } from './config.svelte';
 
 function createProfilesStore() {
-  const profiles = $state<Profiles>(load('profiles') ?? {});
-  let defaultProfileId = $state<null | string>(load('defaultProfile'));
+  const profiles = $state<Profiles>(loadValidated('profiles', profilesSchema) ?? {});
+  let defaultProfileId = $state<null | string>(loadValidated('defaultProfile', z.string()));
 
   return {
     // Create a new profile

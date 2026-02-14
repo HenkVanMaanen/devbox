@@ -1,143 +1,177 @@
-// Core type definitions for Devbox
+// Core type definitions for Devbox — Zod schemas + inferred types
 
-export interface AutoDeleteConfig {
-  enabled: boolean;
-  timeoutMinutes: number;
-  warningMinutes: number;
-}
+import { z } from 'zod';
 
-export interface ChezmoiConfig {
-  ageKey: string;
-  repoUrl: string;
-}
+export const autoDeleteConfigSchema = z.object({
+  enabled: z.boolean(),
+  timeoutMinutes: z.number(),
+  warningMinutes: z.number(),
+});
+export type AutoDeleteConfig = z.infer<typeof autoDeleteConfigSchema>;
 
-export interface CustomCloudInitConfig {
-  mode: 'merge' | 'replace';
-  yaml: string;
-}
+export const chezmoiConfigSchema = z.object({
+  ageKey: z.string(),
+  repoUrl: z.string(),
+});
+export type ChezmoiConfig = z.infer<typeof chezmoiConfigSchema>;
 
-export interface GitCredential {
-  host: string;
-  token: string;
-  username: string;
-}
+export const customCloudInitConfigSchema = z.object({
+  mode: z.enum(['merge', 'replace']),
+  yaml: z.string(),
+});
+export type CustomCloudInitConfig = z.infer<typeof customCloudInitConfigSchema>;
 
-export interface GlobalConfig {
-  autoDelete: AutoDeleteConfig;
-  chezmoi: ChezmoiConfig;
-  customCloudInit: CustomCloudInitConfig;
-  git: {
-    credential: GitCredential;
-  };
-  hetzner: HetznerConfig;
-  services: ServicesConfig;
-  ssh: {
-    keys: SSHKey[];
-  };
-}
+export const gitCredentialSchema = z.object({
+  host: z.string(),
+  token: z.string(),
+  username: z.string(),
+});
+export type GitCredential = z.infer<typeof gitCredentialSchema>;
 
-export interface HetznerConfig {
-  baseImage: string;
-  location: string;
-  serverType: string;
-}
+export const sshKeySchema = z.object({
+  name: z.string(),
+  pubKey: z.string(),
+});
+export type SSHKey = z.infer<typeof sshKeySchema>;
 
-export interface Image {
-  description: string;
-  id: number;
-  name: string;
-  os_flavor: string;
-  os_version: string;
-  type: 'app' | 'backup' | 'snapshot' | 'system';
-}
+export const hetznerConfigSchema = z.object({
+  baseImage: z.string(),
+  location: z.string(),
+  serverType: z.string(),
+});
+export type HetznerConfig = z.infer<typeof hetznerConfigSchema>;
 
-export interface Location {
-  city: string;
-  country: string;
-  description: string;
-  id: number;
-  name: string;
-}
+export const servicesConfigSchema = z.object({
+  accessToken: z.string(),
+  acmeEmail: z.string(),
+  acmeProvider: z.enum(['actalis', 'buypass', 'custom', 'letsencrypt', 'zerossl']),
+  actalisEabKey: z.string(),
+  actalisEabKeyId: z.string(),
+  customAcmeUrl: z.string(),
+  customDnsDomain: z.string(),
+  customEabKey: z.string(),
+  customEabKeyId: z.string(),
+  dnsService: z.enum(['custom', 'nip.io', 'sslip.io', 'traefik.me']),
+  zerosslEabKey: z.string(),
+  zerosslEabKeyId: z.string(),
+});
+export type ServicesConfig = z.infer<typeof servicesConfigSchema>;
 
-export interface Profile {
-  id: string;
-  name: string;
-  overrides: Record<string, unknown>;
-}
+export const globalConfigSchema = z.object({
+  autoDelete: autoDeleteConfigSchema,
+  chezmoi: chezmoiConfigSchema,
+  customCloudInit: customCloudInitConfigSchema,
+  git: z.object({
+    credential: gitCredentialSchema,
+  }),
+  hetzner: hetznerConfigSchema,
+  services: servicesConfigSchema,
+  ssh: z.object({
+    keys: z.array(sshKeySchema),
+  }),
+});
+export type GlobalConfig = z.infer<typeof globalConfigSchema>;
 
-export type Profiles = Record<string, Profile>;
+// API response schemas use .loose() to allow extra fields from Hetzner API
+export const imageSchema = z
+  .object({
+    description: z.string(),
+    id: z.number(),
+    name: z.string(),
+    os_flavor: z.string(),
+    os_version: z.string(),
+    type: z.enum(['app', 'backup', 'snapshot', 'system']),
+  })
+  .loose();
+export type Image = z.infer<typeof imageSchema>;
 
-export interface Server {
-  created: string;
-  datacenter: {
-    location: {
-      city: string;
-      country: string;
-    };
-    name: string;
-  };
-  id: number;
-  labels: Record<string, string>;
-  name: string;
-  public_net: {
-    ipv4: { ip: string };
-    ipv6: { ip: string };
-  };
-  server_type: {
-    cores: number;
-    description: string;
-    disk: number;
-    memory: number;
-    name: string;
-  };
-  status:
-    | 'deleting'
-    | 'initializing'
-    | 'migrating'
-    | 'off'
-    | 'rebuilding'
-    | 'running'
-    | 'starting'
-    | 'stopping'
-    | 'unknown';
-}
+export const locationSchema = z
+  .object({
+    city: z.string(),
+    country: z.string(),
+    description: z.string(),
+    id: z.number(),
+    name: z.string(),
+  })
+  .loose();
+export type Location = z.infer<typeof locationSchema>;
 
-export interface ServerType {
-  cores: number;
-  description: string;
-  disk: number;
-  id: number;
-  memory: number;
-  name: string;
-  prices: {
-    location: string;
-    price_hourly: { gross: string };
-    price_monthly: { gross: string };
-  }[];
-}
+export const profileSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  overrides: z.record(z.string(), z.unknown()),
+});
+export type Profile = z.infer<typeof profileSchema>;
 
-export interface ServicesConfig {
-  accessToken: string;
-  acmeEmail: string;
-  acmeProvider: 'actalis' | 'buypass' | 'custom' | 'letsencrypt' | 'zerossl';
-  actalisEabKey: string;
-  actalisEabKeyId: string;
-  customAcmeUrl: string;
-  customDnsDomain: string;
-  customEabKey: string;
-  customEabKeyId: string;
-  dnsService: 'custom' | 'nip.io' | 'sslip.io' | 'traefik.me';
-  zerosslEabKey: string;
-  zerosslEabKeyId: string;
-}
+export const profilesSchema = z.record(z.string(), profileSchema);
+export type Profiles = z.infer<typeof profilesSchema>;
 
-export interface SSHKey {
-  name: string;
-  pubKey: string;
-}
+export const serverSchema = z
+  .object({
+    created: z.string(),
+    datacenter: z
+      .object({
+        location: z.object({ city: z.string(), country: z.string() }).loose(),
+        name: z.string(),
+      })
+      .loose(),
+    id: z.number(),
+    labels: z.record(z.string(), z.string()),
+    name: z.string(),
+    public_net: z
+      .object({
+        ipv4: z.object({ ip: z.string() }).loose(),
+        ipv6: z.object({ ip: z.string() }).loose(),
+      })
+      .loose(),
+    server_type: z
+      .object({
+        cores: z.number(),
+        description: z.string(),
+        disk: z.number(),
+        memory: z.number(),
+        name: z.string(),
+      })
+      .loose(),
+    status: z.enum([
+      'deleting',
+      'initializing',
+      'migrating',
+      'off',
+      'rebuilding',
+      'running',
+      'starting',
+      'stopping',
+      'unknown',
+    ]),
+  })
+  .loose();
+export type Server = z.infer<typeof serverSchema>;
 
-export interface Toast {
-  id: string;
-  message: string;
-  type: 'error' | 'info' | 'success';
-}
+export const serverTypeSchema = z
+  .object({
+    cores: z.number(),
+    description: z.string(),
+    disk: z.number(),
+    id: z.number(),
+    memory: z.number(),
+    name: z.string(),
+    prices: z.array(
+      z
+        .object({
+          location: z.string(),
+          price_hourly: z.object({ gross: z.string() }).loose(),
+          price_monthly: z.object({ gross: z.string() }).loose(),
+        })
+        .loose(),
+    ),
+  })
+  .loose();
+export type ServerType = z.infer<typeof serverTypeSchema>;
+
+export const toastSchema = z.object({
+  id: z.string(),
+  message: z.string(),
+  type: z.enum(['error', 'info', 'success']),
+});
+export type Toast = z.infer<typeof toastSchema>;

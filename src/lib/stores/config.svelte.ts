@@ -2,6 +2,7 @@
 
 import type { GlobalConfig } from '$lib/types';
 
+import { globalConfigSchema } from '$lib/types';
 import { clone, deepMerge, getNestedValue, load, save, setNestedValue, uuid } from '$lib/utils/storage';
 
 const DEFAULT_CONFIG: GlobalConfig = {
@@ -46,8 +47,7 @@ const DEFAULT_CONFIG: GlobalConfig = {
 };
 
 function createConfigStore() {
-  const stored = load<GlobalConfig>('config');
-  let config = $state<GlobalConfig>(stored ? deepMerge(DEFAULT_CONFIG, stored) : clone(DEFAULT_CONFIG));
+  let config = $state<GlobalConfig>(loadConfig());
 
   return {
     // Get a nested value by path
@@ -93,6 +93,16 @@ function createConfigStore() {
       config = newConfig;
     },
   };
+}
+
+function loadConfig(): GlobalConfig {
+  try {
+    const raw = load<Record<string, unknown>>('config');
+    const merged = raw ? deepMerge(DEFAULT_CONFIG, raw as Partial<GlobalConfig>) : clone(DEFAULT_CONFIG);
+    return globalConfigSchema.parse(merged);
+  } catch {
+    return clone(DEFAULT_CONFIG);
+  }
 }
 
 export const configStore = createConfigStore();

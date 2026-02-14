@@ -32,6 +32,7 @@ flowchart TB
 
 - **Framework**: Svelte 5 with runes (`$state`, `$derived`, `$effect`)
 - **Language**: TypeScript (strict mode)
+- **Validation**: Zod (runtime validation for localStorage, API responses, config import)
 - **Build Tool**: Vite 6
 - **CSS**: Tailwind CSS v4
 - **Package Manager**: pnpm

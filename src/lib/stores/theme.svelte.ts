@@ -1,6 +1,8 @@
 // Theme store using Svelte 5 runes
 
-import { load, save } from '$lib/utils/storage';
+import { z } from 'zod';
+
+import { loadValidated, save } from '$lib/utils/storage';
 
 export interface TerminalColors {
   [key: string]: string;
@@ -360,7 +362,7 @@ function applyThemeToDOM(theme: Theme): void {
 const FALLBACK_THEME: Theme = THEMES[0]!;
 
 function createThemeStore() {
-  const stored = load<string>('theme');
+  const stored = loadValidated('theme', z.string());
   const defaultTheme = stored ?? (getSystemPreference() === 'dark' ? 'default-dark' : 'default-light');
   let currentThemeId = $state(defaultTheme);
 

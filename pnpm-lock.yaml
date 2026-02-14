@@ -11,6 +11,9 @@ importers:
       playwright:
         specifier: ^1.58.0
         version: 1.58.0
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
     devDependencies:
       '@commitlint/cli':
         specifier: ^20.4.1

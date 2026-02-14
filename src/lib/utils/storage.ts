@@ -1,5 +1,7 @@
 // localStorage persistence utilities
 
+import type { ZodType } from 'zod';
+
 export function uuid(): string {
   return crypto.randomUUID();
 }
@@ -77,6 +79,17 @@ export function load<T>(key: keyof typeof STORAGE_KEYS): null | T {
   try {
     const data = localStorage.getItem(STORAGE_KEYS[key]);
     return data ? (JSON.parse(data) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function loadValidated<T>(key: keyof typeof STORAGE_KEYS, schema: ZodType<T>): null | T {
+  try {
+    const data = localStorage.getItem(STORAGE_KEYS[key]);
+    if (!data) return null;
+    const result = schema.safeParse(JSON.parse(data));
+    return result.success ? result.data : null;
   } catch {
     return null;
   }
