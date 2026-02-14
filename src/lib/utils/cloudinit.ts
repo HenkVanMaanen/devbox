@@ -52,10 +52,8 @@ export function generateCloudInit(
   } = {},
 ): string {
   // Handle replace mode: return user YAML directly
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- backwards compat: field may be absent in old configs
-  const customYaml = config.customCloudInit?.yaml.trim() ?? '';
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- backwards compat: field may be absent in old configs
-  const customMode = config.customCloudInit?.mode;
+  const customYaml = config.customCloudInit.yaml.trim();
+  const customMode = config.customCloudInit.mode;
 
   if (customYaml && customMode === 'replace') {
     return customYaml.startsWith('#cloud-config') ? customYaml : '#cloud-config\n' + customYaml;

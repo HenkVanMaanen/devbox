@@ -38,20 +38,7 @@
 
   async function copyToClipboard() {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- clipboard API may not be available
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(script);
-      } else {
-        const textarea = document.createElement('textarea');
-        textarea.value = script;
-        textarea.style.position = 'fixed';
-        textarea.style.opacity = '0';
-        document.body.append(textarea);
-        textarea.select();
-        // eslint-disable-next-line @typescript-eslint/no-deprecated
-        document.execCommand('copy');
-        textarea.remove();
-      }
+      await navigator.clipboard.writeText(script);
       toast.success('Copied to clipboard');
     } catch {
       toast.error('Failed to copy');

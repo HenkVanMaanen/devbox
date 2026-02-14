@@ -43,6 +43,7 @@ const minimalConfig = {
   },
   hetzner: { serverType: 'cx22', location: 'fsn1', baseImage: 'ubuntu-24.04' },
   autoDelete: { enabled: false, timeoutMinutes: 60, warningMinutes: 5 },
+  customCloudInit: { yaml: '', mode: 'merge' },
 };
 
 describe('mergeCustomCloudInit', () => {
@@ -195,13 +196,6 @@ describe('generateCloudInit with custom cloud-init', () => {
     };
     const output = generateCloudInit('test', 'token', config);
     assert.ok(output.startsWith('#cloud-config'), 'should have cloud-config header');
-    assert.ok(output.includes('devbox-progress'), 'should contain base config');
-  });
-
-  it('works without customCloudInit field (backwards compatibility)', () => {
-    // Existing configs won't have this field
-    const output = generateCloudInit('test', 'token', minimalConfig);
-    assert.ok(output.startsWith('#cloud-config'), 'should generate normally');
     assert.ok(output.includes('devbox-progress'), 'should contain base config');
   });
 

@@ -73,18 +73,13 @@
 
   function exportConfig() {
     const exportData = {
-      // New format
       config: configStore.value,
-      defaultProfile: profilesStore.defaultProfileId,
       defaultProfileId: profilesStore.defaultProfileId,
       exportedAt: new Date().toISOString(),
-      // Old format (for backwards compatibility)
-      globalConfig: configStore.value,
       hetznerToken: credentialsStore.token,
       profiles: profilesStore.profiles,
       serverTokens: serversStore.serverTokens,
       theme: themeStore.themeId,
-      version: 1,
     };
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
@@ -112,11 +107,9 @@
       try {
         const data = JSON.parse(text) as Record<string, unknown>;
 
-        // Support both new format (config) and old format (globalConfig)
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- intentional: falsy check
-        const rawConfig = data['config'] || data['globalConfig'];
+        const rawConfig = data['config'];
         if (!rawConfig) {
-          toast.error('Invalid config file: missing config or globalConfig');
+          toast.error('Invalid config file: missing config');
           return;
         }
 
@@ -136,9 +129,7 @@
           profilesStore.save();
         }
 
-        // Set default profile if present (support both formats)
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- intentional: falsy check
-        const defaultProfileId = (data['defaultProfileId'] || data['defaultProfile']) as string | undefined;
+        const defaultProfileId = data['defaultProfileId'] as string | undefined;
         if (defaultProfileId) {
           profilesStore.setDefault(defaultProfileId);
         }

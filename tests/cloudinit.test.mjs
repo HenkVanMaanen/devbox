@@ -23,6 +23,7 @@ const minimalConfig = {
   },
   hetzner: { serverType: 'cx22', location: 'fsn1', baseImage: 'ubuntu-24.04' },
   autoDelete: { enabled: false, timeoutMinutes: 60, warningMinutes: 5 },
+  customCloudInit: { yaml: '', mode: 'merge' },
 };
 
 describe('cloud-init progress tracking', () => {
