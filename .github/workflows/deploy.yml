@@ -39,6 +39,12 @@ jobs:
           VERSION=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "dev")
           echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
 
+      - name: Generate changelog
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --output CHANGELOG.md
+
       - run: pnpm check
 
       - run: pnpm run build
