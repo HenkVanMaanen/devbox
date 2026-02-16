@@ -70,7 +70,7 @@ Read these files first for context:
 - Page components go in `src/pages/`
 - State stores go in `src/lib/stores/`
 - Utility functions go in `src/lib/utils/`
-- Tests go in `tests/` with `.test.mjs` extension
+- Unit tests go in `tests/` (`.test.mjs` for Node native, `tests/vitest/*.test.ts` for Svelte stores)
 - Documentation goes in `docs/`
 
 ### Code Style
@@ -116,8 +116,10 @@ pnpm check:types     # svelte-check / TypeScript
 pnpm check:spell     # cspell
 pnpm check:knip      # Dead code detection
 pnpm check:cpd       # Copy-paste detection
-pnpm check:coverage  # Unit tests + coverage thresholds (90% lines, 85% branches, 100% functions)
-pnpm test            # Unit tests only (no coverage enforcement)
+pnpm check:coverage  # Unit tests + coverage thresholds (90% lines, 85% branches, 95% functions)
+pnpm test            # All tests (Node native + vitest)
+pnpm test:unit       # Node native tests only
+pnpm test:vitest     # Vitest (Svelte store) tests only
 pnpm test:mutation   # Stryker mutation testing (80% break threshold)
 ```
 
@@ -145,19 +147,17 @@ pnpm test:mutation   # Stryker mutation testing (80% break threshold)
 
 4. **No secrets in code**: All credentials come from user config, never hardcoded
 
-## Testing Requirements
+## Testing
 
-- **Run checks before committing**: `pnpm check`
-- **Add tests for new functions**: Especially for cloud-init and storage utilities
-- **Test file naming**: `modulename.test.mjs`
-- **Use Node.js native test runner**: `import { describe, it } from 'node:test'`
-- **Use `assert.strictEqual`** for null/undefined checks (not `assert.equal` which uses loose equality)
-- **Coverage thresholds** (enforced by `pnpm check:coverage`): 90% lines, 85% branches, 100% functions
-- **Mutation score** (enforced by `pnpm test:mutation`): 80% minimum
+Two test runners: **Node native** for pure utilities/API, **vitest** for Svelte stores (rune compilation).
 
-Example test:
+- **Run before committing**: `pnpm check`
+- **Coverage thresholds** (`pnpm check:coverage`): 90% lines, 85% branches, 95% functions
+- **Mutation score** (`pnpm test:mutation`): 80% minimum (Stryker)
+- Use `assert.strictEqual` (not `assert.equal` — loose equality hides bugs)
 
 ```javascript
+// Node native test (tests/*.test.mjs) — for utils, API
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import { myFunction } from '../src/lib/utils/mymodule.ts';
@@ -165,6 +165,26 @@ import { myFunction } from '../src/lib/utils/mymodule.ts';
 describe('myFunction', () => {
   it('does something', () => {
     assert.strictEqual(myFunction('input'), 'expected');
+  });
+});
+```
+
+```typescript
+// Vitest test (tests/vitest/*.test.ts) — for Svelte stores
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+describe('my store', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    localStorage.clear();
+  });
+  async function getStore() {
+    const { myStore } = await import('$lib/stores/my.svelte');
+    return myStore;
+  }
+  it('does something', async () => {
+    const store = await getStore();
+    expect(store.value).toBe('expected');
   });
 });
 ```
@@ -278,8 +298,7 @@ pnpm check                  # Run ALL checks (format, lint, types, spell, covera
 pnpm fix                    # Auto-fix lint + format issues
 pnpm dev                    # Dev server with watch
 pnpm build                  # Production build
-pnpm test                   # Unit tests only
-pnpm check:coverage         # Unit tests + coverage thresholds
+pnpm test                   # All tests (Node native + vitest)
 pnpm test:mutation          # Stryker mutation testing
 git log --oneline -10       # Recent commits for context
 ```
