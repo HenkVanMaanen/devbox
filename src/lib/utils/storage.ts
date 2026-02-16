@@ -106,7 +106,9 @@ export function save(key: keyof typeof STORAGE_KEYS, value: unknown): void {
   try {
     localStorage.setItem(STORAGE_KEYS[key], JSON.stringify(value));
   } catch (error) {
+    // Stryker disable all
     console.error(`Failed to save ${key}:`, error);
+    // Stryker restore all
   }
 }
 

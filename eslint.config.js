@@ -17,6 +17,8 @@ export default tseslint.config(
       'node_modules/**',
       'src/lib/utils/qrcode.ts',
       '**/*.test.mjs',
+      '**/*.test.ts',
+      'vitest.config.ts',
       'CHANGELOG.md',
       'commitlint.config.js',
       'svelte.config.js',

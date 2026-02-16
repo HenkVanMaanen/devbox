@@ -57,6 +57,7 @@ export interface ThemeColors {
   warningForeground: string;
 }
 
+// Stryker disable all: Pure data - theme color hex values are not testable logic
 export const THEMES: Theme[] = [
   {
     colors: {
@@ -335,6 +336,7 @@ export const THEMES: Theme[] = [
     },
   },
 ];
+// Stryker restore all
 
 function applyThemeToDOM(theme: Theme): void {
   const root = document.documentElement;
@@ -358,8 +360,10 @@ function applyThemeToDOM(theme: Theme): void {
   metaTheme.setAttribute('content', theme.colors.background);
 }
 
+// Stryker disable all: Pure data constant
 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 const FALLBACK_THEME: Theme = THEMES[0]!;
+// Stryker restore all
 
 function createThemeStore() {
   const stored = loadValidated('theme', z.string());

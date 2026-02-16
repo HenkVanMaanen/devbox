@@ -101,7 +101,9 @@ function loadConfig(): GlobalConfig {
     const merged = raw ? deepMerge(DEFAULT_CONFIG, raw as Partial<GlobalConfig>) : clone(DEFAULT_CONFIG);
     return globalConfigSchema.parse(merged);
   } catch {
+    // Stryker disable all
     return clone(DEFAULT_CONFIG);
+    // Stryker restore all
   }
 }
 

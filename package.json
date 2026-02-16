@@ -18,7 +18,9 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "check:coverage": "node --import tsx/esm --test --experimental-test-coverage --test-coverage-lines=90 --test-coverage-branches=85 --test-coverage-functions=100 tests/*.test.mjs",
-    "test": "tsx --test tests/*.test.mjs",
+    "test": "tsx --test tests/*.test.mjs && vitest run",
+    "test:unit": "tsx --test tests/*.test.mjs",
+    "test:vitest": "vitest run",
     "test:mutation": "stryker run",
     "prepare": "lefthook install"
   },
@@ -44,6 +46,7 @@
     "eslint-plugin-svelte": "^3.15.0",
     "eslint-plugin-unicorn": "^63.0.0",
     "globals": "^17.3.0",
+    "happy-dom": "^20.6.1",
     "jscpd": "^4.0.8",
     "knip": "^5.83.1",
     "lefthook": "^2.1.1",
