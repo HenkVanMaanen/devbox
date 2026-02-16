@@ -20,4 +20,5 @@ devbox
 devbox.pub
 mise.toml
 .stryker-tmp/
+coverage/
 reports/

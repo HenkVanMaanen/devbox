@@ -66,7 +66,7 @@ export function generateCloudInit(
   const themeColors = options.themeColors ?? defaultThemeColors;
   const terminalColors = options.terminalColors ?? defaultTerminalColors;
 
-  // Stryker disable all: cloud-init object construction is configuration data, not testable logic
+  // Stryker disable all: cloud-init data constants
   // Build cloud-init object
   const cloudInit: CloudInitConfig = {
     apt: {
@@ -105,8 +105,8 @@ export function generateCloudInit(
   };
   // Stryker restore all
 
+  // Stryker disable all: write_files and runcmd data constants
   // ========== WRITE_FILES ==========
-  // Stryker disable all: write_files entries are configuration data (paths, permissions, content templates)
 
   // Progress reporting script (must exist before runcmd runs, so no defer)
   cloudInit.write_files.push({
@@ -205,10 +205,8 @@ export function generateCloudInit(
     path: '/var/www/devbox-overview/index.html.template',
     permissions: '0644',
   });
-  // Stryker restore all
 
   // ========== RUNCMD ==========
-  // Stryker disable all: shell command string literals are configuration data, not testable logic
   const runcmd: (string | string[])[] = [
     '/usr/local/bin/devbox-progress configuring',
     'ufw default deny incoming && ufw default allow outgoing && ufw allow 22 && ufw allow 80 && ufw allow 443 && ufw allow 60000:61000/udp && ufw --force enable',
@@ -246,11 +244,11 @@ export function generateCloudInit(
   // Merge custom cloud-init if provided
   if (customYaml) {
     const merged = mergeCustomCloudInit(cloudInit as unknown as Record<string, unknown>, customYaml);
-    return toYAML(merged);
+    return '#cloud-config\n' + YAML.stringify(merged, { lineWidth: 0 });
   }
 
   // Convert to YAML
-  return toYAML(cloudInit as unknown as Record<string, unknown>);
+  return '#cloud-config\n' + YAML.stringify(cloudInit, { lineWidth: 0 });
 }
 
 // Stryker disable all: data constant, not testable logic
@@ -284,7 +282,6 @@ export function mergeCustomCloudInit(baseConfig: Record<string, unknown>, custom
     if (BLOCKED_CUSTOM_KEYS.has(key)) continue;
 
     switch (key) {
-      // Stryker disable all: array merge edge cases are defensive data handling, not core logic
       case 'packages': {
         if (!Array.isArray(value)) continue;
         const existing = Array.isArray(result['packages']) ? (result['packages'] as string[]) : [];
@@ -321,7 +318,6 @@ export function mergeCustomCloudInit(baseConfig: Record<string, unknown>, custom
 
         break;
       }
-      // Stryker restore all
       default: {
         // Extra top-level keys: pass through
         result[key] = value;
@@ -331,80 +327,3 @@ export function mergeCustomCloudInit(baseConfig: Record<string, unknown>, custom
 
   return result;
 }
-
-// Stryker disable all: internal YAML formatting logic - tested via full output in cloudinit.test.mjs
-function formatYAMLValue(value: unknown, indent = 0): string {
-  if (typeof value === 'boolean') return value ? 'true' : 'false';
-  if (typeof value === 'number') return String(value);
-  if (typeof value === 'string') {
-    // Multi-line strings - use block scalar
-    if (value.includes('\n')) {
-      const pad = '  '.repeat(indent + 1);
-      let lines = value.split('\n');
-      // Use | (keep) to preserve trailing newline, |- (strip) otherwise
-      const chomp = value.endsWith('\n') ? '' : '-';
-      // Remove empty trailing element from split
-      if (chomp === '' && lines.at(-1) === '') {
-        lines = lines.slice(0, -1);
-      }
-      return `|${chomp}\n` + lines.map((l) => pad + l).join('\n');
-    }
-    // Strings that need quoting
-    if (
-      value === '' ||
-      /^\s|\s$/.test(value) ||
-      /^[{[\]#&*!|>'"%@`,?~]/.test(value) ||
-      value.includes(': ') ||
-      value.includes(' #') ||
-      value.endsWith(':') ||
-      /^[-+]?(\d[\d_]*\.?[\d_]*|\.inf|\.nan)$/i.test(value) ||
-      /^(true|false|null|yes|no|on|off|~)$/i.test(value)
-    ) {
-      return JSON.stringify(value);
-    }
-    return value;
-  }
-  return String(value);
-}
-
-// Simple YAML serializer for cloud-init
-function toYAML(obj: Record<string, unknown>, indent = 0, isRoot = true): string {
-  const pad = '  '.repeat(indent);
-  let yaml = isRoot ? '#cloud-config\n' : '';
-
-  for (const [key, value] of Object.entries(obj)) {
-    if (value === null || value === undefined) continue;
-
-    if (Array.isArray(value)) {
-      if (value.length === 0) continue;
-      yaml += `${pad}${key}:\n`;
-      for (const item of value) {
-        if (Array.isArray(item)) {
-          // Array item in array (e.g., runcmd shell form: ['bash', '-c', 'script'])
-          yaml += `${pad}-\n`;
-          for (const sub of item) {
-            yaml += `${pad}  - ${formatYAMLValue(sub, indent + 2)}\n`;
-          }
-        } else if (typeof item === 'object' && item !== null) {
-          yaml += `${pad}- `;
-          const lines = toYAML(item as unknown as Record<string, unknown>, 0, false)
-            .split('\n')
-            .filter(Boolean);
-          yaml += (lines[0] ?? '') + '\n';
-          for (let i = 1; i < lines.length; i++) {
-            yaml += `${pad}  ${lines[i]}\n`;
-          }
-        } else {
-          yaml += `${pad}- ${formatYAMLValue(item, indent + 1)}\n`;
-        }
-      }
-    } else if (typeof value === 'object') {
-      yaml += `${pad}${key}:\n`;
-      yaml += toYAML(value as unknown as Record<string, unknown>, indent + 1, false);
-    } else {
-      yaml += `${pad}${key}: ${formatYAMLValue(value, indent)}\n`;
-    }
-  }
-  return yaml;
-}
-// Stryker restore all

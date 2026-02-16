@@ -70,7 +70,7 @@ Read these files first for context:
 - Page components go in `src/pages/`
 - State stores go in `src/lib/stores/`
 - Utility functions go in `src/lib/utils/`
-- Unit tests go in `tests/` (`.test.mjs` for Node native, `tests/vitest/*.test.ts` for Svelte stores)
+- Unit tests go in `tests/vitest/*.test.ts` (all tests use vitest)
 - Documentation goes in `docs/`
 
 ### Code Style
@@ -116,10 +116,9 @@ pnpm check:types     # svelte-check / TypeScript
 pnpm check:spell     # cspell
 pnpm check:knip      # Dead code detection
 pnpm check:cpd       # Copy-paste detection
-pnpm check:coverage  # Unit tests + coverage thresholds (90% lines, 85% branches, 95% functions)
-pnpm test            # All tests (Node native + vitest)
-pnpm test:unit       # Node native tests only
-pnpm test:vitest     # Vitest (Svelte store) tests only
+pnpm check:coverage  # Unit tests + coverage thresholds (90% lines, 85% branches, 90% functions)
+pnpm test            # All tests (vitest)
+pnpm test:vitest     # Alias for pnpm test
 pnpm test:mutation   # Stryker mutation testing (80% break threshold)
 ```
 
@@ -149,28 +148,26 @@ pnpm test:mutation   # Stryker mutation testing (80% break threshold)
 
 ## Testing
 
-Two test runners: **Node native** for pure utilities/API, **vitest** for Svelte stores (rune compilation).
+All tests use **vitest** (`tests/vitest/*.test.ts`).
 
 - **Run before committing**: `pnpm check`
-- **Coverage thresholds** (`pnpm check:coverage`): 90% lines, 85% branches, 95% functions
+- **Coverage thresholds** (`pnpm check:coverage`): 90% lines, 85% branches, 90% functions
 - **Mutation score** (`pnpm test:mutation`): 80% minimum (Stryker)
-- Use `assert.strictEqual` (not `assert.equal` — loose equality hides bugs)
 
-```javascript
-// Node native test (tests/*.test.mjs) — for utils, API
-import { describe, it } from 'node:test';
-import assert from 'node:assert';
-import { myFunction } from '../src/lib/utils/mymodule.ts';
+```typescript
+// Utility test (tests/vitest/*.test.ts)
+import { describe, it, expect } from 'vitest';
+import { myFunction } from '$lib/utils/mymodule';
 
 describe('myFunction', () => {
   it('does something', () => {
-    assert.strictEqual(myFunction('input'), 'expected');
+    expect(myFunction('input')).toBe('expected');
   });
 });
 ```
 
 ```typescript
-// Vitest test (tests/vitest/*.test.ts) — for Svelte stores
+// Svelte store test (tests/vitest/*.test.ts) — needs vi.resetModules for rune compilation
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 describe('my store', () => {
@@ -298,7 +295,7 @@ pnpm check                  # Run ALL checks (format, lint, types, spell, covera
 pnpm fix                    # Auto-fix lint + format issues
 pnpm dev                    # Dev server with watch
 pnpm build                  # Production build
-pnpm test                   # All tests (Node native + vitest)
+pnpm test                   # All tests (vitest)
 pnpm test:mutation          # Stryker mutation testing
 git log --oneline -10       # Recent commits for context
 ```

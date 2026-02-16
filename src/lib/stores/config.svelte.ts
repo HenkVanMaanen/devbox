@@ -5,6 +5,7 @@ import type { GlobalConfig } from '$lib/types';
 import { globalConfigSchema } from '$lib/types';
 import { clone, deepMerge, getNestedValue, load, save, setNestedValue, uuid } from '$lib/utils/storage';
 
+// Stryker disable all: default config data constant
 const DEFAULT_CONFIG: GlobalConfig = {
   autoDelete: {
     enabled: true,
@@ -45,6 +46,7 @@ const DEFAULT_CONFIG: GlobalConfig = {
     keys: [],
   },
 };
+// Stryker restore all
 
 function createConfigStore() {
   let config = $state<GlobalConfig>(loadConfig());

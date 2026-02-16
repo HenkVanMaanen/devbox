@@ -87,7 +87,6 @@ export function generateServerName(): string {
   return `${adj}-${noun}`;
 }
 
-// Stryker disable all
 function randomFrom<T>(arr: readonly T[]): T {
   const item = arr[Math.floor(Math.random() * arr.length)];
   if (item === undefined) {
@@ -95,4 +94,3 @@ function randomFrom<T>(arr: readonly T[]): T {
   }
   return item;
 }
-// Stryker restore all

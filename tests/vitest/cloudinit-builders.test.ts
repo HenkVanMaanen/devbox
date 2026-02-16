@@ -1,12 +1,6 @@
-import { describe, it } from 'node:test';
-import assert from 'node:assert';
+import { describe, expect, it } from 'vitest';
 
-import {
-  shellEscape,
-  toBase64URL,
-  buildGitCredentials,
-  buildCaddyConfig,
-} from '../src/lib/utils/cloudinit-builders.ts';
+import { shellEscape, toBase64URL, buildGitCredentials, buildCaddyConfig } from '$lib/utils/cloudinit-builders';
 
 // Helper to build a minimal GlobalConfig with service overrides
 function makeConfig(overrides = {}) {
@@ -37,130 +31,130 @@ function makeConfig(overrides = {}) {
 
 describe('shellEscape', () => {
   it('returns empty string for empty input', () => {
-    assert.strictEqual(shellEscape(''), '');
+    expect(shellEscape('')).toBe('');
   });
 
   it('escapes double quotes', () => {
-    assert.strictEqual(shellEscape('he said "hi"'), 'he said \\"hi\\"');
+    expect(shellEscape('he said "hi"')).toBe('he said \\"hi\\"');
   });
 
   it('escapes dollar signs', () => {
-    assert.strictEqual(shellEscape('$HOME'), '\\$HOME');
+    expect(shellEscape('$HOME')).toBe('\\$HOME');
   });
 
   it('escapes backticks', () => {
-    assert.strictEqual(shellEscape('`cmd`'), '\\`cmd\\`');
+    expect(shellEscape('`cmd`')).toBe('\\`cmd\\`');
   });
 
   it('escapes backslashes', () => {
-    assert.strictEqual(shellEscape('a\\b'), 'a\\\\b');
+    expect(shellEscape('a\\b')).toBe('a\\\\b');
   });
 
   it('escapes exclamation marks', () => {
-    assert.strictEqual(shellEscape('hello!'), 'hello\\!');
+    expect(shellEscape('hello!')).toBe('hello\\!');
   });
 
   it('removes newlines', () => {
-    assert.strictEqual(shellEscape('line1\nline2'), 'line1line2');
+    expect(shellEscape('line1\nline2')).toBe('line1line2');
   });
 
   it('prevents command injection via $(...)', () => {
-    assert.strictEqual(shellEscape('$(rm -rf /)'), '\\$(rm -rf /)');
+    expect(shellEscape('$(rm -rf /)')).toBe('\\$(rm -rf /)');
   });
 
   it('escapes all metacharacters in a combined string', () => {
-    assert.strictEqual(shellEscape('$HOME\\path "file" `cmd` end!'), '\\$HOME\\\\path \\"file\\" \\`cmd\\` end\\!');
+    expect(shellEscape('$HOME\\path "file" `cmd` end!')).toBe('\\$HOME\\\\path \\"file\\" \\`cmd\\` end\\!');
   });
 });
 
 describe('toBase64URL', () => {
   it('returns empty string for empty input', () => {
-    assert.strictEqual(toBase64URL(''), '');
+    expect(toBase64URL('')).toBe('');
   });
 
   it('replaces + with -', () => {
-    assert.strictEqual(toBase64URL('a+b'), 'a-b');
+    expect(toBase64URL('a+b')).toBe('a-b');
   });
 
   it('replaces / with _', () => {
-    assert.strictEqual(toBase64URL('a/b'), 'a_b');
+    expect(toBase64URL('a/b')).toBe('a_b');
   });
 
   it('strips trailing = padding', () => {
-    assert.strictEqual(toBase64URL('abc=='), 'abc');
+    expect(toBase64URL('abc==')).toBe('abc');
   });
 
   it('handles combined replacements', () => {
-    assert.strictEqual(toBase64URL('a+b/c=='), 'a-b_c');
+    expect(toBase64URL('a+b/c==')).toBe('a-b_c');
   });
 });
 
 describe('buildGitCredentials', () => {
   it('returns credential URL for valid input', () => {
     const result = buildGitCredentials({ host: 'github.com', username: 'user', token: 'tok123' });
-    assert.strictEqual(result, 'https://user:tok123@github.com\n');
+    expect(result).toBe('https://user:tok123@github.com\n');
   });
 
   it('URI-encodes username and token with special characters', () => {
     const result = buildGitCredentials({ host: 'github.com', username: 'u@ser', token: 'p@ss/word' });
-    assert.strictEqual(result, 'https://u%40ser:p%40ss%2Fword@github.com\n');
+    expect(result).toBe('https://u%40ser:p%40ss%2Fword@github.com\n');
   });
 
   it('returns empty string when host is empty', () => {
-    assert.strictEqual(buildGitCredentials({ host: '', username: 'user', token: 'tok' }), '');
+    expect(buildGitCredentials({ host: '', username: 'user', token: 'tok' })).toBe('');
   });
 
   it('returns empty string when username is empty', () => {
-    assert.strictEqual(buildGitCredentials({ host: 'github.com', username: '', token: 'tok' }), '');
+    expect(buildGitCredentials({ host: 'github.com', username: '', token: 'tok' })).toBe('');
   });
 
   it('returns empty string when token is empty', () => {
-    assert.strictEqual(buildGitCredentials({ host: 'github.com', username: 'user', token: '' }), '');
+    expect(buildGitCredentials({ host: 'github.com', username: 'user', token: '' })).toBe('');
   });
 
   it('strips non-hostname characters from host', () => {
     const result = buildGitCredentials({ host: 'git;rm', username: 'user', token: 'tok' });
-    assert.strictEqual(result, 'https://user:tok@gitrm\n');
+    expect(result).toBe('https://user:tok@gitrm\n');
   });
 
   it('produces a URL ending with newline', () => {
     const result = buildGitCredentials({ host: 'github.com', username: 'user', token: 'tok' });
-    assert.ok(result.endsWith('\n'));
-    assert.strictEqual(result.split('\n').length, 2); // content + trailing empty
+    expect(result.endsWith('\n')).toBe(true);
+    expect(result.split('\n')).toHaveLength(2); // content + trailing empty
   });
 });
 
 describe('buildCaddyConfig', () => {
   it('always includes on_demand_tls block', () => {
     const result = buildCaddyConfig(makeConfig());
-    assert.ok(result.includes('on_demand_tls'));
-    assert.ok(result.includes('ask http://localhost:65531/verify-domain'));
+    expect(result).toContain('on_demand_tls');
+    expect(result).toContain('ask http://localhost:65531/verify-domain');
   });
 
   it('includes ACME email when provided', () => {
     const result = buildCaddyConfig(makeConfig({ acmeEmail: 'user@example.com' }));
-    assert.ok(result.includes('email user@example.com'));
+    expect(result).toContain('email user@example.com');
   });
 
   it('rejects ACME email containing spaces or braces', () => {
     const withSpace = buildCaddyConfig(makeConfig({ acmeEmail: 'user @example.com' }));
-    assert.ok(!withSpace.includes('email '));
+    expect(withSpace).not.toContain('email ');
 
     const withBrace = buildCaddyConfig(makeConfig({ acmeEmail: 'user{@example.com' }));
-    assert.ok(!withBrace.includes('email '));
+    expect(withBrace).not.toContain('email ');
 
     const withCloseBrace = buildCaddyConfig(makeConfig({ acmeEmail: 'user}@example.com' }));
-    assert.ok(!withCloseBrace.includes('email '));
+    expect(withCloseBrace).not.toContain('email ');
   });
 
   it("does not add acme_ca for Let's Encrypt (default provider)", () => {
     const result = buildCaddyConfig(makeConfig({ acmeProvider: 'letsencrypt' }));
-    assert.ok(!result.includes('acme_ca'));
+    expect(result).not.toContain('acme_ca');
   });
 
   it('includes acme_ca for ZeroSSL', () => {
     const result = buildCaddyConfig(makeConfig({ acmeProvider: 'zerossl' }));
-    assert.ok(result.includes('acme_ca https://acme.zerossl.com/v2/DV90'));
+    expect(result).toContain('acme_ca https://acme.zerossl.com/v2/DV90');
   });
 
   it('includes acme_eab for ZeroSSL when EAB keys provided', () => {
@@ -171,9 +165,9 @@ describe('buildCaddyConfig', () => {
         zerosslEabKey: 'zero-mac-key',
       }),
     );
-    assert.ok(result.includes('acme_eab'));
-    assert.ok(result.includes('key_id zero-key-id'));
-    assert.ok(result.includes('mac_key zero-mac-key'));
+    expect(result).toContain('acme_eab');
+    expect(result).toContain('key_id zero-key-id');
+    expect(result).toContain('mac_key zero-mac-key');
   });
 
   it('includes acme_eab for Actalis with base64url-converted key', () => {
@@ -184,14 +178,14 @@ describe('buildCaddyConfig', () => {
         actalisEabKey: 'a+b/c==',
       }),
     );
-    assert.ok(result.includes('acme_eab'));
-    assert.ok(result.includes('key_id act-key-id'));
-    assert.ok(result.includes('mac_key a-b_c'));
+    expect(result).toContain('acme_eab');
+    expect(result).toContain('key_id act-key-id');
+    expect(result).toContain('mac_key a-b_c');
   });
 
   it('includes acme_ca for Buypass', () => {
     const result = buildCaddyConfig(makeConfig({ acmeProvider: 'buypass' }));
-    assert.ok(result.includes('acme_ca https://api.buypass.com/acme/directory'));
+    expect(result).toContain('acme_ca https://api.buypass.com/acme/directory');
   });
 
   it('includes custom ACME URL and optional EAB for custom provider', () => {
@@ -201,8 +195,8 @@ describe('buildCaddyConfig', () => {
         customAcmeUrl: 'https://acme.custom.example/dir',
       }),
     );
-    assert.ok(withoutEab.includes('acme_ca https://acme.custom.example/dir'));
-    assert.ok(!withoutEab.includes('acme_eab'));
+    expect(withoutEab).toContain('acme_ca https://acme.custom.example/dir');
+    expect(withoutEab).not.toContain('acme_eab');
 
     const withEab = buildCaddyConfig(
       makeConfig({
@@ -212,15 +206,15 @@ describe('buildCaddyConfig', () => {
         customEabKey: 'custom-key',
       }),
     );
-    assert.ok(withEab.includes('acme_ca https://acme.custom.example/dir'));
-    assert.ok(withEab.includes('acme_eab'));
-    assert.ok(withEab.includes('key_id custom-id'));
-    assert.ok(withEab.includes('mac_key custom-key'));
+    expect(withEab).toContain('acme_ca https://acme.custom.example/dir');
+    expect(withEab).toContain('acme_eab');
+    expect(withEab).toContain('key_id custom-id');
+    expect(withEab).toContain('mac_key custom-key');
   });
 
   it('always includes basic_auth block with __HASH__ placeholder', () => {
     const result = buildCaddyConfig(makeConfig());
-    assert.ok(result.includes('basic_auth'));
-    assert.ok(result.includes('devbox __HASH__'));
+    expect(result).toContain('basic_auth');
+    expect(result).toContain('devbox __HASH__');
   });
 });

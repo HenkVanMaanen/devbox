@@ -36,7 +36,6 @@ export interface ThemeColors {
   warning: string;
 }
 
-// Stryker disable all
 // Build devbox daemon script with port scanning and autodelete
 export function buildDaemonScript(config: GlobalConfig, hetznerToken: string): string {
   const timeout = config.autoDelete.timeoutMinutes;
@@ -152,7 +151,6 @@ function main(){
 main();
 `;
 }
-// Stryker restore all
 
 // Build git credentials file content
 export function buildGitCredentials(credential: GitCredential): string {
@@ -176,7 +174,6 @@ export function toBase64URL(s: string): string {
   return s.replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
 }
 
-// Stryker disable all
 // Escape a string for safe embedding in a single-quoted JS string literal
 function escapeSingleQuotedJS(s: string): string {
   if (!s) return '';
@@ -186,7 +183,6 @@ function escapeSingleQuotedJS(s: string): string {
     .replaceAll('\n', String.raw`\n`)
     .replaceAll('</', String.raw`<\/`);
 }
-// Stryker restore all
 
 // Stryker disable all
 // ACME provider configurations
@@ -274,14 +270,12 @@ ${authBlock}
   return caddyfile;
 }
 
-// Stryker disable all
 // Build overview page HTML (minified, themed)
 export function buildOverviewPage(config: GlobalConfig, serverName: string, themeColors: ThemeColors): string {
   const colors = themeColors;
 
   return String.raw`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="${colors.background}"><title>${serverName}</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:${colors.background};min-height:100vh;color:${colors.foreground};padding:1.5rem;font-size:16px;line-height:1.6}.c{max-width:600px;margin:0 auto}h1{font-size:1.5rem;color:${colors.foreground};margin-bottom:.25rem}.sub{color:${colors.mutedForeground};font-size:1rem;margin-bottom:1.5rem}.card{background:${colors.card};border-radius:.5rem;padding:1.5rem;margin-bottom:1rem;border:2px solid ${colors.border}}.hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}.ttl{font-size:1rem;color:${colors.mutedForeground}}.ind{display:flex;align-items:center;gap:.5rem}.dot{width:10px;height:10px;border-radius:50%;background:${colors.success};animation:p 2s infinite}.dot.w{background:${colors.warning}}.dot.e{background:${colors.destructive};animation:none}@keyframes p{0%,100%{opacity:1}50%{opacity:.5}}#cd{font-size:2rem;font-weight:600;color:${colors.foreground}}.lbl{font-size:1rem;color:${colors.mutedForeground};margin-top:.25rem}.svcs{display:grid;gap:.75rem}.svc{display:flex;align-items:center;gap:1rem;background:${colors.card};border:2px solid ${colors.border};border-radius:.5rem;padding:1rem;min-height:60px;text-decoration:none;color:inherit;transition:background .15s}.svc:hover{background:${colors.muted}}.svc:focus{outline:3px solid ${colors.focus};outline-offset:2px}.svc.inactive{opacity:.5}.ico{width:44px;height:44px;border-radius:.375rem;display:flex;align-items:center;justify-content:center;font-size:1.25rem;background:${colors.muted}}.inf{flex:1}.nm{font-weight:600;font-size:1rem;color:${colors.foreground}}.ds{font-size:1rem;color:${colors.mutedForeground}}.sdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}.sdot.active{background:${colors.success}}.sdot.inactive{background:${colors.destructive}}</style></head><body><div class="c"><h1>${serverName}</h1><p class="sub">Devbox</p><div class="card"><div class="hdr"><span class="ttl">Auto-shutdown</span><div class="ind"><div id="d" class="dot" role="status" aria-label="Server status indicator"></div><span id="s">Active</span></div></div><div id="cd" aria-live="polite">--:--</div><div class="lbl">until idle shutdown</div></div><nav class="svcs" id="svcs" aria-label="Services"></nav></div><script>const token='${escapeSingleQuotedJS(config.services.accessToken)}';const d=document.getElementById('d'),s=document.getElementById('s'),cd=document.getElementById('cd'),svcsEl=document.getElementById('svcs');let r=-1,w=0;function f(x){if(x<0)return'--:--';return String(Math.floor(x/60)).padStart(2,'0')+':'+String(x%60).padStart(2,'0')}function up(){cd.textContent=f(r);d.className=w?'dot w':r<=0?'dot e':'dot';s.textContent=w?'Warning':r<=0?'Shutting down':'Active'}async function getStatus(){try{const x=await(await fetch(location.origin+'/api/status')).json();r=x.remaining||x.remaining_seconds||0;w=x.warn||x.warning_active;up()}catch{d.className='dot e';s.textContent='Error'}}async function getServices(){try{const svcs=await(await fetch(location.origin+'/api/services')).json();renderServices(svcs)}catch{}}function renderServices(svcs){svcsEl.innerHTML='';for(const svc of svcs){const url='https://devbox:'+encodeURIComponent(token)+'@'+new URL(svc.url).host+'/';const a=document.createElement('a');a.href=url;a.className='svc'+(svc.active?'':' inactive');a.innerHTML='<div class="ico" aria-hidden="true">'+getIcon(svc.name)+'</div><div class="inf"><div class="nm">'+esc(svc.name)+'</div><div class="ds">'+(svc.active?'Active':'Inactive')+(svc.port?' &middot; port '+svc.port:'')+'</div></div><div class="sdot '+(svc.active?'active':'inactive')+'"></div>';svcsEl.appendChild(a)}}function getIcon(name){const m={'Terminal':'$_'};return m[name]||'\ud83c\udf10'}function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}function t(){if(r>0){r--;up()}}getStatus();getServices();setInterval(getStatus,10000);setInterval(getServices,10000);setInterval(t,1000)</script></body></html>`;
 }
-// Stryker restore all
 
 // Stryker disable all
 // Default theme colors (dark theme)

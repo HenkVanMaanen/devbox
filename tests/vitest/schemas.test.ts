@@ -1,7 +1,7 @@
-import { describe, it } from 'node:test';
-import assert from 'node:assert';
-import { globalConfigSchema, serverSchema, profilesSchema } from '../src/lib/types.ts';
-import { sshPublicKeySchema } from '../src/lib/utils/validation.ts';
+import { describe, expect, it } from 'vitest';
+
+import { globalConfigSchema, serverSchema, profilesSchema } from '$lib/types';
+import { sshPublicKeySchema } from '$lib/utils/validation';
 
 // Minimal valid config matching DEFAULT_CONFIG shape
 const validConfig = {
@@ -30,13 +30,13 @@ const validConfig = {
 describe('globalConfigSchema', () => {
   it('accepts valid config', () => {
     const result = globalConfigSchema.safeParse(validConfig);
-    assert.ok(result.success, 'should accept valid config');
+    expect(result.success).toBe(true);
   });
 
   it('rejects config with missing autoDelete', () => {
     const { autoDelete: _, ...partial } = validConfig;
     const result = globalConfigSchema.safeParse(partial);
-    assert.ok(!result.success, 'should reject config missing autoDelete');
+    expect(result.success).toBe(false);
   });
 
   it('rejects config with invalid acmeProvider', () => {
@@ -45,7 +45,7 @@ describe('globalConfigSchema', () => {
       services: { ...validConfig.services, acmeProvider: 'invalid' },
     };
     const result = globalConfigSchema.safeParse(invalid);
-    assert.ok(!result.success, 'should reject invalid acmeProvider');
+    expect(result.success).toBe(false);
   });
 
   it('rejects config with invalid customCloudInit mode', () => {
@@ -54,7 +54,7 @@ describe('globalConfigSchema', () => {
       customCloudInit: { mode: 'append', yaml: '' },
     };
     const result = globalConfigSchema.safeParse(invalid);
-    assert.ok(!result.success, 'should reject invalid customCloudInit mode');
+    expect(result.success).toBe(false);
   });
 });
 
@@ -72,19 +72,19 @@ describe('serverSchema', () => {
 
   it('accepts valid server', () => {
     const result = serverSchema.safeParse(validServer);
-    assert.ok(result.success, 'should accept valid server');
+    expect(result.success).toBe(true);
   });
 
   it('rejects server with invalid status', () => {
     const invalid = { ...validServer, status: 'exploding' };
     const result = serverSchema.safeParse(invalid);
-    assert.ok(!result.success, 'should reject invalid status');
+    expect(result.success).toBe(false);
   });
 
   it('rejects server with missing id', () => {
     const { id: _, ...noId } = validServer;
     const result = serverSchema.safeParse(noId);
-    assert.ok(!result.success, 'should reject missing id');
+    expect(result.success).toBe(false);
   });
 });
 
@@ -94,53 +94,53 @@ describe('profilesSchema', () => {
       'abc-123': { id: 'abc-123', name: 'Dev', overrides: { 'hetzner.serverType': 'cx32' } },
     };
     const result = profilesSchema.safeParse(profiles);
-    assert.ok(result.success, 'should accept valid profiles');
+    expect(result.success).toBe(true);
   });
 
   it('accepts empty profiles', () => {
     const result = profilesSchema.safeParse({});
-    assert.ok(result.success, 'should accept empty profiles');
+    expect(result.success).toBe(true);
   });
 
   it('rejects profile with missing name', () => {
     const invalid = { 'abc-123': { id: 'abc-123', overrides: {} } };
     const result = profilesSchema.safeParse(invalid);
-    assert.ok(!result.success, 'should reject profile missing name');
+    expect(result.success).toBe(false);
   });
 });
 
 describe('sshPublicKeySchema', () => {
   it('accepts valid ed25519 key', () => {
     const result = sshPublicKeySchema.safeParse('ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAItest user@host');
-    assert.ok(result.success, 'should accept valid ed25519 key');
+    expect(result.success).toBe(true);
   });
 
   it('accepts valid rsa key', () => {
     const result = sshPublicKeySchema.safeParse('ssh-rsa AAAAB3NzaC1yc2EAAAAtest user@host');
-    assert.ok(result.success, 'should accept valid rsa key');
+    expect(result.success).toBe(true);
   });
 
   it('rejects empty string', () => {
     const result = sshPublicKeySchema.safeParse('');
-    assert.ok(!result.success, 'should reject empty string');
-    assert.equal(result.error.issues[0]?.message, 'SSH key is required');
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe('SSH key is required');
   });
 
   it('rejects private key', () => {
     const result = sshPublicKeySchema.safeParse('-----BEGIN PRIVATE KEY-----\ndata\n-----END PRIVATE KEY-----');
-    assert.ok(!result.success, 'should reject private key');
-    assert.ok(result.error.issues[0]?.message.includes('private key'), 'error should mention private key');
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toContain('private key');
   });
 
   it('rejects multiple keys', () => {
     const result = sshPublicKeySchema.safeParse('ssh-ed25519 AAAA key1\nssh-ed25519 BBBB key2');
-    assert.ok(!result.success, 'should reject multiple keys');
-    assert.equal(result.error.issues[0]?.message, 'Please enter only one SSH key');
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe('Please enter only one SSH key');
   });
 
   it('rejects unrecognized format', () => {
     const result = sshPublicKeySchema.safeParse('not-a-key');
-    assert.ok(!result.success, 'should reject unrecognized format');
-    assert.ok(result.error.issues[0]?.message.includes('Unrecognized'), 'should say unrecognized');
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toContain('Unrecognized');
   });
 });

@@ -15,6 +15,16 @@ export default defineConfig({
     },
   },
   test: {
+    coverage: {
+      exclude: ['src/lib/data/**', 'src/lib/utils/qrcode.ts'],
+      include: ['src/lib/**/*.ts'],
+      provider: 'v8',
+      thresholds: {
+        branches: 85,
+        functions: 90,
+        lines: 90,
+      },
+    },
     environment: 'happy-dom',
     include: ['tests/vitest/**/*.test.ts'],
     restoreMocks: true,

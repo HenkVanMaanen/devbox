@@ -1,32 +1,5 @@
-import { describe, it, beforeEach } from 'node:test';
-import assert from 'node:assert';
-
-// Mock localStorage before importing the module
-const store = {};
-globalThis.localStorage = {
-  getItem(key) {
-    return store[key] ?? null;
-  },
-  setItem(key, value) {
-    store[key] = value;
-  },
-  removeItem(key) {
-    delete store[key];
-  },
-  clear() {
-    for (const k of Object.keys(store)) delete store[k];
-  },
-  get length() {
-    return Object.keys(store).length;
-  },
-  key(i) {
-    return Object.keys(store)[i] ?? null;
-  },
-};
-
-// Suppress console.error noise from save() error handling
-const originalConsoleError = console.error;
-console.error = () => {};
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
 
 import {
   uuid,
@@ -39,8 +12,10 @@ import {
   loadValidated,
   save,
   remove,
-} from '../src/lib/utils/storage.ts';
-import { z } from 'zod';
+} from '$lib/utils/storage';
+
+// Suppress console.error noise from save() error handling
+vi.spyOn(console, 'error').mockImplementation(() => {});
 
 // --- uuid() ---
 
@@ -48,12 +23,12 @@ describe('uuid', () => {
   it('returns a valid UUID v4 format string', () => {
     const id = uuid();
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    assert.match(id, uuidRegex);
+    expect(id).toMatch(uuidRegex);
   });
 
   it('returns unique values on successive calls', () => {
     const ids = new Set(Array.from({ length: 100 }, () => uuid()));
-    assert.equal(ids.size, 100);
+    expect(ids.size).toBe(100);
   });
 });
 
@@ -75,12 +50,12 @@ describe('clearAll', () => {
 
     clearAll();
 
-    assert.strictEqual(localStorage.getItem('devbox_config'), null);
-    assert.strictEqual(localStorage.getItem('devbox_default_profile'), null);
-    assert.strictEqual(localStorage.getItem('devbox_hetzner_token'), null);
-    assert.strictEqual(localStorage.getItem('devbox_profiles'), null);
-    assert.strictEqual(localStorage.getItem('devbox_server_tokens'), null);
-    assert.strictEqual(localStorage.getItem('devbox_theme'), null);
+    expect(localStorage.getItem('devbox_config')).toBeNull();
+    expect(localStorage.getItem('devbox_default_profile')).toBeNull();
+    expect(localStorage.getItem('devbox_hetzner_token')).toBeNull();
+    expect(localStorage.getItem('devbox_profiles')).toBeNull();
+    expect(localStorage.getItem('devbox_server_tokens')).toBeNull();
+    expect(localStorage.getItem('devbox_theme')).toBeNull();
   });
 
   it('removes devbox_cache_* entries', () => {
@@ -90,9 +65,9 @@ describe('clearAll', () => {
 
     clearAll();
 
-    assert.strictEqual(localStorage.getItem('devbox_cache_servers'), null);
-    assert.strictEqual(localStorage.getItem('devbox_cache_images'), null);
-    assert.strictEqual(localStorage.getItem('devbox_cache_locations'), null);
+    expect(localStorage.getItem('devbox_cache_servers')).toBeNull();
+    expect(localStorage.getItem('devbox_cache_images')).toBeNull();
+    expect(localStorage.getItem('devbox_cache_locations')).toBeNull();
   });
 
   it('preserves unrelated keys', () => {
@@ -101,7 +76,7 @@ describe('clearAll', () => {
 
     clearAll();
 
-    assert.equal(localStorage.getItem('unrelated_key'), 'keep me');
+    expect(localStorage.getItem('unrelated_key')).toBe('keep me');
   });
 
   it('does not add extra keys during clearing', () => {
@@ -112,8 +87,50 @@ describe('clearAll', () => {
     clearAll();
 
     // Only 'other_key' should remain
-    assert.strictEqual(localStorage.length, 1);
-    assert.strictEqual(localStorage.getItem('other_key'), 'keep');
+    expect(localStorage.length).toBe(1);
+    expect(localStorage.getItem('other_key')).toBe('keep');
+  });
+
+  it('keysToRemove starts empty (kills initial array value mutant)', () => {
+    // If keysToRemove was initialized with ["Stryker was here"] instead of [],
+    // calling clearAll with only non-cache keys would try to remove that bogus key.
+    // We verify that no errors occur and no extra removals happen.
+    localStorage.setItem('devbox_config', '{}');
+    // No devbox_cache_* keys at all
+
+    clearAll();
+
+    expect(localStorage.getItem('devbox_config')).toBeNull();
+    // localStorage should be completely empty since no unrelated keys exist
+    expect(localStorage.length).toBe(0);
+  });
+
+  it('loop iterates exactly localStorage.length times (kills i <= vs i < boundary)', () => {
+    // If the loop used i <= localStorage.length, it would call localStorage.key() with
+    // an out-of-bounds index, getting null. With key?.startsWith, null would be safe
+    // but the behavior differs. We add cache keys and ensure exactly those are removed.
+    localStorage.setItem('devbox_cache_alpha', '{}');
+    localStorage.setItem('devbox_cache_beta', '{}');
+    localStorage.setItem('other_key', 'keep');
+
+    clearAll();
+
+    expect(localStorage.getItem('devbox_cache_alpha')).toBeNull();
+    expect(localStorage.getItem('devbox_cache_beta')).toBeNull();
+    expect(localStorage.getItem('other_key')).toBe('keep');
+    expect(localStorage.length).toBe(1);
+  });
+
+  it('handles null key from localStorage.key() safely (kills optional chaining removal)', () => {
+    // If key?.startsWith was mutated to key.startsWith, it would throw on null.
+    // We test with a storage that has items, and after removing known keys,
+    // the iteration still works correctly.
+    localStorage.setItem('devbox_config', '{}');
+    localStorage.setItem('devbox_cache_x', '{}');
+
+    // Should not throw even when localStorage.key() might return null at boundaries
+    expect(() => clearAll()).not.toThrow();
+    expect(localStorage.length).toBe(0);
   });
 });
 
@@ -124,26 +141,26 @@ describe('clone', () => {
     const original = { a: { b: { c: 1 } } };
     const cloned = clone(original);
 
-    assert.deepStrictEqual(cloned, original);
+    expect(cloned).toEqual(original);
     // Mutating clone should not affect original
     cloned.a.b.c = 999;
-    assert.equal(original.a.b.c, 1);
+    expect(original.a.b.c).toBe(1);
   });
 
   it('clones arrays without sharing references', () => {
-    const original = [1, [2, 3], { x: 4 }];
+    const original = [1, [2, 3], { x: 4 }] as [number, number[], { x: number }];
     const cloned = clone(original);
 
-    assert.deepStrictEqual(cloned, original);
-    cloned[1][0] = 99;
-    assert.equal(original[1][0], 2);
+    expect(cloned).toEqual(original);
+    (cloned[1] as number[])[0] = 99;
+    expect((original[1] as number[])[0]).toBe(2);
   });
 
   it('handles null and primitive values', () => {
-    assert.equal(clone(null), null);
-    assert.equal(clone(42), 42);
-    assert.equal(clone('hello'), 'hello');
-    assert.equal(clone(true), true);
+    expect(clone(null)).toBeNull();
+    expect(clone(42)).toBe(42);
+    expect(clone('hello')).toBe('hello');
+    expect(clone(true)).toBe(true);
   });
 });
 
@@ -156,7 +173,7 @@ describe('deepMerge', () => {
 
     const result = deepMerge(target, source);
 
-    assert.deepStrictEqual(result, { a: { b: 10, c: 2 }, d: 3 });
+    expect(result).toEqual({ a: { b: 10, c: 2 }, d: 3 });
   });
 
   it('replaces arrays instead of merging them', () => {
@@ -165,7 +182,7 @@ describe('deepMerge', () => {
 
     const result = deepMerge(target, source);
 
-    assert.deepStrictEqual(result, { items: [4, 5] });
+    expect(result).toEqual({ items: [4, 5] });
   });
 
   it('handles null source values by replacing target', () => {
@@ -174,7 +191,7 @@ describe('deepMerge', () => {
 
     const result = deepMerge(target, source);
 
-    assert.deepStrictEqual(result, { a: null });
+    expect(result).toEqual({ a: null });
   });
 
   it('does not mutate the target object', () => {
@@ -183,7 +200,7 @@ describe('deepMerge', () => {
 
     deepMerge(target, source);
 
-    assert.equal(target.a.b, 1);
+    expect(target.a.b).toBe(1);
   });
 
   it('adds new keys from source', () => {
@@ -192,21 +209,30 @@ describe('deepMerge', () => {
 
     const result = deepMerge(target, source);
 
-    assert.deepStrictEqual(result, { existing: 1, newKey: 2 });
+    expect(result).toEqual({ existing: 1, newKey: 2 });
   });
 
   it('overwrites object target with primitive source value', () => {
     const target = { a: { nested: true } };
     const source = { a: 'replaced' };
     const result = deepMerge(target, source);
-    assert.strictEqual(result.a, 'replaced');
+    expect(result.a).toBe('replaced');
   });
 
   it('overwrites primitive target with object source value', () => {
     const target = { a: 'string' };
     const source = { a: { nested: true } };
     const result = deepMerge(target, source);
-    assert.deepStrictEqual(result.a, { nested: true });
+    expect(result.a).toEqual({ nested: true });
+  });
+
+  it('replaces null target value with object source (kills targetValue !== null → true)', () => {
+    // When target value is null and source is an object, it should replace (not deep merge)
+    const target = { a: null };
+    const source = { a: { nested: true } };
+    const result = deepMerge(target, source);
+    // If targetValue !== null was mutated to true, it would try to deepMerge null with the object
+    expect(result.a).toEqual({ nested: true });
   });
 });
 
@@ -215,27 +241,46 @@ describe('deepMerge', () => {
 describe('getNestedValue', () => {
   it('retrieves a deeply nested value by dot path', () => {
     const obj = { a: { b: { c: 42 } } };
-    assert.equal(getNestedValue(obj, 'a.b.c'), 42);
+    expect(getNestedValue(obj, 'a.b.c')).toBe(42);
   });
 
   it('returns undefined for a missing key', () => {
     const obj = { a: { b: 1 } };
-    assert.equal(getNestedValue(obj, 'a.x.y'), undefined);
+    expect(getNestedValue(obj, 'a.x.y')).toBeUndefined();
   });
 
   it('returns undefined when traversal hits null', () => {
     const obj = { a: null };
-    assert.equal(getNestedValue(obj, 'a.b'), undefined);
+    expect(getNestedValue(obj, 'a.b')).toBeUndefined();
   });
 
   it('retrieves top-level values', () => {
     const obj = { foo: 'bar' };
-    assert.equal(getNestedValue(obj, 'foo'), 'bar');
+    expect(getNestedValue(obj, 'foo')).toBe('bar');
   });
 
   it('returns undefined when intermediate value is a primitive', () => {
     const obj = { a: 'string-not-object' };
-    assert.strictEqual(getNestedValue(obj, 'a.b'), undefined);
+    expect(getNestedValue(obj, 'a.b')).toBeUndefined();
+  });
+
+  it('returns undefined when intermediate value is undefined (kills current === null || false)', () => {
+    // current === undefined should trigger the early return
+    // This is distinct from the null case tested above
+    const obj = { a: { b: undefined } } as Record<string, unknown>;
+    expect(getNestedValue(obj, 'a.b.c')).toBeUndefined();
+  });
+
+  it('returns undefined when intermediate is a number (kills typeof !== object → false)', () => {
+    // If typeof current !== 'object' was mutated to false, traversal would continue
+    // into a number and try to access properties on it
+    const obj = { a: { b: 42 } };
+    expect(getNestedValue(obj, 'a.b.c')).toBeUndefined();
+  });
+
+  it('returns undefined when intermediate is a boolean', () => {
+    const obj = { a: { b: true } } as Record<string, unknown>;
+    expect(getNestedValue(obj, 'a.b.c')).toBeUndefined();
   });
 });
 
@@ -243,35 +288,35 @@ describe('getNestedValue', () => {
 
 describe('setNestedValue', () => {
   it('sets a deeply nested value, creating intermediate objects', () => {
-    const obj = {};
+    const obj: Record<string, unknown> = {};
     setNestedValue(obj, 'a.b.c', 42);
-    assert.deepStrictEqual(obj, { a: { b: { c: 42 } } });
+    expect(obj).toEqual({ a: { b: { c: 42 } } });
   });
 
   it('overwrites an existing leaf value', () => {
     const obj = { a: { b: 1 } };
     setNestedValue(obj, 'a.b', 99);
-    assert.equal(obj.a.b, 99);
+    expect(obj.a.b).toBe(99);
   });
 
   it('sets a top-level value', () => {
-    const obj = {};
+    const obj: Record<string, unknown> = {};
     setNestedValue(obj, 'key', 'value');
-    assert.deepStrictEqual(obj, { key: 'value' });
+    expect(obj).toEqual({ key: 'value' });
   });
 
   it('preserves sibling properties on intermediate objects', () => {
-    const obj = { a: { existing: 'keep', b: { old: 1 } } };
+    const obj = { a: { existing: 'keep', b: { old: 1 } } } as Record<string, Record<string, unknown>>;
     setNestedValue(obj, 'a.b.new', 2);
-    assert.strictEqual(obj.a.existing, 'keep');
-    assert.strictEqual(obj.a.b.old, 1);
-    assert.strictEqual(obj.a.b.new, 2);
+    expect(obj['a']?.['existing']).toBe('keep');
+    expect((obj['a']?.['b'] as Record<string, unknown>)?.['old']).toBe(1);
+    expect((obj['a']?.['b'] as Record<string, unknown>)?.['new']).toBe(2);
   });
 
   it('replaces non-object intermediate with empty object', () => {
-    const obj = { a: 'not-an-object' };
+    const obj = { a: 'not-an-object' } as Record<string, unknown>;
     setNestedValue(obj, 'a.b', 42);
-    assert.strictEqual(obj.a.b, 42);
+    expect((obj['a'] as Record<string, unknown>)?.['b']).toBe(42);
   });
 });
 
@@ -287,17 +332,25 @@ describe('load', () => {
 
     const result = load('config');
 
-    assert.deepStrictEqual(result, { editor: 'vim' });
+    expect(result).toEqual({ editor: 'vim' });
   });
 
   it('returns null when key does not exist', () => {
-    assert.strictEqual(load('config'), null);
+    expect(load('config')).toBeNull();
   });
 
   it('returns null when stored value is invalid JSON', () => {
     localStorage.setItem('devbox_config', 'not valid json{{{');
 
-    assert.strictEqual(load('config'), null);
+    expect(load('config')).toBeNull();
+  });
+
+  it('returns null for missing key, not undefined (kills !data → false)', () => {
+    // If !data guard was removed (mutated to false), JSON.parse(null) would throw
+    // or return unexpected results. Verify we get exactly null.
+    const result = load('config');
+    expect(result).toBeNull();
+    expect(result).not.toBeUndefined();
   });
 });
 
@@ -314,7 +367,7 @@ describe('loadValidated', () => {
 
     const result = loadValidated('config', schema);
 
-    assert.deepStrictEqual(result, { name: 'test', count: 5 });
+    expect(result).toEqual({ name: 'test', count: 5 });
   });
 
   it('returns null when data does not match the schema', () => {
@@ -323,19 +376,19 @@ describe('loadValidated', () => {
 
     const result = loadValidated('config', schema);
 
-    assert.strictEqual(result, null);
+    expect(result).toBeNull();
   });
 
   it('returns null when key does not exist', () => {
     const schema = z.string();
-    assert.strictEqual(loadValidated('config', schema), null);
+    expect(loadValidated('config', schema)).toBeNull();
   });
 
   it('returns null when stored value is invalid JSON', () => {
     const schema = z.object({});
     localStorage.setItem('devbox_config', '{{invalid');
 
-    assert.strictEqual(loadValidated('config', schema), null);
+    expect(loadValidated('config', schema)).toBeNull();
   });
 });
 
@@ -349,14 +402,14 @@ describe('save', () => {
   it('serializes value as JSON into the correct localStorage key', () => {
     save('hetznerToken', 'my-secret-token');
 
-    assert.equal(localStorage.getItem('devbox_hetzner_token'), '"my-secret-token"');
+    expect(localStorage.getItem('devbox_hetzner_token')).toBe('"my-secret-token"');
   });
 
   it('saves complex objects', () => {
     const data = { profiles: [{ name: 'dev' }] };
     save('config', data);
 
-    assert.deepStrictEqual(JSON.parse(localStorage.getItem('devbox_config')), data);
+    expect(JSON.parse(localStorage.getItem('devbox_config') ?? '{}')).toEqual(data);
   });
 
   it('handles write errors gracefully without throwing', () => {
@@ -367,7 +420,7 @@ describe('save', () => {
     };
 
     // Should not throw
-    assert.doesNotThrow(() => save('config', { big: 'data' }));
+    expect(() => save('config', { big: 'data' })).not.toThrow();
 
     // Restore original
     localStorage.setItem = originalSetItem;
@@ -386,10 +439,10 @@ describe('remove', () => {
 
     remove('theme');
 
-    assert.strictEqual(localStorage.getItem('devbox_theme'), null);
+    expect(localStorage.getItem('devbox_theme')).toBeNull();
   });
 
   it('does not throw when removing a non-existent key', () => {
-    assert.doesNotThrow(() => remove('config'));
+    expect(() => remove('config')).not.toThrow();
   });
 });

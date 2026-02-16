@@ -2,7 +2,16 @@
   "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
   "version": "0.2",
   "language": "en",
-  "ignorePaths": ["node_modules", "dist", "pnpm-lock.yaml", "CHANGELOG.md", "src/lib/utils/qrcode.ts", ".git", "*.svg"],
+  "ignorePaths": [
+    "node_modules",
+    "dist",
+    "coverage",
+    "pnpm-lock.yaml",
+    "CHANGELOG.md",
+    "src/lib/utils/qrcode.ts",
+    ".git",
+    "*.svg"
+  ],
   "ignoreRegExpList": [
     "/\\$state|\\$derived|\\$effect|\\$props|\\$bindable|\\$inspect/g",
     "/[0-9a-f]{6,}/gi",

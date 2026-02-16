@@ -37,7 +37,6 @@ export async function backgroundRefresh<T>(opts: SwrFetchOptions<T>): Promise<vo
   const th = hashToken(token);
 
   try {
-    // Stryker disable next-line all
     const fresh = await deduplicatedFetch(`${key}:${th}`, fetcher);
     writeCache(key, fresh, th);
     onData(fresh);
@@ -70,7 +69,6 @@ export async function swrFetch<T>(opts: SwrFetchOptions<T>): Promise<void> {
   }
 
   try {
-    // Stryker disable next-line all
     const fresh = await deduplicatedFetch(`${key}:${th}`, fetcher);
     writeCache(key, fresh, th);
     onData(fresh);

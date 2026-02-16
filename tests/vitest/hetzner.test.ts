@@ -1,6 +1,6 @@
-import { describe, it, beforeEach, afterEach } from 'node:test';
-import assert from 'node:assert';
-import * as hetzner from '../src/lib/api/hetzner.ts';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+import * as hetzner from '$lib/api/hetzner';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -9,25 +9,25 @@ import * as hetzner from '../src/lib/api/hetzner.ts';
 const originalFetch = globalThis.fetch;
 
 /** Build a mock fetch that resolves with the given body and status. */
-function mockFetch(body, status = 200) {
-  globalThis.fetch = () =>
+function mockFetch(body: unknown, status = 200) {
+  globalThis.fetch = (() =>
     Promise.resolve({
       ok: status >= 200 && status < 300,
       status,
       statusText: 'OK',
       json: () => Promise.resolve(body),
-    });
+    })) as typeof globalThis.fetch;
 }
 
 /** Build a mock fetch whose json() rejects (simulates broken JSON response). */
 function mockFetchJsonFails(status = 500) {
-  globalThis.fetch = () =>
+  globalThis.fetch = (() =>
     Promise.resolve({
       ok: false,
       status,
       statusText: 'Internal Server Error',
       json: () => Promise.reject(new Error('json parse error')),
-    });
+    })) as typeof globalThis.fetch;
 }
 
 // ---------------------------------------------------------------------------
@@ -105,47 +105,44 @@ describe('hetzner API client', () => {
 
   describe('request (internal)', () => {
     it('sets Authorization Bearer header', async () => {
-      let capturedHeaders;
-      globalThis.fetch = (_url, opts) => {
+      let capturedHeaders: Record<string, string> = {};
+      globalThis.fetch = ((_url: unknown, opts: { headers: Record<string, string> }) => {
         capturedHeaders = opts.headers;
         return Promise.resolve({
           ok: true,
           status: 200,
           json: () => Promise.resolve({ servers: [] }),
         });
-      };
+      }) as typeof globalThis.fetch;
 
       await hetzner.listServers('test-token-123');
-      assert.strictEqual(capturedHeaders['Authorization'], 'Bearer test-token-123');
-      assert.strictEqual(capturedHeaders['Content-Type'], 'application/json');
+      expect(capturedHeaders['Authorization']).toBe('Bearer test-token-123');
+      expect(capturedHeaders['Content-Type']).toBe('application/json');
     });
 
     it('throws HetznerApiError with message from error response', async () => {
       mockFetch({ error: { message: 'server not found' } }, 404);
 
-      await assert.rejects(
-        () => hetzner.getServer('tok', 999),
-        (err) => {
-          assert.strictEqual(err.name, 'HetznerApiError');
-          assert.strictEqual(err.status, 404);
-          assert.strictEqual(err.message, 'server not found');
-          return true;
-        },
-      );
+      await expect(hetzner.getServer('tok', 999)).rejects.toThrow('server not found');
+      try {
+        await hetzner.getServer('tok', 999);
+      } catch (err) {
+        expect((err as { name: string }).name).toBe('HetznerApiError');
+        expect((err as { status: number }).status).toBe(404);
+      }
     });
 
     it('throws HetznerApiError with statusText when error JSON parsing fails', async () => {
       mockFetchJsonFails(502);
 
-      await assert.rejects(
-        () => hetzner.getServer('tok', 1),
-        (err) => {
-          assert.strictEqual(err.name, 'HetznerApiError');
-          assert.strictEqual(err.status, 502);
-          assert.strictEqual(err.message, 'Internal Server Error');
-          return true;
-        },
-      );
+      try {
+        await hetzner.getServer('tok', 1);
+        expect.fail('Should have thrown');
+      } catch (err) {
+        expect((err as { name: string }).name).toBe('HetznerApiError');
+        expect((err as { status: number }).status).toBe(502);
+        expect((err as Error).message).toBe('Internal Server Error');
+      }
     });
   });
 
@@ -158,15 +155,14 @@ describe('hetzner API client', () => {
       // Return a server with missing required fields to trigger Zod error
       mockFetch({ server: { id: 'not-a-number' } });
 
-      await assert.rejects(
-        () => hetzner.getServer('tok', 1),
-        (err) => {
-          assert.strictEqual(err.name, 'HetznerApiError');
-          assert.strictEqual(err.status, 0);
-          assert.ok(err.message.startsWith('Invalid API response:'));
-          return true;
-        },
-      );
+      try {
+        await hetzner.getServer('tok', 1);
+        expect.fail('Should have thrown');
+      } catch (err) {
+        expect((err as { name: string }).name).toBe('HetznerApiError');
+        expect((err as { status: number }).status).toBe(0);
+        expect((err as Error).message).toMatch(/^Invalid API response:/);
+      }
     });
   });
 
@@ -176,8 +172,9 @@ describe('hetzner API client', () => {
 
   describe('createServer', () => {
     it('sends POST with correct body and returns validated server', async () => {
-      let capturedUrl, capturedOpts;
-      globalThis.fetch = (url, opts) => {
+      let capturedUrl = '';
+      let capturedOpts: { method: string; body: string } = { method: '', body: '' };
+      globalThis.fetch = ((url: string, opts: { method: string; body: string }) => {
         capturedUrl = url;
         capturedOpts = opts;
         return Promise.resolve({
@@ -185,7 +182,7 @@ describe('hetzner API client', () => {
           status: 200,
           json: () => Promise.resolve({ server: mockServer }),
         });
-      };
+      }) as typeof globalThis.fetch;
 
       const result = await hetzner.createServer('tok', {
         image: 'ubuntu-24.04',
@@ -197,42 +194,40 @@ describe('hetzner API client', () => {
         userData: '#cloud-config',
       });
 
-      assert.strictEqual(capturedOpts.method, 'POST');
-      assert.ok(capturedUrl.endsWith('/servers'));
+      expect(capturedOpts.method).toBe('POST');
+      expect(capturedUrl.endsWith('/servers')).toBe(true);
 
       const body = JSON.parse(capturedOpts.body);
-      assert.strictEqual(body.name, 'test');
-      assert.strictEqual(body.server_type, 'cx22');
-      assert.strictEqual(body.image, 'ubuntu-24.04');
-      assert.strictEqual(body.location, 'fsn1');
-      assert.deepStrictEqual(body.ssh_keys, [42]);
-      assert.strictEqual(body.start_after_create, true);
-      assert.strictEqual(body.user_data, '#cloud-config');
+      expect(body.name).toBe('test');
+      expect(body.server_type).toBe('cx22');
+      expect(body.image).toBe('ubuntu-24.04');
+      expect(body.location).toBe('fsn1');
+      expect(body.ssh_keys).toEqual([42]);
+      expect(body.start_after_create).toBe(true);
+      expect(body.user_data).toBe('#cloud-config');
 
-      assert.strictEqual(result.id, 1);
-      assert.strictEqual(result.name, 'test');
+      expect(result.id).toBe(1);
+      expect(result.name).toBe('test');
     });
 
     it('throws on API error', async () => {
       mockFetch({ error: { message: 'insufficient funds' } }, 402);
 
-      await assert.rejects(
-        () =>
-          hetzner.createServer('tok', {
-            image: 'ubuntu-24.04',
-            location: 'fsn1',
-            name: 'test',
-            serverType: 'cx22',
-            sshKeys: [],
-            userData: '',
-          }),
-        (err) => {
-          assert.strictEqual(err.name, 'HetznerApiError');
-          assert.strictEqual(err.status, 402);
-          assert.strictEqual(err.message, 'insufficient funds');
-          return true;
-        },
-      );
+      try {
+        await hetzner.createServer('tok', {
+          image: 'ubuntu-24.04',
+          location: 'fsn1',
+          name: 'test',
+          serverType: 'cx22',
+          sshKeys: [],
+          userData: '',
+        });
+        expect.fail('Should have thrown');
+      } catch (err) {
+        expect((err as { name: string }).name).toBe('HetznerApiError');
+        expect((err as { status: number }).status).toBe(402);
+        expect((err as Error).message).toBe('insufficient funds');
+      }
     });
   });
 
@@ -242,26 +237,26 @@ describe('hetzner API client', () => {
 
   describe('createSSHKey', () => {
     it('sends POST and returns validated key', async () => {
-      let capturedOpts;
-      globalThis.fetch = (_url, opts) => {
+      let capturedOpts: { method: string; body: string } = { method: '', body: '' };
+      globalThis.fetch = ((_url: unknown, opts: { method: string; body: string }) => {
         capturedOpts = opts;
         return Promise.resolve({
           ok: true,
           status: 200,
           json: () => Promise.resolve({ ssh_key: mockSSHKey }),
         });
-      };
+      }) as typeof globalThis.fetch;
 
       const result = await hetzner.createSSHKey('tok', 'my-key', 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5 test@dev');
 
-      assert.strictEqual(capturedOpts.method, 'POST');
+      expect(capturedOpts.method).toBe('POST');
       const body = JSON.parse(capturedOpts.body);
-      assert.strictEqual(body.name, 'my-key');
-      assert.strictEqual(body.public_key, 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5 test@dev');
+      expect(body.name).toBe('my-key');
+      expect(body.public_key).toBe('ssh-ed25519 AAAAC3NzaC1lZDI1NTE5 test@dev');
 
-      assert.strictEqual(result.id, 42);
-      assert.strictEqual(result.name, 'my-key');
-      assert.strictEqual(result.fingerprint, 'aa:bb:cc');
+      expect(result.id).toBe(42);
+      expect(result.name).toBe('my-key');
+      expect(result.fingerprint).toBe('aa:bb:cc');
     });
   });
 
@@ -271,8 +266,9 @@ describe('hetzner API client', () => {
 
   describe('deleteServer', () => {
     it('sends DELETE request', async () => {
-      let capturedUrl, capturedOpts;
-      globalThis.fetch = (url, opts) => {
+      let capturedUrl = '';
+      let capturedOpts: { method: string } = { method: '' };
+      globalThis.fetch = ((url: string, opts: { method: string }) => {
         capturedUrl = url;
         capturedOpts = opts;
         return Promise.resolve({
@@ -280,21 +276,21 @@ describe('hetzner API client', () => {
           status: 200,
           json: () => Promise.resolve({}),
         });
-      };
+      }) as typeof globalThis.fetch;
 
       await hetzner.deleteServer('tok', 123);
 
-      assert.strictEqual(capturedOpts.method, 'DELETE');
-      assert.ok(capturedUrl.endsWith('/servers/123'));
+      expect(capturedOpts.method).toBe('DELETE');
+      expect(capturedUrl.endsWith('/servers/123')).toBe(true);
     });
 
     it('handles 204 No Content response', async () => {
-      globalThis.fetch = () =>
+      globalThis.fetch = (() =>
         Promise.resolve({
           ok: true,
           status: 204,
           json: () => Promise.reject(new Error('no body')),
-        });
+        })) as typeof globalThis.fetch;
 
       // Should not throw — 204 is handled by returning {}
       await hetzner.deleteServer('tok', 123);
@@ -311,13 +307,13 @@ describe('hetzner API client', () => {
 
       const result = await hetzner.ensureSSHKey('tok', 'my-key', 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5 test@dev');
 
-      assert.strictEqual(result.id, 42);
-      assert.strictEqual(result.name, 'my-key');
+      expect(result.id).toBe(42);
+      expect(result.name).toBe('my-key');
     });
 
     it('creates new key when not found', async () => {
       let callCount = 0;
-      globalThis.fetch = () => {
+      globalThis.fetch = (() => {
         callCount++;
         if (callCount === 1) {
           // listSSHKeys — no matching key
@@ -333,17 +329,17 @@ describe('hetzner API client', () => {
           status: 200,
           json: () => Promise.resolve({ ssh_key: mockSSHKey }),
         });
-      };
+      }) as typeof globalThis.fetch;
 
       const result = await hetzner.ensureSSHKey('tok', 'my-key', 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5 test@dev');
 
-      assert.strictEqual(callCount, 2);
-      assert.strictEqual(result.id, 42);
+      expect(callCount).toBe(2);
+      expect(result.id).toBe(42);
     });
 
     it('handles uniqueness_error race condition by re-fetching', async () => {
       let callCount = 0;
-      globalThis.fetch = () => {
+      globalThis.fetch = (() => {
         callCount++;
         if (callCount === 1) {
           // listSSHKeys — empty (key doesn't exist yet)
@@ -368,17 +364,17 @@ describe('hetzner API client', () => {
           status: 200,
           json: () => Promise.resolve({ ssh_keys: [mockSSHKey] }),
         });
-      };
+      }) as typeof globalThis.fetch;
 
       const result = await hetzner.ensureSSHKey('tok', 'my-key', 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5 test@dev');
 
-      assert.strictEqual(callCount, 3);
-      assert.strictEqual(result.id, 42);
+      expect(callCount).toBe(3);
+      expect(result.id).toBe(42);
     });
 
     it('throws non-uniqueness errors', async () => {
       let callCount = 0;
-      globalThis.fetch = () => {
+      globalThis.fetch = (() => {
         callCount++;
         if (callCount === 1) {
           // listSSHKeys — empty
@@ -395,17 +391,16 @@ describe('hetzner API client', () => {
           statusText: 'Forbidden',
           json: () => Promise.resolve({ error: { message: 'forbidden' } }),
         });
-      };
+      }) as typeof globalThis.fetch;
 
-      await assert.rejects(
-        () => hetzner.ensureSSHKey('tok', 'my-key', 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5 test@dev'),
-        (err) => {
-          assert.strictEqual(err.name, 'HetznerApiError');
-          assert.strictEqual(err.status, 403);
-          assert.strictEqual(err.message, 'forbidden');
-          return true;
-        },
-      );
+      try {
+        await hetzner.ensureSSHKey('tok', 'my-key', 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5 test@dev');
+        expect.fail('Should have thrown');
+      } catch (err) {
+        expect((err as { name: string }).name).toBe('HetznerApiError');
+        expect((err as { status: number }).status).toBe(403);
+        expect((err as Error).message).toBe('forbidden');
+      }
     });
   });
 
@@ -415,23 +410,23 @@ describe('hetzner API client', () => {
 
   describe('getServer', () => {
     it('returns validated server', async () => {
-      let capturedUrl;
-      globalThis.fetch = (url) => {
+      let capturedUrl = '';
+      globalThis.fetch = ((url: string) => {
         capturedUrl = url;
         return Promise.resolve({
           ok: true,
           status: 200,
           json: () => Promise.resolve({ server: mockServer }),
         });
-      };
+      }) as typeof globalThis.fetch;
 
       const result = await hetzner.getServer('tok', 1);
 
-      assert.ok(capturedUrl.endsWith('/servers/1'));
-      assert.strictEqual(result.id, 1);
-      assert.strictEqual(result.name, 'test');
-      assert.strictEqual(result.status, 'running');
-      assert.strictEqual(result.public_net.ipv4.ip, '1.2.3.4');
+      expect(capturedUrl.endsWith('/servers/1')).toBe(true);
+      expect(result.id).toBe(1);
+      expect(result.name).toBe('test');
+      expect(result.status).toBe('running');
+      expect(result.public_net.ipv4.ip).toBe('1.2.3.4');
     });
   });
 
@@ -441,22 +436,22 @@ describe('hetzner API client', () => {
 
   describe('listImages', () => {
     it('returns validated image array', async () => {
-      let capturedUrl;
-      globalThis.fetch = (url) => {
+      let capturedUrl = '';
+      globalThis.fetch = ((url: string) => {
         capturedUrl = url;
         return Promise.resolve({
           ok: true,
           status: 200,
           json: () => Promise.resolve({ images: [mockImage] }),
         });
-      };
+      }) as typeof globalThis.fetch;
 
       const result = await hetzner.listImages('tok');
 
-      assert.ok(capturedUrl.includes('/images?type=system'));
-      assert.strictEqual(result.length, 1);
-      assert.strictEqual(result[0].name, 'ubuntu-24.04');
-      assert.strictEqual(result[0].os_flavor, 'ubuntu');
+      expect(capturedUrl).toContain('/images?type=system');
+      expect(result).toHaveLength(1);
+      expect(result[0]?.name).toBe('ubuntu-24.04');
+      expect(result[0]?.os_flavor).toBe('ubuntu');
     });
   });
 
@@ -466,22 +461,22 @@ describe('hetzner API client', () => {
 
   describe('listLocations', () => {
     it('returns validated location array', async () => {
-      let capturedUrl;
-      globalThis.fetch = (url) => {
+      let capturedUrl = '';
+      globalThis.fetch = ((url: string) => {
         capturedUrl = url;
         return Promise.resolve({
           ok: true,
           status: 200,
           json: () => Promise.resolve({ locations: [mockLocation] }),
         });
-      };
+      }) as typeof globalThis.fetch;
 
       const result = await hetzner.listLocations('tok');
 
-      assert.ok(capturedUrl.endsWith('/locations'));
-      assert.strictEqual(result.length, 1);
-      assert.strictEqual(result[0].name, 'fsn1');
-      assert.strictEqual(result[0].city, 'Falkenstein');
+      expect(capturedUrl.endsWith('/locations')).toBe(true);
+      expect(result).toHaveLength(1);
+      expect(result[0]?.name).toBe('fsn1');
+      expect(result[0]?.city).toBe('Falkenstein');
     });
   });
 
@@ -495,9 +490,9 @@ describe('hetzner API client', () => {
 
       const result = await hetzner.listServers('tok');
 
-      assert.strictEqual(result.length, 1);
-      assert.strictEqual(result[0].id, 1);
-      assert.strictEqual(result[0].name, 'test');
+      expect(result).toHaveLength(1);
+      expect(result[0]?.id).toBe(1);
+      expect(result[0]?.name).toBe('test');
     });
   });
 
@@ -507,23 +502,23 @@ describe('hetzner API client', () => {
 
   describe('listServerTypes', () => {
     it('returns validated server type array', async () => {
-      let capturedUrl;
-      globalThis.fetch = (url) => {
+      let capturedUrl = '';
+      globalThis.fetch = ((url: string) => {
         capturedUrl = url;
         return Promise.resolve({
           ok: true,
           status: 200,
           json: () => Promise.resolve({ server_types: [mockServerType] }),
         });
-      };
+      }) as typeof globalThis.fetch;
 
       const result = await hetzner.listServerTypes('tok');
 
-      assert.ok(capturedUrl.endsWith('/server_types'));
-      assert.strictEqual(result.length, 1);
-      assert.strictEqual(result[0].name, 'cx22');
-      assert.strictEqual(result[0].cores, 2);
-      assert.deepStrictEqual(result[0].prices[0].price_hourly, { gross: '0.0080' });
+      expect(capturedUrl.endsWith('/server_types')).toBe(true);
+      expect(result).toHaveLength(1);
+      expect(result[0]?.name).toBe('cx22');
+      expect(result[0]?.cores).toBe(2);
+      expect(result[0]?.prices[0]?.price_hourly).toEqual({ gross: '0.0080' });
     });
   });
 
@@ -533,22 +528,22 @@ describe('hetzner API client', () => {
 
   describe('listSSHKeys', () => {
     it('returns validated SSH key array', async () => {
-      let capturedUrl;
-      globalThis.fetch = (url) => {
+      let capturedUrl = '';
+      globalThis.fetch = ((url: string) => {
         capturedUrl = url;
         return Promise.resolve({
           ok: true,
           status: 200,
           json: () => Promise.resolve({ ssh_keys: [mockSSHKey] }),
         });
-      };
+      }) as typeof globalThis.fetch;
 
       const result = await hetzner.listSSHKeys('tok');
 
-      assert.ok(capturedUrl.endsWith('/ssh_keys'));
-      assert.strictEqual(result.length, 1);
-      assert.strictEqual(result[0].id, 42);
-      assert.strictEqual(result[0].fingerprint, 'aa:bb:cc');
+      expect(capturedUrl.endsWith('/ssh_keys')).toBe(true);
+      expect(result).toHaveLength(1);
+      expect(result[0]?.id).toBe(42);
+      expect(result[0]?.fingerprint).toBe('aa:bb:cc');
     });
   });
 
@@ -558,8 +553,9 @@ describe('hetzner API client', () => {
 
   describe('rebuildServer', () => {
     it('sends POST with image', async () => {
-      let capturedUrl, capturedOpts;
-      globalThis.fetch = (url, opts) => {
+      let capturedUrl = '';
+      let capturedOpts: { method: string; body: string } = { method: '', body: '' };
+      globalThis.fetch = ((url: string, opts: { method: string; body: string }) => {
         capturedUrl = url;
         capturedOpts = opts;
         return Promise.resolve({
@@ -567,14 +563,14 @@ describe('hetzner API client', () => {
           status: 200,
           json: () => Promise.resolve({}),
         });
-      };
+      }) as typeof globalThis.fetch;
 
       await hetzner.rebuildServer('tok', 5, 'ubuntu-24.04');
 
-      assert.strictEqual(capturedOpts.method, 'POST');
-      assert.ok(capturedUrl.endsWith('/servers/5/actions/rebuild'));
+      expect(capturedOpts.method).toBe('POST');
+      expect(capturedUrl.endsWith('/servers/5/actions/rebuild')).toBe(true);
       const body = JSON.parse(capturedOpts.body);
-      assert.strictEqual(body.image, 'ubuntu-24.04');
+      expect(body.image).toBe('ubuntu-24.04');
     });
   });
 
@@ -584,20 +580,20 @@ describe('hetzner API client', () => {
 
   describe('validateToken', () => {
     it('returns true on success', async () => {
-      let capturedUrl;
-      globalThis.fetch = (url) => {
+      let capturedUrl = '';
+      globalThis.fetch = ((url: string) => {
         capturedUrl = url;
         return Promise.resolve({
           ok: true,
           status: 200,
           json: () => Promise.resolve({ servers: [] }),
         });
-      };
+      }) as typeof globalThis.fetch;
 
       const result = await hetzner.validateToken('good-token');
 
-      assert.strictEqual(result, true);
-      assert.ok(capturedUrl.includes('/servers?per_page=1'));
+      expect(result).toBe(true);
+      expect(capturedUrl).toContain('/servers?per_page=1');
     });
 
     it('returns false on failure', async () => {
@@ -605,7 +601,191 @@ describe('hetzner API client', () => {
 
       const result = await hetzner.validateToken('bad-token');
 
-      assert.strictEqual(result, false);
+      expect(result).toBe(false);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // ensureSSHKey — normalize function edge cases
+  // -----------------------------------------------------------------------
+
+  describe('ensureSSHKey normalize', () => {
+    it('matches key with extra whitespace between parts', async () => {
+      // Key stored on server has single space, input has multiple spaces
+      const storedKey = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5 test@dev';
+      const inputKey = 'ssh-ed25519   AAAAC3NzaC1lZDI1NTE5   test@dev';
+      mockFetch({ ssh_keys: [{ ...mockSSHKey, public_key: storedKey }] });
+
+      const result = await hetzner.ensureSSHKey('tok', 'my-key', inputKey);
+      expect(result.id).toBe(42);
+    });
+
+    it('matches key with leading/trailing whitespace', async () => {
+      const storedKey = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5 test@dev';
+      const inputKey = '  ssh-ed25519 AAAAC3NzaC1lZDI1NTE5 test@dev  ';
+      mockFetch({ ssh_keys: [{ ...mockSSHKey, public_key: storedKey }] });
+
+      const result = await hetzner.ensureSSHKey('tok', 'my-key', inputKey);
+      expect(result.id).toBe(42);
+    });
+
+    it('ignores comment part when matching', async () => {
+      // Same key type+data, different comments — should match
+      const storedKey = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5 stored@server';
+      const inputKey = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5 different@comment';
+      mockFetch({ ssh_keys: [{ ...mockSSHKey, public_key: storedKey }] });
+
+      const result = await hetzner.ensureSSHKey('tok', 'my-key', inputKey);
+      expect(result.id).toBe(42);
+    });
+
+    it('does not match different key data', async () => {
+      const storedKey = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5 test@dev';
+      const inputKey = 'ssh-ed25519 BBBBC3NzaC1lZDI1NTE5 test@dev';
+      let callCount = 0;
+      globalThis.fetch = (() => {
+        callCount++;
+        if (callCount === 1) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve({ ssh_keys: [{ ...mockSSHKey, public_key: storedKey }] }),
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ ssh_key: { ...mockSSHKey, public_key: inputKey } }),
+        });
+      }) as typeof globalThis.fetch;
+
+      const result = await hetzner.ensureSSHKey('tok', 'my-key', inputKey);
+      // Should have created a new key (call count 2)
+      expect(callCount).toBe(2);
+      expect(result.public_key).toBe(inputKey);
+    });
+
+    it('uniqueness_error re-fetch with no match throws', async () => {
+      let callCount = 0;
+      globalThis.fetch = (() => {
+        callCount++;
+        if (callCount === 1) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve({ ssh_keys: [] }),
+          });
+        }
+        if (callCount === 2) {
+          return Promise.resolve({
+            ok: false,
+            status: 409,
+            statusText: 'Conflict',
+            json: () => Promise.resolve({ error: { message: 'uniqueness_error' } }),
+          });
+        }
+        // Re-fetch returns no matching key either
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ ssh_keys: [{ ...mockSSHKey, public_key: 'ssh-rsa OTHER other@dev' }] }),
+        });
+      }) as typeof globalThis.fetch;
+
+      await expect(hetzner.ensureSSHKey('tok', 'my-key', 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5 test@dev')).rejects.toThrow(
+        'uniqueness_error',
+      );
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // createServer labels
+  // -----------------------------------------------------------------------
+
+  describe('createServer labels', () => {
+    it('sends empty labels when opts.labels is undefined', async () => {
+      let capturedBody = '';
+      globalThis.fetch = ((_url: unknown, opts: { body: string }) => {
+        capturedBody = opts.body;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ server: mockServer }),
+        });
+      }) as typeof globalThis.fetch;
+
+      await hetzner.createServer('tok', {
+        image: 'ubuntu-24.04',
+        location: 'fsn1',
+        name: 'test',
+        serverType: 'cx22',
+        sshKeys: [],
+        userData: '',
+      });
+
+      const body = JSON.parse(capturedBody);
+      expect(body.labels).toEqual({});
+    });
+
+    it('sends provided labels when opts.labels is set', async () => {
+      let capturedBody = '';
+      globalThis.fetch = ((_url: unknown, opts: { body: string }) => {
+        capturedBody = opts.body;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ server: mockServer }),
+        });
+      }) as typeof globalThis.fetch;
+
+      await hetzner.createServer('tok', {
+        image: 'ubuntu-24.04',
+        labels: { managed: 'devbox', progress: 'installing' },
+        location: 'fsn1',
+        name: 'test',
+        serverType: 'cx22',
+        sshKeys: [],
+        userData: '',
+      });
+
+      const body = JSON.parse(capturedBody);
+      expect(body.labels).toEqual({ managed: 'devbox', progress: 'installing' });
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // URL path verification
+  // -----------------------------------------------------------------------
+
+  describe('URL paths', () => {
+    it('createSSHKey uses /ssh_keys path', async () => {
+      let capturedUrl = '';
+      globalThis.fetch = ((url: string) => {
+        capturedUrl = url;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ ssh_key: mockSSHKey }),
+        });
+      }) as typeof globalThis.fetch;
+
+      await hetzner.createSSHKey('tok', 'key', 'ssh-ed25519 AAAA test@dev');
+      expect(capturedUrl).toContain('/ssh_keys');
+    });
+
+    it('listServers uses /servers path', async () => {
+      let capturedUrl = '';
+      globalThis.fetch = ((url: string) => {
+        capturedUrl = url;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ servers: [] }),
+        });
+      }) as typeof globalThis.fetch;
+
+      await hetzner.listServers('tok');
+      expect(capturedUrl).toContain('/servers');
     });
   });
 
@@ -619,13 +799,13 @@ describe('hetzner API client', () => {
 
       const result = await hetzner.waitForRunning('tok', 1, 3, 1);
 
-      assert.strictEqual(result.status, 'running');
-      assert.strictEqual(result.id, 1);
+      expect(result.status).toBe('running');
+      expect(result.id).toBe(1);
     });
 
     it('polls until server is running', async () => {
       let callCount = 0;
-      globalThis.fetch = () => {
+      globalThis.fetch = (() => {
         callCount++;
         const status = callCount >= 3 ? 'running' : 'initializing';
         return Promise.resolve({
@@ -633,24 +813,18 @@ describe('hetzner API client', () => {
           status: 200,
           json: () => Promise.resolve({ server: { ...mockServer, status } }),
         });
-      };
+      }) as typeof globalThis.fetch;
 
       const result = await hetzner.waitForRunning('tok', 1, 5, 1);
 
-      assert.strictEqual(result.status, 'running');
-      assert.strictEqual(callCount, 3);
+      expect(result.status).toBe('running');
+      expect(callCount).toBe(3);
     });
 
     it('throws on timeout', async () => {
       mockFetch({ server: { ...mockServer, status: 'initializing' } });
 
-      await assert.rejects(
-        () => hetzner.waitForRunning('tok', 1, 1, 1),
-        (err) => {
-          assert.ok(err.message.includes('Timeout'));
-          return true;
-        },
-      );
+      await expect(hetzner.waitForRunning('tok', 1, 1, 1)).rejects.toThrow('Timeout');
     });
   });
 });

@@ -7,7 +7,7 @@
     "$components/*": ["src/components/*"],
     "$pages/*": ["src/pages/*"]
   },
-  "ignoreDependencies": ["@stryker-mutator/command-runner", "tailwindcss", "vitest", "playwright", "happy-dom"],
+  "ignoreDependencies": ["tailwindcss", "playwright"],
   "ignoreExportsUsedInFile": true,
   "rules": {
     "unlisted": "error",

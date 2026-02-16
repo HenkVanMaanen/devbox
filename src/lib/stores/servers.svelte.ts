@@ -9,13 +9,11 @@ import * as hetzner from '$lib/api/hetzner';
 import { loadValidated, save } from '$lib/utils/storage';
 import { backgroundRefresh, CACHE_KEYS, clearSwrCache, peekCache, swrFetch } from '$lib/utils/swr-cache';
 
-// Stryker disable all: helper filter and poll constants - data values not worth mutating
 const filterDevbox = (allServers: Server[]): Server[] => allServers.filter((s) => s.labels['managed'] === 'devbox');
 
 const POLL_INTERVAL = 5000;
 const POLL_MAX_DURATION = 15 * 60 * 1000; // 15 minutes
 const POLL_MAX_FAILURES = 3;
-// Stryker restore all
 
 function createServersStore() {
   let servers = $state<Server[]>([]);
@@ -38,7 +36,6 @@ function createServersStore() {
     { interval: ReturnType<typeof setInterval>; timeout: ReturnType<typeof setTimeout> }
   >();
 
-  // Stryker disable all: polling infrastructure - setInterval/setTimeout with async retry logic, impractical to unit test
   function startProgressPolling(token: string, serverId: number): void {
     if (pollingTimers.has(serverId)) return;
 
@@ -82,7 +79,6 @@ function createServersStore() {
       stopProgressPolling(id);
     }
   }
-  // Stryker restore all
 
   return {
     // Clear options (e.g., when token changes)
@@ -94,7 +90,6 @@ function createServersStore() {
       clearSwrCache(Object.values(CACHE_KEYS));
     },
     // Create a new server
-    // Stryker disable all: complex async flow with waitForRunning, backgroundRefresh, progress tracking - happy path tested but internal mutations survive
     async create(token: string, opts: hetzner.CreateServerOptions, accessToken: string): Promise<Server> {
       creating = true;
       createProgress = 'Creating server...';
@@ -138,7 +133,6 @@ function createServersStore() {
         createProgress = '';
       }
     },
-    // Stryker restore all
     get createProgress() {
       return createProgress;
     },
@@ -146,7 +140,6 @@ function createServersStore() {
       return creating;
     },
     // Delete a server (optimistic)
-    // Stryker disable all: optimistic update with rollback - basic flow tested but internal mutations survive
     async delete(token: string, id: number, name: string): Promise<void> {
       // Optimistic: remove server from UI immediately
       const previousServers = [...servers];
@@ -172,7 +165,6 @@ function createServersStore() {
         throw error_;
       }
     },
-    // Stryker restore all
     // Get devbox servers only
     get devboxServers() {
       return servers.filter((s) => s.labels['managed'] === 'devbox');
@@ -190,7 +182,6 @@ function createServersStore() {
     },
 
     // Load servers from Hetzner
-    // Stryker disable all: SWR fetch orchestration with error handling - complex async flow
     async load(token: string): Promise<void> {
       if (!token) {
         servers = [];
@@ -227,14 +218,12 @@ function createServersStore() {
         loading = false;
       }
     },
-    // Stryker restore all
 
     get loading() {
       return loading;
     },
 
     // Load Hetzner options (server types, locations, images)
-    // Stryker disable all: SWR fetch orchestration with error handling - complex async flow
     async loadOptions(token: string): Promise<void> {
       if (!token || serverTypes.length > 0) return;
 
@@ -269,7 +258,6 @@ function createServersStore() {
         console.error('Failed to load Hetzner options:', error_);
       }
     },
-    // Stryker restore all
 
     get locations() {
       return locations;
