@@ -4,6 +4,28 @@ All notable changes to Devbox will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [3.2.2] - 2026-02-16
+
+### Fixed
+
+- Reorder release workflow so changelog is committed before build
+## [3.2.1] - 2026-02-16
+
+### Added
+
+- Add Zod runtime validation for localStorage, API responses, and config import
+
+### Changed
+
+- Remove backward compatibility and deprecated code
+
+### Chore
+
+- Add comprehensive linting and code quality tooling
+
+### Fixed
+
+- Use JSON clone instead of structuredClone for Svelte 5 proxy compatibility
 ## [3.2.0] - 2026-02-13
 
 ### Added
