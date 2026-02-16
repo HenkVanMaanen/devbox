@@ -38,25 +38,6 @@ jobs:
           config: cliff.toml
           args: --latest --strip header
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Build
-        run: pnpm run build
-
-      - name: Create dist archive
-        run: |
-          cd dist
-          zip -r ../devbox-${{ env.VERSION }}.zip .
-
       - name: Commit changelog to main
         run: |
           # Save generated changelog before switching branches
@@ -78,6 +59,25 @@ jobs:
             git commit -m "chore: update changelog for v${{ env.VERSION }}"
             git push origin main
           fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Create dist archive
+        run: |
+          cd dist
+          zip -r ../devbox-${{ env.VERSION }}.zip .
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
