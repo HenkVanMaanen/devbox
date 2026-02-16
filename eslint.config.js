@@ -12,6 +12,7 @@ export default tseslint.config(
   // Global ignores
   {
     ignores: [
+      '.stryker-tmp/**',
       'dist/**',
       'node_modules/**',
       'src/lib/utils/qrcode.ts',

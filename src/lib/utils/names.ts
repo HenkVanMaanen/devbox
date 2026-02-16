@@ -1,5 +1,6 @@
 // Funny alliterative server name generator
 
+// Stryker disable all
 const adjectives = [
   'adorable',
   'brave',
@@ -69,6 +70,7 @@ const nouns = [
   'echidna',
   'ferret',
 ];
+// Stryker restore all
 
 export function generateServerName(): string {
   // Pick a random letter
@@ -85,6 +87,7 @@ export function generateServerName(): string {
   return `${adj}-${noun}`;
 }
 
+// Stryker disable all
 function randomFrom<T>(arr: readonly T[]): T {
   const item = arr[Math.floor(Math.random() * arr.length)];
   if (item === undefined) {
@@ -92,3 +95,4 @@ function randomFrom<T>(arr: readonly T[]): T {
   }
   return item;
 }
+// Stryker restore all

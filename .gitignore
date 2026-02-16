@@ -19,3 +19,5 @@ dist/
 devbox
 devbox.pub
 mise.toml
+.stryker-tmp/
+reports/
