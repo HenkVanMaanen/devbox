@@ -33,7 +33,10 @@ export function clearAll(): void {
 }
 
 export function clone<T>(value: T): T {
-  return structuredClone(value);
+  // Use JSON round-trip instead of structuredClone because Svelte 5's
+  // $state creates Proxy objects that structuredClone cannot handle
+  // eslint-disable-next-line unicorn/prefer-structured-clone -- structuredClone fails on Svelte 5 proxies
+  return JSON.parse(JSON.stringify(value)) as T;
 }
 
 // Deep merge two objects
