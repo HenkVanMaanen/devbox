@@ -102,20 +102,23 @@ pnpm fix       # Auto-fix lint errors + format code
 | **cspell**       | `cspell.json`          | Spell checking                             |
 | **knip**         | `knip.json`            | Dead code / unused dependency detection    |
 | **jscpd**        | `.jscpd.json`          | Copy-paste detection                       |
+| **Stryker**      | `stryker.config.json`  | Mutation testing (80% break threshold)     |
 | **commitlint**   | `commitlint.config.js` | Conventional commit enforcement            |
 | **lefthook**     | `lefthook.yml`         | Git hooks (pre-commit + commit-msg)        |
 
 ### Individual Check Commands
 
 ```bash
-pnpm check:format  # Prettier format check
-pnpm check:lint    # ESLint
-pnpm check:css     # Stylelint
-pnpm check:types   # svelte-check / TypeScript
-pnpm check:spell   # cspell
-pnpm check:knip    # Dead code detection
-pnpm check:cpd     # Copy-paste detection
-pnpm test          # Unit tests
+pnpm check:format    # Prettier format check
+pnpm check:lint      # ESLint
+pnpm check:css       # Stylelint
+pnpm check:types     # svelte-check / TypeScript
+pnpm check:spell     # cspell
+pnpm check:knip      # Dead code detection
+pnpm check:cpd       # Copy-paste detection
+pnpm check:coverage  # Unit tests + coverage thresholds (90% lines, 85% branches, 100% functions)
+pnpm test            # Unit tests only (no coverage enforcement)
+pnpm test:mutation   # Stryker mutation testing (80% break threshold)
 ```
 
 ### Git Hooks (lefthook)
@@ -148,6 +151,9 @@ pnpm test          # Unit tests
 - **Add tests for new functions**: Especially for cloud-init and storage utilities
 - **Test file naming**: `modulename.test.mjs`
 - **Use Node.js native test runner**: `import { describe, it } from 'node:test'`
+- **Use `assert.strictEqual`** for null/undefined checks (not `assert.equal` which uses loose equality)
+- **Coverage thresholds** (enforced by `pnpm check:coverage`): 90% lines, 85% branches, 100% functions
+- **Mutation score** (enforced by `pnpm test:mutation`): 80% minimum
 
 Example test:
 
@@ -158,7 +164,7 @@ import { myFunction } from '../src/lib/utils/mymodule.ts';
 
 describe('myFunction', () => {
   it('does something', () => {
-    assert.equal(myFunction('input'), 'expected');
+    assert.strictEqual(myFunction('input'), 'expected');
   });
 });
 ```
@@ -268,11 +274,13 @@ GitHub Actions automatically:
 ## Useful Commands
 
 ```bash
-pnpm check                  # Run ALL checks (format, lint, types, spell, tests, etc.)
+pnpm check                  # Run ALL checks (format, lint, types, spell, coverage, etc.)
 pnpm fix                    # Auto-fix lint + format issues
 pnpm dev                    # Dev server with watch
 pnpm build                  # Production build
 pnpm test                   # Unit tests only
+pnpm check:coverage         # Unit tests + coverage thresholds
+pnpm test:mutation          # Stryker mutation testing
 git log --oneline -10       # Recent commits for context
 ```
 
