@@ -5,6 +5,7 @@
   import { profilesStore } from '$lib/stores/profiles.svelte';
   import { themeStore } from '$lib/stores/theme.svelte';
   import { toast } from '$lib/stores/toast.svelte';
+  import { copyToClipboard } from '$lib/utils/clipboard';
   import { generateCloudInit } from '$lib/utils/cloudinit';
 
   let selectedProfileId = $state<null | string>(profilesStore.defaultProfileId);
@@ -35,15 +36,6 @@
     sizePercent > 90 ? 'text-destructive' : sizePercent > 70 ? 'text-warning' : 'text-success',
   );
   const barColor = $derived(sizePercent > 90 ? 'bg-destructive' : sizePercent > 70 ? 'bg-warning' : 'bg-success');
-
-  async function copyToClipboard() {
-    try {
-      await navigator.clipboard.writeText(script);
-      toast.success('Copied to clipboard');
-    } catch {
-      toast.error('Failed to copy');
-    }
-  }
 
   function download() {
     const blob = new Blob([script], { type: 'text/yaml' });
@@ -105,7 +97,7 @@
         </div>
         <div class="flex gap-2">
           <Button variant="secondary" size="sm" onclick={refresh}>Refresh</Button>
-          <Button variant="secondary" size="sm" onclick={copyToClipboard}>Copy</Button>
+          <Button variant="secondary" size="sm" onclick={() => copyToClipboard(script, 'Cloud-init')}>Copy</Button>
           <Button variant="secondary" size="sm" onclick={download}>Download</Button>
         </div>
       </div>

@@ -16,7 +16,7 @@ export default defineConfig({
   },
   test: {
     coverage: {
-      exclude: ['src/lib/data/**', 'src/lib/utils/qrcode.ts'],
+      exclude: ['src/lib/data/**'],
       include: ['src/lib/**/*.ts'],
       provider: 'v8',
       thresholds: {

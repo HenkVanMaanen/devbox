@@ -3,7 +3,7 @@
 
   import { configStore } from '$lib/stores/config.svelte';
   import { serversStore } from '$lib/stores/servers.svelte';
-  import { toast } from '$lib/stores/toast.svelte';
+  import { copyToClipboard } from '$lib/utils/clipboard';
   import { generateQR } from '$lib/utils/qrcode';
 
   import Button from './ui/Button.svelte';
@@ -73,29 +73,6 @@
         ? 'bg-warning/30 text-warning'
         : 'bg-success/30 text-success',
   );
-
-  async function copyToClipboard(text: string, label: string) {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
-      } else {
-        // Fallback for HTTP
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        textarea.style.position = 'fixed';
-        textarea.style.opacity = '0';
-        document.body.append(textarea);
-        textarea.select();
-        // eslint-disable-next-line @typescript-eslint/no-deprecated
-        document.execCommand('copy');
-        textarea.remove();
-      }
-      toast.success(`${label} copied`);
-    } catch {
-      toast.error('Failed to copy');
-    }
-  }
 </script>
 
 <Card class="mb-4">

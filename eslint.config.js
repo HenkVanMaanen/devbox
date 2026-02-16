@@ -16,7 +16,6 @@ export default tseslint.config(
       'coverage/**',
       'dist/**',
       'node_modules/**',
-      'src/lib/utils/qrcode.ts',
       '**/*.test.mjs',
       '**/*.test.ts',
       'vitest.config.ts',
