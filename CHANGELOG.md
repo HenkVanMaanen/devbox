@@ -4,6 +4,22 @@ All notable changes to Devbox will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [3.3.0] - 2026-02-16
+
+### Changed
+
+- Replace vendored QR code and name generator with npm packages, extract clipboard utility
+
+### Documentation
+
+- Update AGENTS.md for vitest and lower function coverage to 95%
+- Update AGENTS.md with coverage and mutation testing commands
+
+### Testing
+
+- Migrate to vitest, replace custom YAML serializer, improve mutation score
+- Add hetzner API and Svelte store tests, expand mutation testing
+- Add unit tests and Stryker mutation testing
 ## [3.2.3] - 2026-02-16
 
 ### Fixed
