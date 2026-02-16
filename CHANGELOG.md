@@ -4,6 +4,11 @@ All notable changes to Devbox will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [3.2.3] - 2026-02-16
+
+### Fixed
+
+- Generate changelog in deploy workflow for correct builds
 ## [3.2.2] - 2026-02-16
 
 ### Fixed
