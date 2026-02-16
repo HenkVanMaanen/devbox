@@ -1,5 +1,5 @@
-import QRCode from 'qrcode-svg';
+import { renderSVG } from 'uqr';
 
 export function generateQR(text: string): string {
-  return new QRCode({ container: 'svg-viewbox', content: text, ecl: 'M', join: true, padding: 4 }).svg();
+  return renderSVG(text, { border: 4, ecc: 'M' });
 }
