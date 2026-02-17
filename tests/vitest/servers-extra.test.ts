@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Server } from '$lib/types';
+import type { SwrFetchOptions } from '$lib/utils/swr-cache';
 
 const mockSwrFetch = vi.fn();
 const mockBackgroundRefresh = vi.fn();
@@ -48,6 +49,16 @@ const mockProvisioningServer: Server = {
   id: 3,
   labels: { managed: 'devbox', progress: 'installing' },
   name: 'provisioning-server',
+};
+
+const createOpts = {
+  image: 'ubuntu-24.04',
+  labels: { managed: 'devbox' },
+  location: 'fsn1',
+  name: 'new-server',
+  serverType: 'cx22',
+  sshKeys: [1],
+  userData: '#cloud-config',
 };
 
 describe('servers store - load()', () => {
@@ -308,5 +319,441 @@ describe('servers store - delete()', () => {
 
     await store.delete('test-token', 1, 'test-server');
     expect(store.servers).toHaveLength(0);
+  });
+});
+
+describe('servers store - backgroundRefresh callbacks', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+    localStorage.clear();
+  });
+
+  async function getStore() {
+    const { serversStore } = await import('$lib/stores/servers.svelte');
+    return serversStore;
+  }
+
+  async function getHetzner() {
+    return await import('$lib/api/hetzner');
+  }
+
+  it('create() backgroundRefresh onData callback updates servers and starts polling for non-ready', async () => {
+    const hetznerMod = await getHetzner();
+    const createdServer: Server = { ...mockServer, id: 10, status: 'initializing' };
+    const runningServer: Server = { ...mockServer, id: 10, status: 'running' };
+
+    vi.mocked(hetznerMod.createServer).mockResolvedValue(createdServer);
+    vi.mocked(hetznerMod.waitForRunning).mockResolvedValue(runningServer);
+
+    // Make backgroundRefresh call both fetcher and onData
+    mockBackgroundRefresh.mockImplementation(async (opts: SwrFetchOptions<Server[]>) => {
+      const data = await opts.fetcher();
+      opts.onData(data);
+    });
+
+    // listServers returns a mix of devbox and non-devbox servers, including a provisioning one
+    const provisioningServer: Server = {
+      ...mockServer,
+      id: 20,
+      labels: { managed: 'devbox', progress: 'installing' },
+      name: 'provisioning',
+    };
+    vi.mocked(hetznerMod.listServers).mockResolvedValue([mockServer, provisioningServer]);
+
+    const store = await getStore();
+    await store.create('test-token', createOpts, 'access-token');
+
+    // onData should have filtered to devbox servers
+    expect(store.servers).toHaveLength(2);
+    // fetcher (listServers) should have been called
+    expect(hetznerMod.listServers).toHaveBeenCalledWith('test-token');
+  });
+
+  it('create() backgroundRefresh fetcher calls hetzner.listServers', async () => {
+    const hetznerMod = await getHetzner();
+    const createdServer: Server = { ...mockServer, id: 10, status: 'initializing' };
+    const runningServer: Server = { ...mockServer, id: 10, status: 'running' };
+
+    vi.mocked(hetznerMod.createServer).mockResolvedValue(createdServer);
+    vi.mocked(hetznerMod.waitForRunning).mockResolvedValue(runningServer);
+
+    // Capture the fetcher and call it
+    mockBackgroundRefresh.mockImplementation(async (opts: SwrFetchOptions<Server[]>) => {
+      await opts.fetcher();
+    });
+
+    vi.mocked(hetznerMod.listServers).mockResolvedValue([mockServer]);
+
+    const store = await getStore();
+    await store.create('test-token', createOpts, 'access-token');
+
+    expect(hetznerMod.listServers).toHaveBeenCalledWith('test-token');
+    // servers should not have been updated since onData was not called
+    expect(store.servers.some((s) => s.id === 10)).toBe(true);
+  });
+
+  it('delete() backgroundRefresh onData callback updates servers with filtered list', async () => {
+    // Load a server first
+    mockPeekCache.mockReturnValue(false);
+    mockSwrFetch.mockImplementation(async (opts: { onData: (data: Server[]) => void }) => {
+      opts.onData([mockServer]);
+    });
+
+    const store = await getStore();
+    await store.load('test-token');
+    store.saveServerToken('test-server', 'tok');
+
+    const hetznerMod = await getHetzner();
+    vi.mocked(hetznerMod.deleteServer).mockResolvedValue(undefined);
+
+    // Make backgroundRefresh call onData with remaining servers
+    mockBackgroundRefresh.mockImplementation(async (opts: SwrFetchOptions<Server[]>) => {
+      const data = await opts.fetcher();
+      opts.onData(data);
+    });
+
+    // After deletion, listServers returns empty
+    vi.mocked(hetznerMod.listServers).mockResolvedValue([]);
+
+    await store.delete('test-token', 1, 'test-server');
+
+    expect(store.servers).toHaveLength(0);
+    expect(hetznerMod.listServers).toHaveBeenCalledWith('test-token');
+  });
+
+  it('delete() backgroundRefresh fetcher calls hetzner.listServers', async () => {
+    // Load a server first
+    mockPeekCache.mockReturnValue(false);
+    mockSwrFetch.mockImplementation(async (opts: { onData: (data: Server[]) => void }) => {
+      opts.onData([mockServer]);
+    });
+
+    const store = await getStore();
+    await store.load('test-token');
+    store.saveServerToken('test-server', 'tok');
+
+    const hetznerMod = await getHetzner();
+    vi.mocked(hetznerMod.deleteServer).mockResolvedValue(undefined);
+
+    // Only call fetcher, not onData
+    mockBackgroundRefresh.mockImplementation(async (opts: SwrFetchOptions<Server[]>) => {
+      await opts.fetcher();
+    });
+
+    vi.mocked(hetznerMod.listServers).mockResolvedValue([]);
+
+    await store.delete('test-token', 1, 'test-server');
+
+    expect(hetznerMod.listServers).toHaveBeenCalledWith('test-token');
+  });
+});
+
+describe('servers store - swrFetch fetcher callbacks', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+    localStorage.clear();
+  });
+
+  async function getStore() {
+    const { serversStore } = await import('$lib/stores/servers.svelte');
+    return serversStore;
+  }
+
+  async function getHetzner() {
+    return await import('$lib/api/hetzner');
+  }
+
+  it('load() swrFetch fetcher calls hetzner.listServers', async () => {
+    const hetznerMod = await getHetzner();
+    mockPeekCache.mockReturnValue(false);
+
+    vi.mocked(hetznerMod.listServers).mockResolvedValue([mockServer]);
+
+    // Make swrFetch call both fetcher and onData
+    mockSwrFetch.mockImplementation(async (opts: SwrFetchOptions<Server[]>) => {
+      const data = await opts.fetcher();
+      opts.onData(data);
+    });
+
+    const store = await getStore();
+    await store.load('test-token');
+
+    expect(hetznerMod.listServers).toHaveBeenCalledWith('test-token');
+    expect(store.servers).toHaveLength(1);
+  });
+
+  it('loadOptions() swrFetch fetchers call hetzner.listServerTypes, listLocations, listImages', async () => {
+    const hetznerMod = await getHetzner();
+
+    vi.mocked(hetznerMod.listServerTypes).mockResolvedValue([
+      { name: 'cx22', description: 'CX22', cores: 2, memory: 4, disk: 40 },
+    ]);
+    vi.mocked(hetznerMod.listLocations).mockResolvedValue([{ id: 1, name: 'fsn1' }]);
+    vi.mocked(hetznerMod.listImages).mockResolvedValue([{ id: 1, name: 'ubuntu-24.04' }]);
+
+    // Make swrFetch call both fetcher and onData
+    mockSwrFetch.mockImplementation(async (opts: SwrFetchOptions<unknown>) => {
+      const data = await opts.fetcher();
+      opts.onData(data);
+    });
+
+    const store = await getStore();
+    await store.loadOptions('test-token');
+
+    expect(hetznerMod.listServerTypes).toHaveBeenCalledWith('test-token');
+    expect(hetznerMod.listLocations).toHaveBeenCalledWith('test-token');
+    expect(hetznerMod.listImages).toHaveBeenCalledWith('test-token');
+    expect(store.serverTypes).toHaveLength(1);
+    expect(store.locations).toHaveLength(1);
+    expect(store.images).toHaveLength(1);
+  });
+});
+
+describe('servers store - progress polling', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.resetModules();
+    vi.clearAllMocks();
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  async function getStore() {
+    const { serversStore } = await import('$lib/stores/servers.svelte');
+    return serversStore;
+  }
+
+  async function getHetzner() {
+    return await import('$lib/api/hetzner');
+  }
+
+  it('polling interval calls getServer and updates server when still provisioning', async () => {
+    const hetznerMod = await getHetzner();
+
+    // Load a provisioning server to start polling
+    mockPeekCache.mockReturnValue(false);
+    mockSwrFetch.mockImplementation(async (opts: { onData: (data: Server[]) => void }) => {
+      opts.onData([mockProvisioningServer]);
+    });
+
+    const store = await getStore();
+    await store.load('test-token');
+
+    expect(store.servers).toHaveLength(1);
+    expect(store.servers[0]?.labels['progress']).toBe('installing');
+
+    // Mock getServer to return an updated server (still not ready)
+    const updatedServer: Server = {
+      ...mockProvisioningServer,
+      labels: { managed: 'devbox', progress: 'configuring' },
+    };
+    vi.mocked(hetznerMod.getServer).mockResolvedValue(updatedServer);
+
+    // Advance past POLL_INTERVAL (5000ms) to trigger the interval callback
+    await vi.advanceTimersByTimeAsync(5000);
+
+    expect(hetznerMod.getServer).toHaveBeenCalledWith('test-token', 3);
+    expect(store.servers[0]?.labels['progress']).toBe('configuring');
+  });
+
+  it('polling interval stops when server becomes ready', async () => {
+    const hetznerMod = await getHetzner();
+
+    mockPeekCache.mockReturnValue(false);
+    mockSwrFetch.mockImplementation(async (opts: { onData: (data: Server[]) => void }) => {
+      opts.onData([mockProvisioningServer]);
+    });
+
+    const store = await getStore();
+    await store.load('test-token');
+
+    // First poll: server becomes ready
+    const readyServer: Server = {
+      ...mockProvisioningServer,
+      labels: { managed: 'devbox', progress: 'ready' },
+    };
+    vi.mocked(hetznerMod.getServer).mockResolvedValue(readyServer);
+
+    await vi.advanceTimersByTimeAsync(5000);
+
+    expect(store.servers[0]?.labels['progress']).toBe('ready');
+
+    // Second poll should not happen (polling stopped)
+    vi.mocked(hetznerMod.getServer).mockClear();
+    await vi.advanceTimersByTimeAsync(5000);
+
+    expect(hetznerMod.getServer).not.toHaveBeenCalled();
+  });
+
+  it('polling stops after POLL_MAX_FAILURES (3) consecutive failures', async () => {
+    const hetznerMod = await getHetzner();
+
+    mockPeekCache.mockReturnValue(false);
+    mockSwrFetch.mockImplementation(async (opts: { onData: (data: Server[]) => void }) => {
+      opts.onData([mockProvisioningServer]);
+    });
+
+    const store = await getStore();
+    await store.load('test-token');
+
+    // Make getServer fail every time
+    vi.mocked(hetznerMod.getServer).mockRejectedValue(new Error('API error'));
+
+    // Trigger 3 consecutive failures
+    await vi.advanceTimersByTimeAsync(5000); // failure 1
+    await vi.advanceTimersByTimeAsync(5000); // failure 2
+    await vi.advanceTimersByTimeAsync(5000); // failure 3 -> stops polling
+
+    expect(hetznerMod.getServer).toHaveBeenCalledTimes(3);
+
+    // 4th tick should NOT trigger getServer (polling stopped)
+    vi.mocked(hetznerMod.getServer).mockClear();
+    await vi.advanceTimersByTimeAsync(5000);
+
+    expect(hetznerMod.getServer).not.toHaveBeenCalled();
+  });
+
+  it('polling failure counter resets on success', async () => {
+    const hetznerMod = await getHetzner();
+
+    mockPeekCache.mockReturnValue(false);
+    mockSwrFetch.mockImplementation(async (opts: { onData: (data: Server[]) => void }) => {
+      opts.onData([mockProvisioningServer]);
+    });
+
+    const store = await getStore();
+    await store.load('test-token');
+
+    const stillProvisioning: Server = {
+      ...mockProvisioningServer,
+      labels: { managed: 'devbox', progress: 'installing' },
+    };
+
+    // Fail twice, then succeed, then fail twice more — should NOT stop polling
+    vi.mocked(hetznerMod.getServer)
+      .mockRejectedValueOnce(new Error('fail 1'))
+      .mockRejectedValueOnce(new Error('fail 2'))
+      .mockResolvedValueOnce(stillProvisioning)
+      .mockRejectedValueOnce(new Error('fail 3'))
+      .mockRejectedValueOnce(new Error('fail 4'));
+
+    await vi.advanceTimersByTimeAsync(5000); // fail 1
+    await vi.advanceTimersByTimeAsync(5000); // fail 2
+    await vi.advanceTimersByTimeAsync(5000); // success -> resets counter
+    await vi.advanceTimersByTimeAsync(5000); // fail 3
+    await vi.advanceTimersByTimeAsync(5000); // fail 4
+
+    // Polling should still be active (counter was reset after success)
+    expect(hetznerMod.getServer).toHaveBeenCalledTimes(5);
+  });
+
+  it('polling stops after POLL_MAX_DURATION timeout (15 minutes)', async () => {
+    const hetznerMod = await getHetzner();
+
+    mockPeekCache.mockReturnValue(false);
+    mockSwrFetch.mockImplementation(async (opts: { onData: (data: Server[]) => void }) => {
+      opts.onData([mockProvisioningServer]);
+    });
+
+    const store = await getStore();
+    await store.load('test-token');
+
+    // getServer always returns a non-ready server
+    const stillProvisioning: Server = {
+      ...mockProvisioningServer,
+      labels: { managed: 'devbox', progress: 'installing' },
+    };
+    vi.mocked(hetznerMod.getServer).mockResolvedValue(stillProvisioning);
+
+    // Advance past the max duration (15 * 60 * 1000 = 900000ms)
+    await vi.advanceTimersByTimeAsync(15 * 60 * 1000);
+
+    // Record how many times getServer was called
+    const callCountBeforeExtra = vi.mocked(hetznerMod.getServer).mock.calls.length;
+
+    // Additional ticks should not trigger more polls
+    await vi.advanceTimersByTimeAsync(5000);
+    await vi.advanceTimersByTimeAsync(5000);
+
+    expect(vi.mocked(hetznerMod.getServer).mock.calls.length).toBe(callCountBeforeExtra);
+  });
+
+  it('polling map callback replaces matching server and leaves others unchanged', async () => {
+    const hetznerMod = await getHetzner();
+
+    // Load two devbox servers: one provisioning, one ready
+    const secondServer: Server = {
+      ...mockServer,
+      id: 99,
+      labels: { managed: 'devbox', progress: 'ready' },
+      name: 'other-server',
+    };
+
+    mockPeekCache.mockReturnValue(false);
+    mockSwrFetch.mockImplementation(async (opts: { onData: (data: Server[]) => void }) => {
+      opts.onData([mockProvisioningServer, secondServer]);
+    });
+
+    const store = await getStore();
+    await store.load('test-token');
+
+    expect(store.servers).toHaveLength(2);
+
+    // getServer returns updated data for the provisioning server
+    const updatedProvisioning: Server = {
+      ...mockProvisioningServer,
+      labels: { managed: 'devbox', progress: 'configuring' },
+    };
+    vi.mocked(hetznerMod.getServer).mockResolvedValue(updatedProvisioning);
+
+    await vi.advanceTimersByTimeAsync(5000);
+
+    // The provisioning server should be updated
+    const provServer = store.servers.find((s) => s.id === 3);
+    expect(provServer?.labels['progress']).toBe('configuring');
+
+    // The other server should be unchanged
+    const otherServer = store.servers.find((s) => s.id === 99);
+    expect(otherServer?.labels['progress']).toBe('ready');
+  });
+
+  it('create() starts polling that fires interval callback', async () => {
+    const hetznerMod = await getHetzner();
+    const createdServer: Server = {
+      ...mockServer,
+      id: 10,
+      labels: { managed: 'devbox', progress: 'installing' },
+      status: 'initializing',
+    };
+    const runningServer: Server = {
+      ...mockServer,
+      id: 10,
+      labels: { managed: 'devbox', progress: 'installing' },
+      status: 'running',
+    };
+
+    vi.mocked(hetznerMod.createServer).mockResolvedValue(createdServer);
+    vi.mocked(hetznerMod.waitForRunning).mockResolvedValue(runningServer);
+    mockBackgroundRefresh.mockResolvedValue(undefined);
+
+    const store = await getStore();
+    await store.create('test-token', createOpts, 'access-token');
+
+    // Now the store should be polling for server id=10
+    const readyServer: Server = {
+      ...runningServer,
+      labels: { managed: 'devbox', progress: 'ready' },
+    };
+    vi.mocked(hetznerMod.getServer).mockResolvedValue(readyServer);
+
+    await vi.advanceTimersByTimeAsync(5000);
+
+    expect(hetznerMod.getServer).toHaveBeenCalledWith('test-token', 10);
+    expect(store.servers.find((s) => s.id === 10)?.labels['progress']).toBe('ready');
   });
 });

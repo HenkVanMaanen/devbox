@@ -13,6 +13,7 @@ export default defineConfig({
       $lib: resolve(__dirname, './src/lib'),
       $pages: resolve(__dirname, './src/pages'),
     },
+    conditions: ['browser'],
   },
   test: {
     coverage: {

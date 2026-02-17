@@ -18,11 +18,13 @@ export default tseslint.config(
       'node_modules/**',
       '**/*.test.mjs',
       '**/*.test.ts',
+      '**/*.spec.ts',
       'vitest.config.ts',
       'CHANGELOG.md',
       'commitlint.config.js',
       'svelte.config.js',
       'eslint.config.js',
+      'playwright.config.ts',
     ],
   },
 

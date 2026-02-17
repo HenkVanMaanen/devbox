@@ -22,3 +22,5 @@ mise.toml
 .stryker-tmp/
 coverage/
 reports/
+test-results/
+playwright-report/

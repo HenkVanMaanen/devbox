@@ -1,7 +1,15 @@
 {
   "threshold": 5,
   "reporters": ["console"],
-  "ignore": ["node_modules", "dist", "pnpm-lock.yaml", "src/lib/utils/qrcode.ts", "CHANGELOG.md", "**/*.test.mjs"],
+  "ignore": [
+    "node_modules",
+    "dist",
+    "pnpm-lock.yaml",
+    "src/lib/utils/qrcode.ts",
+    "CHANGELOG.md",
+    "**/*.test.mjs",
+    "tests/**"
+  ],
   "format": ["typescript", "svelte", "css"],
   "absolute": false,
   "gitignore": true

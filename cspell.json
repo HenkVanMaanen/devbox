@@ -76,7 +76,11 @@
     "WCAG",
     "Wetty",
     "zerossl",
-    "zod"
+    "zod",
+    "axe",
+    "a11y",
+    "fastcheck",
+    "networkidle"
   ],
   "dictionaries": ["typescript", "html", "css", "node", "bash"]
 }
