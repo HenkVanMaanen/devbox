@@ -4,6 +4,11 @@ All notable changes to Devbox will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [3.4.0] - 2026-02-17
+
+### Testing
+
+- Add e2e, component, property-based, and security tests
 ## [3.3.1] - 2026-02-16
 
 ### Fixed
