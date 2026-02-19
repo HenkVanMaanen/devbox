@@ -2,18 +2,18 @@
 
 import { z } from 'zod';
 
+import { isSafeObjectPath } from '$lib/utils/path-safety';
+
 export const autoDeleteConfigSchema = z.object({
   enabled: z.boolean(),
   timeoutMinutes: z.number(),
   warningMinutes: z.number(),
 });
-export type AutoDeleteConfig = z.infer<typeof autoDeleteConfigSchema>;
 
 export const chezmoiConfigSchema = z.object({
   ageKey: z.string(),
   repoUrl: z.string(),
 });
-export type ChezmoiConfig = z.infer<typeof chezmoiConfigSchema>;
 
 export const customCloudInitConfigSchema = z.object({
   mode: z.enum(['merge', 'replace']),
@@ -32,14 +32,12 @@ export const sshKeySchema = z.object({
   name: z.string(),
   pubKey: z.string(),
 });
-export type SSHKey = z.infer<typeof sshKeySchema>;
 
 export const hetznerConfigSchema = z.object({
   baseImage: z.string(),
   location: z.string(),
   serverType: z.string(),
 });
-export type HetznerConfig = z.infer<typeof hetznerConfigSchema>;
 
 export const servicesConfigSchema = z.object({
   accessToken: z.string(),
@@ -55,7 +53,6 @@ export const servicesConfigSchema = z.object({
   zerosslEabKey: z.string(),
   zerosslEabKeyId: z.string(),
 });
-export type ServicesConfig = z.infer<typeof servicesConfigSchema>;
 
 export const globalConfigSchema = z.object({
   autoDelete: autoDeleteConfigSchema,
@@ -99,7 +96,12 @@ export type Location = z.infer<typeof locationSchema>;
 export const profileSchema = z.object({
   id: z.string(),
   name: z.string(),
-  overrides: z.record(z.string(), z.unknown()),
+  overrides: z.record(
+    z.string().refine((path) => isSafeObjectPath(path), {
+      message: 'Unsafe override path',
+    }),
+    z.unknown(),
+  ),
 });
 export type Profile = z.infer<typeof profileSchema>;
 

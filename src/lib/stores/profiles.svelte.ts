@@ -5,7 +5,7 @@ import { z } from 'zod';
 import type { GlobalConfig, Profile, Profiles } from '$lib/types';
 
 import { profilesSchema } from '$lib/types';
-import { clone, getNestedValue, loadValidated, save, uuid } from '$lib/utils/storage';
+import { clone, getNestedValue, loadValidated, save, setNestedValue, uuid } from '$lib/utils/storage';
 
 import { configStore } from './config.svelte';
 
@@ -86,19 +86,7 @@ function createProfilesStore() {
 
       // Apply overrides
       for (const [path, value] of Object.entries(profile.overrides)) {
-        const keys = path.split('.');
-        let current: Record<string, unknown> = baseConfig as unknown as Record<string, unknown>;
-
-        for (let i = 0; i < keys.length - 1; i++) {
-          const key = keys[i];
-          if (key === undefined) continue;
-          current = current[key] as Record<string, unknown>;
-        }
-
-        const lastKey = keys.at(-1);
-        if (lastKey !== undefined) {
-          current[lastKey] = clone(value);
-        }
+        setNestedValue(baseConfig as unknown as Record<string, unknown>, path, clone(value));
       }
 
       return baseConfig;

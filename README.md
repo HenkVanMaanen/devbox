@@ -25,17 +25,17 @@ A browser-based development environment manager for Hetzner Cloud. Spin up ephem
 # Install dependencies
 pnpm install
 
+# Start dev server
+pnpm dev
+
+# Run full quality checks
+pnpm check
+
 # Build for production
-pnpm run build
+pnpm build
 
-# Open in browser
-open web/index.html
-```
-
-Or for development with auto-reload:
-
-```sh
-pnpm run dev
+# Preview production build
+pnpm preview
 ```
 
 ## Usage
@@ -56,15 +56,15 @@ pnpm run dev
 
 ## Tech Stack
 
-| Component       | Technology                 |
-| --------------- | -------------------------- |
-| Framework       | Svelte 5                   |
-| Language        | TypeScript (strict)        |
-| Styling         | Tailwind CSS v4            |
-| Build           | Vite                       |
-| Testing         | Node.js native test runner |
-| Package Manager | pnpm                       |
-| Deployment      | GitHub Pages               |
+| Component       | Technology          |
+| --------------- | ------------------- |
+| Framework       | Svelte 5            |
+| Language        | TypeScript (strict) |
+| Styling         | Tailwind CSS v4     |
+| Build           | Vite                |
+| Testing         | Vitest + Playwright |
+| Package Manager | pnpm                |
+| Deployment      | GitHub Pages        |
 
 ## Development
 
@@ -77,7 +77,7 @@ pnpm test
 Watch for changes:
 
 ```sh
-pnpm run dev
+pnpm dev
 ```
 
 ## Deployment

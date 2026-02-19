@@ -7,7 +7,7 @@
     "$components/*": ["src/components/*"],
     "$pages/*": ["src/pages/*"]
   },
-  "ignoreDependencies": ["tailwindcss", "playwright", "@playwright/test"],
+  "ignoreDependencies": ["tailwindcss"],
   "ignoreExportsUsedInFile": true,
   "rules": {
     "unlisted": "error",

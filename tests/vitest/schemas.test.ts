@@ -107,6 +107,14 @@ describe('profilesSchema', () => {
     const result = profilesSchema.safeParse(invalid);
     expect(result.success).toBe(false);
   });
+
+  it('rejects unsafe override paths', () => {
+    const invalid = {
+      'abc-123': { id: 'abc-123', name: 'Dev', overrides: { '__proto__.polluted': 'yes' } },
+    };
+    const result = profilesSchema.safeParse(invalid);
+    expect(result.success).toBe(false);
+  });
 });
 
 describe('sshPublicKeySchema', () => {

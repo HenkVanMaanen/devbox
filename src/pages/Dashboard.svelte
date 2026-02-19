@@ -64,14 +64,19 @@
 
     try {
       // Ensure SSH keys exist in Hetzner
-      const sshKeyIds: number[] = [];
-      for (const key of config.ssh.keys) {
-        if (key.pubKey) {
-          const safeName = key.name.replaceAll(/[^a-zA-Z0-9_-]/g, '-').replaceAll(/-+/g, '-') || 'key';
-          const hetznerKey = await hetzner.ensureSSHKey(credentialsStore.token, `devbox-${safeName}`, key.pubKey);
-          sshKeyIds.push(hetznerKey.id);
-        }
-      }
+      const sshKeyIds = [
+        ...new Set(
+          await Promise.all(
+            config.ssh.keys
+              .filter((key) => Boolean(key.pubKey))
+              .map(async (key) => {
+                const safeName = key.name.replaceAll(/[^a-zA-Z0-9_-]/g, '-').replaceAll(/-+/g, '-') || 'key';
+                const hetznerKey = await hetzner.ensureSSHKey(credentialsStore.token, `devbox-${safeName}`, key.pubKey);
+                return hetznerKey.id;
+              }),
+          ),
+        ),
+      ];
 
       // Generate cloud-init with current theme
       const userData = generateCloudInit(serverName, credentialsStore.token, config, {

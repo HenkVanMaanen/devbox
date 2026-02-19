@@ -282,6 +282,11 @@ describe('getNestedValue', () => {
     const obj = { a: { b: true } } as Record<string, unknown>;
     expect(getNestedValue(obj, 'a.b.c')).toBeUndefined();
   });
+
+  it('returns undefined for blocked prototype paths', () => {
+    const obj = { safe: { value: 1 } };
+    expect(getNestedValue(obj, '__proto__.constructor')).toBeUndefined();
+  });
 });
 
 // --- setNestedValue() ---
@@ -317,6 +322,18 @@ describe('setNestedValue', () => {
     const obj = { a: 'not-an-object' } as Record<string, unknown>;
     setNestedValue(obj, 'a.b', 42);
     expect((obj['a'] as Record<string, unknown>)?.['b']).toBe(42);
+  });
+
+  it('replaces null intermediate with empty object', () => {
+    const obj = { a: null } as Record<string, unknown>;
+    setNestedValue(obj, 'a.b', 42);
+    expect((obj['a'] as Record<string, unknown>)?.['b']).toBe(42);
+  });
+
+  it('ignores blocked prototype paths', () => {
+    const obj: Record<string, unknown> = {};
+    setNestedValue(obj, '__proto__.polluted', 'yes');
+    expect(({} as Record<string, unknown>)['polluted']).toBeUndefined();
   });
 });
 

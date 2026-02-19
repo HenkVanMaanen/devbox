@@ -136,29 +136,22 @@ describe('Security tests', () => {
       delete (Object.prototype as Record<string, unknown>)['polluted'];
     });
 
-    it('__proto__ path pollutes Object.prototype (documented behavior)', () => {
+    it('__proto__ path is blocked in setNestedValue', () => {
       const obj: Record<string, unknown> = {};
       setNestedValue(obj, '__proto__.polluted', 'yes');
-      // setNestedValue does NOT guard against prototype pollution.
-      // The app mitigates this at the caller level (controlled paths only).
-      // Document that pollution occurs:
-      expect(({} as Record<string, unknown>)['polluted']).toBe('yes');
-    });
-
-    it('constructor.prototype path does not pollute (constructor gets replaced)', () => {
-      const obj: Record<string, unknown> = {};
-      setNestedValue(obj, 'constructor.prototype.polluted', 'yes');
-      // setNestedValue replaces constructor (a function) with a plain object,
-      // so the real Object.prototype is never reached
       expect(({} as Record<string, unknown>)['polluted']).toBeUndefined();
     });
 
-    it('__proto__ via getNestedValue traverses prototype chain', () => {
+    it('constructor.prototype path is blocked in setNestedValue', () => {
+      const obj: Record<string, unknown> = {};
+      setNestedValue(obj, 'constructor.prototype.polluted', 'yes');
+      expect(({} as Record<string, unknown>)['polluted']).toBeUndefined();
+    });
+
+    it('__proto__ via getNestedValue is blocked', () => {
       const obj = { safe: 'value' };
-      // Accessing __proto__ via bracket notation returns the prototype
       const result = getNestedValue(obj, '__proto__.constructor');
-      // This documents that getNestedValue follows __proto__ to Object.prototype
-      expect(typeof result === 'function' || result === undefined).toBe(true);
+      expect(result).toBeUndefined();
     });
   });
 

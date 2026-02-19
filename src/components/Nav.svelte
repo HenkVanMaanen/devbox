@@ -58,7 +58,12 @@
 </nav>
 
 <Modal bind:open={showChangelog} title="Changelog" onClose={() => (showChangelog = false)} maxWidth="max-w-2xl">
-  <div class="changelog max-h-[60vh] overflow-y-auto text-sm">
+  <div
+    class="[&_a]:text-primary [&_h2]:border-border [&_h3]:text-muted-foreground max-h-[60vh] overflow-y-auto text-sm [&_a:hover]:underline
+           [&_h1]:mb-4 [&_h1]:text-xl [&_h1]:font-bold [&_h2]:mt-6 [&_h2]:mb-3 [&_h2]:border-b
+           [&_h2]:pb-1 [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:mt-4 [&_h3]:mb-2
+           [&_h3]:text-base [&_h3]:font-medium [&_li]:my-1 [&_p]:my-2 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5"
+  >
     <!-- eslint-disable-next-line svelte/no-at-html-tags -->
     {@html changelogHtml}
   </div>
@@ -66,29 +71,3 @@
     <Button variant="secondary" onclick={() => (showChangelog = false)}>Close</Button>
   {/snippet}
 </Modal>
-
-<style>
-  @reference '../app.css';
-
-  .changelog :global(h1) {
-    @apply mb-4 text-xl font-bold;
-  }
-  .changelog :global(h2) {
-    @apply border-border mt-6 mb-3 border-b pb-1 text-lg font-semibold;
-  }
-  .changelog :global(h3) {
-    @apply text-muted-foreground mt-4 mb-2 text-base font-medium;
-  }
-  .changelog :global(ul) {
-    @apply my-2 list-disc pl-5;
-  }
-  .changelog :global(li) {
-    @apply my-1;
-  }
-  .changelog :global(a) {
-    @apply text-primary hover:underline;
-  }
-  .changelog :global(p) {
-    @apply my-2;
-  }
-</style>

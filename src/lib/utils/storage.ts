@@ -2,6 +2,8 @@
 
 import type { ZodType } from 'zod';
 
+import { isSafeObjectPath, parseObjectPath } from '$lib/utils/path-safety';
+
 export function uuid(): string {
   return crypto.randomUUID();
 }
@@ -64,7 +66,11 @@ export function deepMerge<T>(target: T, source: Partial<T>): T {
 
 // Get nested value from object by dot-notation path
 export function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
-  const keys = path.split('.');
+  if (!isSafeObjectPath(path)) {
+    return undefined;
+  }
+
+  const keys = parseObjectPath(path);
   let current: unknown = obj;
 
   for (const key of keys) {
@@ -114,13 +120,18 @@ export function save(key: keyof typeof STORAGE_KEYS, value: unknown): void {
 
 // Set nested value in object by dot-notation path
 export function setNestedValue(obj: Record<string, unknown>, path: string, value: unknown): void {
-  const keys = path.split('.');
+  if (!isSafeObjectPath(path)) {
+    return;
+  }
+
+  const keys = parseObjectPath(path);
   let current = obj;
 
   for (let i = 0; i < keys.length - 1; i++) {
     const key = keys[i];
     if (key === undefined) continue;
-    if (!(key in current) || typeof current[key] !== 'object') {
+    const next = current[key];
+    if (next === null || typeof next !== 'object' || Array.isArray(next)) {
       current[key] = {};
     }
     current = current[key] as Record<string, unknown>;

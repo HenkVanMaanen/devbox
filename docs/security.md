@@ -170,6 +170,7 @@ export function escapeHtml(str) {
     base-uri 'self';
     form-action 'self';
     frame-ancestors 'none';
+    object-src 'none';
 "
 />
 ```
@@ -182,6 +183,7 @@ export function escapeHtml(str) {
 | `connect-src`     | `'self' https://api.hetzner.cloud` | Restrict API calls                                   |
 | `img-src`         | `'self' data:`                     | Allow images + QR code data URIs                     |
 | `frame-ancestors` | `'none'`                           | Prevent clickjacking (cannot be embedded in iframes) |
+| `object-src`      | `'none'`                           | Disable plugins/embeds (`<object>`, `<embed>`)       |
 
 **Why `unsafe-inline` for styles?**
 
