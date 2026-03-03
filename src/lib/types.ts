@@ -72,6 +72,7 @@ export type GlobalConfig = z.infer<typeof globalConfigSchema>;
 // API response schemas use .loose() to allow extra fields from Hetzner API
 export const imageSchema = z
   .object({
+    architecture: z.string(),
     description: z.string(),
     id: z.number(),
     name: z.string(),
@@ -152,6 +153,7 @@ export type Server = z.infer<typeof serverSchema>;
 
 export const serverTypeSchema = z
   .object({
+    architecture: z.string(),
     cores: z.number(),
     description: z.string(),
     disk: z.number(),

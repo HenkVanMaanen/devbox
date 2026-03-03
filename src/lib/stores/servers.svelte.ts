@@ -181,6 +181,12 @@ function createServersStore() {
       return images;
     },
 
+    imagesForServerType(serverTypeName: string): Image[] {
+      const type = serverTypes.find((t) => t.name === serverTypeName);
+      if (!type) return images;
+      return images.filter((img) => img.architecture === type.architecture);
+    },
+
     // Load servers from Hetzner
     async load(token: string): Promise<void> {
       if (!token) {

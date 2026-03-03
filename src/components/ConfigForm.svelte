@@ -406,10 +406,10 @@
                  py-2 text-base focus:ring-3 focus:outline-none
                  disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {#if serversStore.images.length === 0}
+          {#if serversStore.imagesForServerType(getValue('hetzner.serverType') as string).length === 0}
             <option value={getValue('hetzner.baseImage')}>{getValue('hetzner.baseImage')}</option>
           {:else}
-            {#each serversStore.images as img (img.name)}
+            {#each serversStore.imagesForServerType(getValue('hetzner.serverType') as string) as img (img.id)}
               <option value={img.name}>{img.description}</option>
             {/each}
           {/if}

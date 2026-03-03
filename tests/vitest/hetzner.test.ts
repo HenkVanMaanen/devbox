@@ -53,6 +53,7 @@ const mockSSHKey = {
 };
 
 const mockImage = {
+  architecture: 'x86',
   id: 1,
   name: 'ubuntu-24.04',
   description: 'Ubuntu 24.04',
@@ -70,6 +71,7 @@ const mockLocation = {
 };
 
 const mockServerType = {
+  architecture: 'x86',
   id: 1,
   name: 'cx22',
   description: 'CX22',
