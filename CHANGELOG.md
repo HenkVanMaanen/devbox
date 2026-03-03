@@ -4,6 +4,11 @@ All notable changes to Devbox will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [3.5.1] - 2026-03-03
+
+### Fixed
+
+- Filter base images by selected server type architecture
 ## [3.5.0] - 2026-03-03
 
 ### Added
