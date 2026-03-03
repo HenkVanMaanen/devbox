@@ -4,6 +4,11 @@ All notable changes to Devbox will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [3.5.0] - 2026-03-03
+
+### Added
+
+- Pre-warm SSL certs after Caddy is ready
 ## [3.4.3] - 2026-03-03
 
 ### Fixed
