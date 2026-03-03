@@ -210,6 +210,12 @@ describe('buildOverviewPage', () => {
     expect(html).toContain('/api/status');
     expect(html).toContain('/api/services');
   });
+
+  it('opens service links in new tab', () => {
+    const html = buildOverviewPage(makeConfig(), 'test', defaultThemeColors);
+    expect(html).toContain("a.target='_blank'");
+    expect(html).toContain("a.rel='noopener noreferrer'");
+  });
 });
 
 describe('escapeSingleQuotedJS (via buildDaemonScript)', () => {
