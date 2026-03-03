@@ -104,6 +104,23 @@ function prewarmCert(port){
   console.log(\`Pre-warming certificate for port \${port}\`);
 }
 
+function prewarmOverview(){
+  https.get(\`https://\${ipHex}.\${DNS_SERVICE}/\`,{rejectUnauthorized:false,timeout:30000},()=>{}).on('error',()=>{});
+  console.log('Pre-warming certificate for overview page');
+}
+
+function prewarmAll(){services=scanPorts();prewarmOverview();for(const[p]of services)prewarmCert(p)}
+
+function waitForCaddy(cb){
+  const poll=()=>{
+    http.get('http://localhost:2019/config/',r=>{
+      if(r.statusCode===200){console.log('Caddy ready');cb()}
+      else setTimeout(poll,2000)
+    }).on('error',()=>setTimeout(poll,2000));
+  };
+  poll();
+}
+
 // Domain-agnostic verification: accepts any domain matching our IP hex
 // This allows the same server to work with sslip.io, nip.io, custom domains, etc.
 function verifyDomain(domain){
@@ -133,7 +150,7 @@ function main(){
   ipHex=loadConfig();console.log(\`Devbox daemon starting with IP hex: \${ipHex}, DNS: \${DNS_SERVICE}\`);
   services=scanPorts();
   console.log(\`Found \${services.size} services on startup\`);
-  for(const[p,s]of services)prewarmCert(p);
+  waitForCaddy(prewarmAll);
   setInterval(updateServices,10000);
   http.createServer((req,res)=>{
     const url=new URL(req.url,'http://localhost');

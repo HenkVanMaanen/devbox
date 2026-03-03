@@ -128,6 +128,28 @@ describe('buildDaemonScript', () => {
     expect(script).toContain('wip');
     expect(script).toContain('git -C');
   });
+
+  it('contains waitForCaddy polling Caddy admin API', () => {
+    const script = buildDaemonScript(makeConfig(), 'tok');
+    expect(script).toContain('waitForCaddy');
+    expect(script).toContain('localhost:2019');
+  });
+
+  it('contains prewarmOverview for base domain certificate', () => {
+    const script = buildDaemonScript(makeConfig(), 'tok');
+    expect(script).toContain('prewarmOverview');
+    expect(script).toContain('Pre-warming certificate for overview page');
+  });
+
+  it('contains prewarmAll combining overview and service pre-warming', () => {
+    const script = buildDaemonScript(makeConfig(), 'tok');
+    expect(script).toContain('prewarmAll');
+  });
+
+  it('defers pre-warming until Caddy is ready', () => {
+    const script = buildDaemonScript(makeConfig(), 'tok');
+    expect(script).toContain('waitForCaddy(prewarmAll)');
+  });
 });
 
 describe('buildOverviewPage', () => {
