@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  buildDaemonScript,
-  buildOverviewPage,
   buildCaddyConfig,
+  buildDaemonConfig,
+  buildDaemonScript,
+  buildOverviewConfig,
+  buildOverviewPage,
   defaultThemeColors,
 } from '$lib/utils/cloudinit-builders';
 
@@ -37,38 +39,85 @@ function makeConfig(overrides: Partial<GlobalConfig> = {}): GlobalConfig {
 }
 
 describe('buildDaemonScript', () => {
+  it('is a valid Node.js script starting with shebang', () => {
+    const script = buildDaemonScript();
+    expect(script.startsWith('#!/usr/bin/env node')).toBe(true);
+  });
+
+  it('reads config from /etc/devbox/config.json', () => {
+    const script = buildDaemonScript();
+    expect(script).toContain('/etc/devbox/config.json');
+  });
+
+  it('contains port scanning logic', () => {
+    const script = buildDaemonScript();
+    expect(script).toContain('ss -tlnp');
+  });
+
+  it('contains HTTP server listening on 65531', () => {
+    const script = buildDaemonScript();
+    expect(script).toContain('65531');
+    expect(script).toContain('127.0.0.1');
+  });
+
+  it('contains WIP git commit logic', () => {
+    const script = buildDaemonScript();
+    expect(script).toContain('git -C');
+  });
+
+  it('contains Caddy readiness polling', () => {
+    const script = buildDaemonScript();
+    expect(script).toContain('localhost:2019');
+  });
+
+  it('contains certificate pre-warming logic', () => {
+    const script = buildDaemonScript();
+    expect(script).toContain('Pre-warming certificate');
+  });
+
+  it('contains auto-delete logic', () => {
+    const script = buildDaemonScript();
+    expect(script).toContain('api.hetzner.cloud');
+  });
+
+  it('returns a static string (no config dependency)', () => {
+    const a = buildDaemonScript();
+    const b = buildDaemonScript();
+    expect(a).toBe(b);
+  });
+});
+
+describe('buildDaemonConfig', () => {
   it('contains timeout and warning values from config', () => {
-    const script = buildDaemonScript(
+    const json = buildDaemonConfig(
       makeConfig({ autoDelete: { enabled: true, timeoutMinutes: 90, warningMinutes: 10 } }),
       'tok',
     );
-    expect(script).toContain('TIMEOUT=90');
-    expect(script).toContain('WARNING=10');
+    const parsed = JSON.parse(json);
+    expect(parsed.timeout).toBe(90);
+    expect(parsed.warning).toBe(10);
   });
 
   it('contains different timeout values', () => {
-    const script = buildDaemonScript(
+    const json = buildDaemonConfig(
       makeConfig({ autoDelete: { enabled: true, timeoutMinutes: 30, warningMinutes: 3 } }),
       'tok',
     );
-    expect(script).toContain('TIMEOUT=30');
-    expect(script).toContain('WARNING=3');
+    const parsed = JSON.parse(json);
+    expect(parsed.timeout).toBe(30);
+    expect(parsed.warning).toBe(3);
   });
 
-  it('contains escaped Hetzner token', () => {
-    const script = buildDaemonScript(makeConfig(), 'my-secret-token');
-    expect(script).toContain('my-secret-token');
-  });
-
-  it('escapes special characters in token', () => {
-    const script = buildDaemonScript(makeConfig(), "token'with");
-    // Single quotes in JS strings should be escaped
-    expect(script).toContain("token\\'with");
+  it('contains Hetzner token', () => {
+    const json = buildDaemonConfig(makeConfig(), 'my-secret-token');
+    const parsed = JSON.parse(json);
+    expect(parsed.token).toBe('my-secret-token');
   });
 
   it('contains DNS service name', () => {
-    const script = buildDaemonScript(makeConfig(), 'tok');
-    expect(script).toContain("DNS_SERVICE='sslip.io'");
+    const json = buildDaemonConfig(makeConfig(), 'tok');
+    const parsed = JSON.parse(json);
+    expect(parsed.dnsService).toBe('sslip.io');
   });
 
   it('uses custom DNS domain when dnsService is custom', () => {
@@ -79,8 +128,9 @@ describe('buildDaemonScript', () => {
         customDnsDomain: 'my.custom.domain',
       },
     });
-    const script = buildDaemonScript(config, 'tok');
-    expect(script).toContain('my.custom.domain');
+    const json = buildDaemonConfig(config, 'tok');
+    const parsed = JSON.parse(json);
+    expect(parsed.dnsService).toBe('my.custom.domain');
   });
 
   it('falls back to sslip.io when custom domain is empty', () => {
@@ -91,89 +141,109 @@ describe('buildDaemonScript', () => {
         customDnsDomain: '',
       },
     });
-    const script = buildDaemonScript(config, 'tok');
-    expect(script).toContain("DNS_SERVICE='sslip.io'");
+    const json = buildDaemonConfig(config, 'tok');
+    const parsed = JSON.parse(json);
+    expect(parsed.dnsService).toBe('sslip.io');
   });
 
-  it('is a valid Node.js script starting with shebang', () => {
-    const script = buildDaemonScript(makeConfig(), 'tok');
-    expect(script.startsWith('#!/usr/bin/env node')).toBe(true);
+  it('produces valid JSON', () => {
+    const json = buildDaemonConfig(makeConfig(), 'tok');
+    expect(() => JSON.parse(json)).not.toThrow();
   });
 
-  it('contains port scanning logic', () => {
-    const script = buildDaemonScript(makeConfig(), 'tok');
-    expect(script).toContain('scanPorts');
-    expect(script).toContain('ss -tlnp');
-  });
-
-  it('contains domain verification logic', () => {
-    const script = buildDaemonScript(makeConfig(), 'tok');
-    expect(script).toContain('verifyDomain');
-  });
-
-  it('contains auto-delete logic', () => {
-    const script = buildDaemonScript(makeConfig(), 'tok');
-    expect(script).toContain('checkActivityAndMaybeDelete');
-    expect(script).toContain('del()');
-  });
-
-  it('contains HTTP server listening on 65531', () => {
-    const script = buildDaemonScript(makeConfig(), 'tok');
-    expect(script).toContain('65531');
-    expect(script).toContain("'127.0.0.1'");
-  });
-
-  it('contains WIP git commit logic', () => {
-    const script = buildDaemonScript(makeConfig(), 'tok');
-    expect(script).toContain('wip');
-    expect(script).toContain('git -C');
-  });
-
-  it('contains waitForCaddy polling Caddy admin API', () => {
-    const script = buildDaemonScript(makeConfig(), 'tok');
-    expect(script).toContain('waitForCaddy');
-    expect(script).toContain('localhost:2019');
-  });
-
-  it('contains prewarmOverview for base domain certificate', () => {
-    const script = buildDaemonScript(makeConfig(), 'tok');
-    expect(script).toContain('prewarmOverview');
-    expect(script).toContain('Pre-warming certificate for overview page');
-  });
-
-  it('contains prewarmAll combining overview and service pre-warming', () => {
-    const script = buildDaemonScript(makeConfig(), 'tok');
-    expect(script).toContain('prewarmAll');
-  });
-
-  it('defers pre-warming until Caddy is ready', () => {
-    const script = buildDaemonScript(makeConfig(), 'tok');
-    expect(script).toContain('waitForCaddy(prewarmAll)');
+  it('safely encodes special characters in token via JSON', () => {
+    const json = buildDaemonConfig(makeConfig(), 'token\'with"special');
+    const parsed = JSON.parse(json);
+    expect(parsed.token).toBe('token\'with"special');
   });
 });
 
 describe('buildOverviewPage', () => {
   it('contains server name in title', () => {
-    const html = buildOverviewPage(makeConfig(), 'my-server', defaultThemeColors);
+    const html = buildOverviewPage('my-server');
     expect(html).toContain('<title>my-server</title>');
   });
 
   it('contains server name in h1', () => {
-    const html = buildOverviewPage(makeConfig(), 'my-server', defaultThemeColors);
+    const html = buildOverviewPage('my-server');
     expect(html).toContain('>my-server</h1>');
   });
 
-  it('contains theme colors in CSS', () => {
-    const html = buildOverviewPage(makeConfig(), 'test', defaultThemeColors);
-    expect(html).toContain(defaultThemeColors.background);
-    expect(html).toContain(defaultThemeColors.foreground);
-    expect(html).toContain(defaultThemeColors.success);
-    expect(html).toContain(defaultThemeColors.warning);
-    expect(html).toContain(defaultThemeColors.destructive);
-    expect(html).toContain(defaultThemeColors.muted);
-    expect(html).toContain(defaultThemeColors.mutedForeground);
-    expect(html).toContain(defaultThemeColors.card);
-    expect(html).toContain(defaultThemeColors.border);
+  it('uses CSS custom properties for theming', () => {
+    const html = buildOverviewPage('test');
+    expect(html).toContain('var(--bg');
+    expect(html).toContain('var(--fg');
+  });
+
+  it('contains DOCTYPE declaration', () => {
+    const html = buildOverviewPage('test');
+    expect(html.toLowerCase()).toContain('<!doctype html>');
+  });
+
+  it('contains html, head, body structure', () => {
+    const html = buildOverviewPage('test');
+    expect(html).toContain('<html');
+    expect(html).toContain('<head>');
+    expect(html).toContain('<body>');
+    expect(html).toContain('</html>');
+  });
+
+  it('contains auto-shutdown UI', () => {
+    const html = buildOverviewPage('test');
+    expect(html).toContain('Auto-shutdown');
+    expect(html).toContain('idle shutdown');
+  });
+
+  it('loads config.js synchronously in head', () => {
+    const html = buildOverviewPage('test');
+    expect(html).toContain('<script src="config.js"></script>');
+  });
+
+  it('reads access token from window.__DEVBOX', () => {
+    const html = buildOverviewPage('test');
+    expect(html).toContain('__DEVBOX');
+  });
+
+  it('contains services section', () => {
+    const html = buildOverviewPage('test');
+    expect(html).toContain('services');
+  });
+
+  it('contains status and services fetch logic', () => {
+    const html = buildOverviewPage('test');
+    expect(html).toContain('/api/status');
+    expect(html).toContain('/api/services');
+  });
+
+  it('replaces all occurrences of __SERVER_NAME__', () => {
+    const html = buildOverviewPage('my-server');
+    expect(html).not.toContain('__SERVER_NAME__');
+  });
+});
+
+describe('buildOverviewConfig', () => {
+  it('contains theme colors as CSS variable setters', () => {
+    const configJs = buildOverviewConfig(makeConfig(), defaultThemeColors);
+    expect(configJs).toContain("setProperty('--bg'");
+    expect(configJs).toContain("setProperty('--fg'");
+    expect(configJs).toContain("setProperty('--card'");
+    expect(configJs).toContain("setProperty('--border'");
+    expect(configJs).toContain("setProperty('--muted'");
+    expect(configJs).toContain("setProperty('--success'");
+    expect(configJs).toContain("setProperty('--warning'");
+    expect(configJs).toContain("setProperty('--destructive'");
+    expect(configJs).toContain("setProperty('--focus'");
+  });
+
+  it('contains default theme color values', () => {
+    const configJs = buildOverviewConfig(makeConfig(), defaultThemeColors);
+    expect(configJs).toContain(defaultThemeColors.background);
+    expect(configJs).toContain(defaultThemeColors.foreground);
+    expect(configJs).toContain(defaultThemeColors.success);
+    expect(configJs).toContain(defaultThemeColors.warning);
+    expect(configJs).toContain(defaultThemeColors.destructive);
+    expect(configJs).toContain(defaultThemeColors.card);
+    expect(configJs).toContain(defaultThemeColors.border);
   });
 
   it('contains custom theme colors', () => {
@@ -182,83 +252,70 @@ describe('buildOverviewPage', () => {
       background: '#custom-bg',
       foreground: '#custom-fg',
     };
-    const html = buildOverviewPage(makeConfig(), 'test', customColors);
-    expect(html).toContain('#custom-bg');
-    expect(html).toContain('#custom-fg');
+    const configJs = buildOverviewConfig(makeConfig(), customColors);
+    expect(configJs).toContain('#custom-bg');
+    expect(configJs).toContain('#custom-fg');
   });
 
-  it('contains escaped access token', () => {
+  it('contains access token', () => {
     const config = makeConfig({
       services: { ...makeConfig().services, accessToken: 'my-secret-token' },
     });
-    const html = buildOverviewPage(config, 'test', defaultThemeColors);
-    expect(html).toContain('my-secret-token');
+    const configJs = buildOverviewConfig(config, defaultThemeColors);
+    expect(configJs).toContain('my-secret-token');
   });
 
   it('escapes special chars in access token', () => {
     const config = makeConfig({
       services: { ...makeConfig().services, accessToken: "tok'en" },
     });
-    const html = buildOverviewPage(config, 'test', defaultThemeColors);
-    expect(html).toContain("tok\\'en");
+    const configJs = buildOverviewConfig(config, defaultThemeColors);
+    expect(configJs).toContain("tok\\'en");
   });
 
-  it('contains DOCTYPE declaration', () => {
-    const html = buildOverviewPage(makeConfig(), 'test', defaultThemeColors);
-    expect(html).toContain('<!DOCTYPE html>');
+  it('exposes config on window.__DEVBOX', () => {
+    const configJs = buildOverviewConfig(makeConfig(), defaultThemeColors);
+    expect(configJs).toContain('window.__DEVBOX=c');
   });
 
-  it('contains html, head, body structure', () => {
-    const html = buildOverviewPage(makeConfig(), 'test', defaultThemeColors);
-    expect(html).toContain('<html');
-    expect(html).toContain('<head>');
-    expect(html).toContain('<body>');
-    expect(html).toContain('</html>');
-  });
-
-  it('contains auto-shutdown UI', () => {
-    const html = buildOverviewPage(makeConfig(), 'test', defaultThemeColors);
-    expect(html).toContain('Auto-shutdown');
-    expect(html).toContain('idle shutdown');
-  });
-
-  it('contains services section', () => {
-    const html = buildOverviewPage(makeConfig(), 'test', defaultThemeColors);
-    expect(html).toContain('services');
-  });
-
-  it('contains keepalive and status fetch logic', () => {
-    const html = buildOverviewPage(makeConfig(), 'test', defaultThemeColors);
-    expect(html).toContain('/api/status');
-    expect(html).toContain('/api/services');
-  });
-
-  it('opens service links in new tab', () => {
-    const html = buildOverviewPage(makeConfig(), 'test', defaultThemeColors);
-    expect(html).toContain("a.target='_blank'");
-    expect(html).toContain("a.rel='noopener noreferrer'");
+  it('is a self-executing function', () => {
+    const configJs = buildOverviewConfig(makeConfig(), defaultThemeColors);
+    expect(configJs).toContain('(function(){');
+    expect(configJs).toContain('})();');
   });
 });
 
-describe('escapeSingleQuotedJS (via buildDaemonScript)', () => {
+describe('escapeSingleQuotedJS (via buildOverviewConfig)', () => {
   it('escapes backslashes', () => {
-    const script = buildDaemonScript(makeConfig(), 'tok\\en');
-    expect(script).toContain('tok\\\\en');
+    const config = makeConfig({
+      services: { ...makeConfig().services, accessToken: 'tok\\en' },
+    });
+    const configJs = buildOverviewConfig(config, defaultThemeColors);
+    expect(configJs).toContain('tok\\\\en');
   });
 
   it('escapes single quotes', () => {
-    const script = buildDaemonScript(makeConfig(), "tok'en");
-    expect(script).toContain("tok\\'en");
+    const config = makeConfig({
+      services: { ...makeConfig().services, accessToken: "tok'en" },
+    });
+    const configJs = buildOverviewConfig(config, defaultThemeColors);
+    expect(configJs).toContain("tok\\'en");
   });
 
   it('escapes newlines', () => {
-    const script = buildDaemonScript(makeConfig(), 'tok\nen');
-    expect(script).toContain('tok\\nen');
+    const config = makeConfig({
+      services: { ...makeConfig().services, accessToken: 'tok\nen' },
+    });
+    const configJs = buildOverviewConfig(config, defaultThemeColors);
+    expect(configJs).toContain('tok\\nen');
   });
 
   it('escapes </ to prevent script tag injection', () => {
-    const script = buildDaemonScript(makeConfig(), 'tok</script>en');
-    expect(script).toContain('tok<\\/script>en');
+    const config = makeConfig({
+      services: { ...makeConfig().services, accessToken: 'tok</script>en' },
+    });
+    const configJs = buildOverviewConfig(config, defaultThemeColors);
+    expect(configJs).toContain('tok<\\/script>en');
   });
 });
 

@@ -6,8 +6,10 @@ import type { GlobalConfig } from '$lib/types';
 
 import {
   buildCaddyConfig,
+  buildDaemonConfig,
   buildDaemonScript,
   buildGitCredentials,
+  buildOverviewConfig,
   buildOverviewPage,
   defaultTerminalColors,
   defaultThemeColors,
@@ -151,7 +153,13 @@ export function generateCloudInit(
   // Devbox daemon (port scanning, Caddy API, autodelete)
   cloudInit.write_files.push(
     {
-      content: buildDaemonScript(config, hetznerToken),
+      content: buildDaemonConfig(config, hetznerToken),
+      owner: 'root:dev',
+      path: '/etc/devbox/config.json',
+      permissions: '0640',
+    },
+    {
+      content: buildDaemonScript(),
       path: '/usr/local/bin/devbox-daemon',
       permissions: '0755',
     },
@@ -201,8 +209,13 @@ export function generateCloudInit(
     permissions: '0644',
   });
   cloudInit.write_files.push({
-    content: buildOverviewPage(config, serverName, themeColors),
+    content: buildOverviewPage(serverName),
     path: '/var/www/devbox-overview/index.html.template',
+    permissions: '0644',
+  });
+  cloudInit.write_files.push({
+    content: buildOverviewConfig(config, themeColors),
+    path: '/var/www/devbox-overview/config.js',
     permissions: '0644',
   });
 

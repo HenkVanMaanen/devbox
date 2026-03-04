@@ -4,6 +4,7 @@
   "ignore": [
     "node_modules",
     "dist",
+    "packages/*/dist",
     "pnpm-lock.yaml",
     "src/lib/utils/qrcode.ts",
     "CHANGELOG.md",

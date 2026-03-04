@@ -3,6 +3,9 @@
   "type": "module",
   "packageManager": "pnpm@10.28.2",
   "scripts": {
+    "build:packages": "pnpm -r --filter './packages/*' run build",
+    "prebuild": "pnpm build:packages",
+    "predev": "pnpm build:packages",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
@@ -26,6 +29,8 @@
     "prepare": "lefthook install"
   },
   "dependencies": {
+    "@devbox/daemon": "workspace:*",
+    "@devbox/overview": "workspace:*",
     "unique-names-generator": "^4.7.1",
     "uqr": "^0.1.2",
     "zod": "^4.3.6"

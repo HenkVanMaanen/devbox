@@ -8,6 +8,12 @@ importers:
 
   .:
     dependencies:
+      '@devbox/daemon':
+        specifier: workspace:*
+        version: link:packages/daemon
+      '@devbox/overview':
+        specifier: workspace:*
+        version: link:packages/overview
       unique-names-generator:
         specifier: ^4.7.1
         version: 4.7.1
@@ -147,6 +153,24 @@ importers:
       yaml:
         specifier: ^2.8.2
         version: 2.8.2
+
+  packages/daemon:
+    devDependencies:
+      esbuild:
+        specifier: ^0.21.5
+        version: 0.21.5
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
+
+  packages/overview:
+    devDependencies:
+      esbuild:
+        specifier: ^0.21.5
+        version: 0.21.5
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
 
 packages:
 

@@ -37,7 +37,8 @@
     "paths": {
       "$lib/*": ["./src/lib/*"],
       "$components/*": ["./src/components/*"],
-      "$pages/*": ["./src/pages/*"]
+      "$pages/*": ["./src/pages/*"],
+      "@devbox/*/template": ["./packages/*/dist/template.ts"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.svelte", "vite.config.ts", "src/vite-env.d.ts"]

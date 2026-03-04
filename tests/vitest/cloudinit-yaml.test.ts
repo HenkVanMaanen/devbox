@@ -333,22 +333,22 @@ describe('generateCloudInit DNS service', () => {
 });
 
 describe('generateCloudInit auto-delete config', () => {
-  it('embeds timeout value in daemon script', () => {
+  it('embeds timeout value in daemon config JSON', () => {
     const config = makeConfig({
       autoDelete: { enabled: true, timeoutMinutes: 120, warningMinutes: 10 },
     });
     const output = generateCloudInit('test', 'tok', config);
-    expect(output).toContain('TIMEOUT=120');
-    expect(output).toContain('WARNING=10');
+    expect(output).toContain('"timeout":120');
+    expect(output).toContain('"warning":10');
   });
 
-  it('embeds different timeout values', () => {
+  it('embeds different timeout values in daemon config JSON', () => {
     const config = makeConfig({
       autoDelete: { enabled: true, timeoutMinutes: 30, warningMinutes: 3 },
     });
     const output = generateCloudInit('test', 'tok', config);
-    expect(output).toContain('TIMEOUT=30');
-    expect(output).toContain('WARNING=3');
+    expect(output).toContain('"timeout":30');
+    expect(output).toContain('"warning":3');
   });
 });
 

@@ -1,13 +1,21 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
-  "project": ["src/**/*.{ts,svelte}"],
-  "ignore": ["src/vite-env.d.ts"],
-  "paths": {
-    "$lib/*": ["src/lib/*"],
-    "$components/*": ["src/components/*"],
-    "$pages/*": ["src/pages/*"]
+  "workspaces": {
+    ".": {
+      "project": ["src/**/*.{ts,svelte}"],
+      "ignore": ["src/vite-env.d.ts", "packages/*/dist/**", "packages/*/src/**", "packages/*/build.ts"],
+      "paths": {
+        "$lib/*": ["src/lib/*"],
+        "$components/*": ["src/components/*"],
+        "$pages/*": ["src/pages/*"],
+        "@devbox/*/template": ["packages/*/dist/template.ts"]
+      },
+      "ignoreDependencies": ["tailwindcss"]
+    },
+    "packages/*": {
+      "ignore": ["**"]
+    }
   },
-  "ignoreDependencies": ["tailwindcss"],
   "ignoreExportsUsedInFile": true,
   "rules": {
     "unlisted": "error",

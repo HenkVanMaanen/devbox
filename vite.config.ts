@@ -31,6 +31,8 @@ export default defineConfig({
       $components: resolve(__dirname, './src/components'),
       $lib: resolve(__dirname, './src/lib'),
       $pages: resolve(__dirname, './src/pages'),
+      '@devbox/daemon/template': resolve(__dirname, './packages/daemon/dist/template.ts'),
+      '@devbox/overview/template': resolve(__dirname, './packages/overview/dist/template.ts'),
     },
   },
   server: {

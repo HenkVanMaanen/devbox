@@ -2,7 +2,16 @@
   "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
   "version": "0.2",
   "language": "en",
-  "ignorePaths": ["node_modules", "dist", "coverage", "pnpm-lock.yaml", "CHANGELOG.md", ".git", "*.svg"],
+  "ignorePaths": [
+    "node_modules",
+    "dist",
+    "packages/*/dist",
+    "coverage",
+    "pnpm-lock.yaml",
+    "CHANGELOG.md",
+    ".git",
+    "*.svg"
+  ],
   "ignoreRegExpList": [
     "/\\$state|\\$derived|\\$effect|\\$props|\\$bindable|\\$inspect/g",
     "/[0-9a-f]{6,}/gi",
@@ -31,6 +40,7 @@
     "cspell",
     "CSPRNG",
     "devbox",
+    "esbuild",
     "Dexie",
     "Falkenstein",
     "fullchain",

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="var(--bg, #0d0d0d)" />
+    <title>__SERVER_NAME__</title>
+    <style>
+      __CSS__
+    </style>
+    <script src="config.js"></script>
+  </head>
+  <body>
+    <div class="c">
+      <h1>__SERVER_NAME__</h1>
+      <p class="sub">Devbox</p>
+      <div class="card">
+        <div class="hdr">
+          <span class="ttl">Auto-shutdown</span>
+          <div class="ind">
+            <div id="d" class="dot" role="status" aria-label="Server status indicator"></div>
+            <span id="s">Active</span>
+          </div>
+        </div>
+        <div id="cd" aria-live="polite">--:--</div>
+        <div class="lbl">until idle shutdown</div>
+      </div>
+      <nav class="svcs" id="svcs" aria-label="Services"></nav>
+    </div>
+    <script>
+      __JS__;
+    </script>
+  </body>
+</html>

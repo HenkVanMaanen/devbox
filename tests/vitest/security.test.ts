@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
-  buildDaemonScript,
+  buildDaemonConfig,
   buildGitCredentials,
+  buildOverviewConfig,
   buildOverviewPage,
   defaultThemeColors,
   shellEscape,
@@ -84,13 +85,13 @@ describe('Security tests', () => {
         // directly in <title> and <h1>. This is acceptable because server
         // names are user-controlled (self-XSS only) and the overview page
         // runs on the provisioned server, not the main app.
-        const html = buildOverviewPage(minimalConfig, payload, defaultThemeColors);
+        const html = buildOverviewPage(payload);
         expect(typeof html).toBe('string');
         expect(html.length).toBeGreaterThan(0);
       });
     }
 
-    it('access token is escaped in JS string', () => {
+    it('access token is escaped in config.js string', () => {
       const maliciousConfig = {
         ...minimalConfig,
         services: {
@@ -98,22 +99,22 @@ describe('Security tests', () => {
           accessToken: "'; alert(document.cookie); '",
         },
       };
-      const html = buildOverviewPage(maliciousConfig, 'test', defaultThemeColors);
+      const configJs = buildOverviewConfig(maliciousConfig, defaultThemeColors);
       // The token should be escaped - single quotes should be escaped
-      expect(html).not.toContain("'; alert(document.cookie); '");
-      expect(html).toContain("\\'");
+      expect(configJs).not.toContain("'; alert(document.cookie); '");
+      expect(configJs).toContain("\\'");
     });
   });
 
-  describe('XSS via buildDaemonScript', () => {
-    it('hetzner token is escaped in JS string', () => {
-      const result = buildDaemonScript(minimalConfig, "'; process.exit(); '");
-      // Single quotes should be escaped
-      expect(result).not.toContain("'; process.exit(); '");
-      expect(result).toContain("\\'");
+  describe('XSS via buildDaemonConfig', () => {
+    it('hetzner token is safely JSON-encoded', () => {
+      const result = buildDaemonConfig(minimalConfig, "'; process.exit(); '");
+      // JSON.stringify handles escaping — verify the token is present as valid JSON
+      const parsed = JSON.parse(result);
+      expect(parsed.token).toBe("'; process.exit(); '");
     });
 
-    it('DNS service is escaped in JS string', () => {
+    it('DNS service with special chars is safely JSON-encoded', () => {
       const config = {
         ...minimalConfig,
         services: {
@@ -122,11 +123,9 @@ describe('Security tests', () => {
           dnsService: 'custom',
         },
       };
-      const result = buildDaemonScript(config, 'safe-token');
-      // Single quotes in DNS domain should be escaped with backslash
-      expect(result).toContain("test\\'inject");
-      // The unescaped single quote should not appear
-      expect(result).not.toContain("test'inject");
+      const result = buildDaemonConfig(config, 'safe-token');
+      const parsed = JSON.parse(result);
+      expect(parsed.dnsService).toBe("test'inject");
     });
   });
 
