@@ -9,6 +9,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - Extract daemon and overview page into separate packages
+
+### Fixed
+
+- Build packages before running checks
 ## [3.5.1] - 2026-03-03
 
 ### Fixed
