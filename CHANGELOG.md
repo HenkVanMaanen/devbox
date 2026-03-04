@@ -4,6 +4,11 @@ All notable changes to Devbox will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [3.6.0] - 2026-03-04
+
+### Added
+
+- Extract daemon and overview page into separate packages
 ## [3.5.1] - 2026-03-03
 
 ### Fixed
