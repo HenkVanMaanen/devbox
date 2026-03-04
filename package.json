@@ -9,6 +9,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "precheck": "pnpm build:packages",
     "check": "pnpm check:format && pnpm check:lint && pnpm check:css && pnpm check:types && pnpm check:spell && pnpm check:knip && pnpm check:cpd && pnpm check:coverage",
     "check:format": "prettier --check .",
     "check:lint": "eslint .",
