@@ -4,6 +4,11 @@ All notable changes to Devbox will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [3.6.1] - 2026-03-10
+
+### Fixed
+
+- Use mtimeMs for idle detection to prevent false activity
 ## [3.6.0] - 2026-03-04
 
 ### Added
