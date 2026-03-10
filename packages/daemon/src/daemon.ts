@@ -146,11 +146,8 @@ function verifyDomain(domain) {
 function check() {
   let a = false;
   try {
-    if (execSync('who', { encoding: 'utf8', timeout: 5000 }).trim()) a = true;
-  } catch {}
-  try {
     for (const f of fs.readdirSync('/dev/pts')) {
-      if (/^\d+$/.test(f) && Date.now() - fs.statSync('/dev/pts/' + f).atimeMs < 60000) a = true;
+      if (/^\d+$/.test(f) && Date.now() - fs.statSync('/dev/pts/' + f).mtimeMs < 60000) a = true;
     }
   } catch {}
   if (a) {
