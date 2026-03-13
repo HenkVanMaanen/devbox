@@ -4,6 +4,11 @@ All notable changes to Devbox will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [3.6.2] - 2026-03-13
+
+### Fixed
+
+- Accept null defaultProfileId in config import
 ## [3.6.1] - 2026-03-10
 
 ### Fixed
