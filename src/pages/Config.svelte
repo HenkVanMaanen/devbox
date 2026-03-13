@@ -18,7 +18,7 @@
 
   const importSchema = z.object({
     config: globalConfigSchema.partial(),
-    defaultProfileId: z.string().optional(),
+    defaultProfileId: z.string().nullable().optional(),
     exportedAt: z.string().optional(),
     hetznerToken: z.string().optional(),
     profiles: profilesSchema.optional(),
