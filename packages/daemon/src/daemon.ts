@@ -156,41 +156,6 @@ function check() {
   }
 }
 
-function wip() {
-  try {
-    let USER = '';
-    try {
-      USER = execSync('git config user.name', { encoding: 'utf8', timeout: 5000 }).trim();
-    } catch {}
-    for (const d of fs.readdirSync('/home/dev')) {
-      if (/[^a-zA-Z0-9._-]/.test(d)) continue;
-      const p = '/home/dev/' + d;
-      if (!fs.statSync(p).isDirectory() || !fs.existsSync(p + '/.git')) continue;
-      try {
-        if (!execSync('git -C ' + JSON.stringify(p) + ' status --porcelain', { encoding: 'utf8' }).trim()) continue;
-        const b =
-          (USER ? 'wip/' + USER.replace(/[^a-zA-Z0-9._-]/g, '_') + '/' : 'wip/') +
-          new Date().toISOString().replace(/[T:]/g, '-').slice(0, 19);
-        execSync(
-          'git -C ' +
-            JSON.stringify(p) +
-            ' checkout -b ' +
-            JSON.stringify(b) +
-            ' && git -C ' +
-            JSON.stringify(p) +
-            ' add -A && git -C ' +
-            JSON.stringify(p) +
-            ' commit -m WIP && git -C ' +
-            JSON.stringify(p) +
-            ' push -u origin ' +
-            JSON.stringify(b),
-          { timeout: 60000 },
-        );
-      } catch {}
-    }
-  } catch {}
-}
-
 let sid;
 try {
   sid = execSync('curl -s -H "Metadata-Flavor:hetzner" http://169.254.169.254/hetzner/v1/metadata/instance-id', {
@@ -226,14 +191,18 @@ function apiCall(method, path, body, callback) {
 }
 
 function createSnapshot(cb) {
-  console.log('Creating snapshot before deletion...');
+  console.log('Syncing filesystem...');
+  try {
+    execSync('sync', { timeout: 30000 });
+  } catch {}
+  console.log('Creating snapshot...');
   apiCall(
     'POST',
     '/servers/' + sid + '/actions/create_image',
     { description: 'devbox-snapshot', type: 'snapshot', labels: { managed: 'devbox' } },
     (err, status, data) => {
       if (err || status >= 300) {
-        console.error('Snapshot failed:', err || status);
+        console.error('Snapshot failed, aborting deletion:', err || status);
         return cb(null);
       }
       const actionId = data.action && data.action.id;
@@ -245,17 +214,20 @@ function createSnapshot(cb) {
 }
 
 function waitForAction(actionId, cb) {
-  if (!actionId) return cb();
+  if (!actionId) return cb(false);
   const poll = () => {
     apiCall('GET', '/actions/' + actionId, null, (err, _status, data) => {
-      if (err || !data.action) return cb();
+      if (err || !data.action) {
+        console.error('Action poll failed, aborting');
+        return cb(false);
+      }
       if (data.action.status === 'success') {
         console.log('Snapshot complete');
-        return cb();
+        return cb(true);
       }
       if (data.action.status === 'error') {
-        console.error('Snapshot action failed');
-        return cb();
+        console.error('Snapshot action failed, aborting');
+        return cb(false);
       }
       setTimeout(poll, 5000);
     });
@@ -288,8 +260,15 @@ function deleteServer() {
 function del() {
   if (!sid) return;
   createSnapshot((result) => {
-    if (!result) return deleteServer();
-    waitForAction(result.actionId, () => {
+    if (!result) {
+      console.error('Snapshot failed, server NOT deleted');
+      return;
+    }
+    waitForAction(result.actionId, (success) => {
+      if (!success) {
+        console.error('Snapshot did not complete, server NOT deleted');
+        return;
+      }
       cleanupSnapshots(result.imageId, deleteServer);
     });
   });
@@ -300,7 +279,6 @@ function checkActivityAndMaybeDelete() {
   const i = (Date.now() - last) / 1000;
   if (TIMEOUT * 60 - i <= WARNING * 60 && !warn) warn = true;
   if (i >= TIMEOUT * 60) {
-    wip();
     del();
   }
 }

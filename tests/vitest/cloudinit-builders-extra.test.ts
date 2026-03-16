@@ -61,9 +61,10 @@ describe('buildDaemonScript', () => {
     expect(script).toContain('127.0.0.1');
   });
 
-  it('contains WIP git commit logic', () => {
+  it('contains snapshot logic before deletion', () => {
     const script = buildDaemonScript();
-    expect(script).toContain('git -C');
+    expect(script).toContain('create_image');
+    expect(script).toContain('snapshot');
   });
 
   it('contains Caddy readiness polling', () => {

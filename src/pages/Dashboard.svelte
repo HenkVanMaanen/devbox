@@ -14,12 +14,17 @@
 
   let deleteModal = $state({ open: false, server: null as null | { id: number; name: string } });
   let selectedProfileId = $state<null | string>(profilesStore.defaultProfileId);
+  let hasSnapshot = $state(false);
 
   // Load servers and options on mount
   $effect(() => {
     if (credentialsStore.hasToken) {
       void serversStore.load(credentialsStore.token);
       void serversStore.loadOptions(credentialsStore.token);
+      void hetzner.listDevboxSnapshots(credentialsStore.token).then(
+        (snapshots) => (hasSnapshot = snapshots.length > 0),
+        () => (hasSnapshot = false),
+      );
     }
   });
 
@@ -172,8 +177,12 @@
           </div>
         {/if}
 
+        {#if hasSnapshot}
+          <p class="text-muted-foreground text-sm">Restoring from previous snapshot</p>
+        {/if}
+
         <Button onclick={createServer} loading={serversStore.creating} class="w-full">
-          {serversStore.creating ? serversStore.createProgress : 'Create Server'}
+          {serversStore.creating ? serversStore.createProgress : hasSnapshot ? 'Restore Server' : 'Create Server'}
         </Button>
       </div>
     </Card>

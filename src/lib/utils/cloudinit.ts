@@ -358,7 +358,19 @@ export function generateSnapshotCloudInit(
   );
   // Stryker restore all
 
-  const cloudInit = { runcmd, write_files: writeFiles };
+  // Re-inject SSH authorized_keys so new keys added since the snapshot work
+  const sshKeys = config.ssh.keys.map((k) => k.pubKey).filter(Boolean);
+
+  const cloudInit: Record<string, unknown> = { runcmd, write_files: writeFiles };
+  if (sshKeys.length > 0) {
+    cloudInit['users'] = [
+      {
+        name: 'dev',
+        ssh_authorized_keys: sshKeys,
+      },
+    ];
+  }
+
   return '#cloud-config\n' + YAML.stringify(cloudInit, { lineWidth: 0 });
 }
 
