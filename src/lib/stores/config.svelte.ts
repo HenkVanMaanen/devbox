@@ -16,6 +16,11 @@ const DEFAULT_CONFIG: GlobalConfig = {
     ageKey: '',
     repoUrl: '',
   },
+  cloudflare: {
+    apiToken: '',
+    hostname: '',
+    zoneId: '',
+  },
   customCloudInit: {
     mode: 'merge',
     yaml: '',
@@ -43,6 +48,7 @@ const DEFAULT_CONFIG: GlobalConfig = {
     zerosslEabKeyId: '',
   },
   ssh: {
+    hostKey: { privateKey: '', publicKey: '' },
     keys: [],
   },
 };

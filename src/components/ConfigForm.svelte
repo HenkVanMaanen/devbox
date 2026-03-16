@@ -4,6 +4,8 @@
   import Card from '$components/ui/Card.svelte';
   import { acmeProviders, dnsServices } from '$lib/data/options';
   import { serversStore } from '$lib/stores/servers.svelte';
+  import { copyToClipboard } from '$lib/utils/clipboard';
+  import { generateSSHHostKey, isValidSSHHostKey } from '$lib/utils/ssh-keygen';
   import { extractSSHKeyName, sshPublicKeySchema } from '$lib/utils/validation';
 
   interface Props {
@@ -77,6 +79,28 @@
       current.filter((_, i) => i !== index),
     );
   }
+
+  // SSH Host Key management
+  function generateHostKey() {
+    const key = generateSSHHostKey();
+    setValue('ssh.hostKey.privateKey', key.privateKey);
+    setValue('ssh.hostKey.publicKey', key.publicKey);
+    notify('SSH host key generated', 'success');
+  }
+
+  function clearHostKey() {
+    setValue('ssh.hostKey.privateKey', '');
+    setValue('ssh.hostKey.publicKey', '');
+    notify('SSH host key removed', 'info');
+  }
+
+  const hasHostKey = $derived(() => {
+    const key = {
+      privateKey: getValue('ssh.hostKey.privateKey') as string,
+      publicKey: getValue('ssh.hostKey.publicKey') as string,
+    };
+    return isValidSSHHostKey(key);
+  });
 
   // Helper to check if field is disabled (profile mode only, when not overridden)
   function isDisabled(path: string): boolean {
@@ -167,6 +191,162 @@
     </div>
   {:else}
     <p class="text-muted-foreground text-sm">Using global SSH keys configuration.</p>
+  {/if}
+</Card>
+
+<!-- SSH Host Key -->
+<Card title="SSH Host Key">
+  <p class="text-muted-foreground mb-4 text-sm">
+    Fixed SSH host key injected into every server. Prevents "host key changed" warnings when recreating servers.
+  </p>
+
+  {#if hasHostKey()}
+    <div class="bg-muted rounded-md p-3">
+      <p class="mb-1 text-sm font-medium">Host key configured</p>
+      <p class="text-muted-foreground max-w-md truncate font-mono text-xs">
+        {(getValue('ssh.hostKey.publicKey') as string).slice(0, 60)}...
+      </p>
+    </div>
+    <div class="mt-3 flex gap-2">
+      <Button variant="secondary" size="sm" onclick={generateHostKey}>Regenerate</Button>
+      <Button variant="ghost" size="sm" onclick={clearHostKey}>Remove</Button>
+    </div>
+  {:else}
+    <Button variant="secondary" onclick={generateHostKey}>Generate Host Key</Button>
+  {/if}
+</Card>
+
+<!-- Cloudflare DNS -->
+<Card title="Cloudflare DNS">
+  {#if mode === 'profile'}
+    <div class="mb-4 flex items-start gap-3">
+      <input
+        type="checkbox"
+        checked={hasOverride('cloudflare')}
+        onchange={() => {
+          toggle('cloudflare');
+        }}
+        class="border-border text-primary focus:ring-focus bg-background mt-1 h-5 w-5 cursor-pointer rounded border-2 focus:ring-3"
+      />
+      <p class="text-muted-foreground text-sm">Override Cloudflare DNS for this profile</p>
+    </div>
+  {/if}
+
+  {#if mode === 'global' || hasOverride('cloudflare')}
+    <p class="text-muted-foreground mb-4 text-sm">
+      Automatically update a DNS A record when a server is created, so you can always SSH via the same hostname.
+    </p>
+
+    <div class="space-y-4">
+      <div>
+        <label for="{idPrefix}cf-hostname" class="mb-1.5 block text-sm font-medium">Hostname</label>
+        <input
+          id="{idPrefix}cf-hostname"
+          type="text"
+          value={getValue('cloudflare.hostname')}
+          onchange={(e) => {
+            setValue('cloudflare.hostname', e.currentTarget.value.trim().toLowerCase());
+          }}
+          disabled={isDisabled('cloudflare')}
+          placeholder="devbox.calabytes.nl"
+          class="bg-background border-border focus:ring-focus focus:border-primary min-h-[44px] w-full rounded-md border-2 px-3
+                 py-2 text-base focus:ring-3 focus:outline-none
+                 disabled:cursor-not-allowed disabled:opacity-50"
+        />
+        <p class="text-muted-foreground mt-1 text-xs">The DNS record that will point to your devbox server</p>
+      </div>
+
+      <div>
+        <label for="{idPrefix}cf-zone-id" class="mb-1.5 block text-sm font-medium">Zone ID</label>
+        <input
+          id="{idPrefix}cf-zone-id"
+          type="text"
+          value={getValue('cloudflare.zoneId')}
+          onchange={(e) => {
+            setValue('cloudflare.zoneId', e.currentTarget.value.trim());
+          }}
+          disabled={isDisabled('cloudflare')}
+          placeholder="Found in Cloudflare dashboard under your domain"
+          class="bg-background border-border focus:ring-focus focus:border-primary min-h-[44px] w-full rounded-md border-2 px-3
+                 py-2 text-base focus:ring-3 focus:outline-none
+                 disabled:cursor-not-allowed disabled:opacity-50"
+        />
+      </div>
+
+      <div>
+        <label for="{idPrefix}cf-api-token" class="mb-1.5 block text-sm font-medium">API Token</label>
+        <input
+          id="{idPrefix}cf-api-token"
+          type="password"
+          value={getValue('cloudflare.apiToken')}
+          onchange={(e) => {
+            setValue('cloudflare.apiToken', e.currentTarget.value.trim());
+          }}
+          disabled={isDisabled('cloudflare')}
+          placeholder="Cloudflare API token with DNS edit permission"
+          class="bg-background border-border focus:ring-focus focus:border-primary min-h-[44px] w-full rounded-md border-2 px-3
+                 py-2 text-base focus:ring-3 focus:outline-none
+                 disabled:cursor-not-allowed disabled:opacity-50"
+        />
+        <p class="text-muted-foreground mt-1 text-xs">
+          Create a token at Cloudflare with <code class="bg-muted rounded px-1 py-0.5 text-xs">Zone:DNS:Edit</code> permission
+        </p>
+      </div>
+
+      {#if hasHostKey() && (getValue('cloudflare.hostname') as string)}
+        {@const cfHostname = getValue('cloudflare.hostname') as string}
+        {@const sshConfigSnippet = `Host devbox\n  HostName ${cfHostname}\n  User dev`}
+        {@const knownHostsLine = `${cfHostname} ${getValue('ssh.hostKey.publicKey') as string}`}
+        <div class="border-border border-t pt-4">
+          <p class="mb-2 text-sm font-medium">SSH Config</p>
+          <p class="text-muted-foreground mb-2 text-xs">
+            Add to <code class="bg-muted rounded px-1 py-0.5 text-xs">~/.ssh/config</code>:
+          </p>
+          <div class="bg-muted relative rounded-md p-3">
+            <pre class="font-mono text-xs">{sshConfigSnippet}</pre>
+            <button
+              type="button"
+              class="text-muted-foreground hover:text-foreground absolute top-2 right-2"
+              onclick={() => void copyToClipboard(sshConfigSnippet, 'SSH config')}
+              aria-label="Copy SSH config"
+            >
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                />
+              </svg>
+            </button>
+          </div>
+
+          <p class="text-muted-foreground mt-3 mb-2 text-xs">
+            Add to <code class="bg-muted rounded px-1 py-0.5 text-xs">~/.ssh/known_hosts</code>:
+          </p>
+          <div class="bg-muted relative rounded-md p-3">
+            <pre class="max-w-full overflow-x-auto font-mono text-xs">{knownHostsLine}</pre>
+            <button
+              type="button"
+              class="text-muted-foreground hover:text-foreground absolute top-2 right-2"
+              onclick={() => void copyToClipboard(knownHostsLine, 'Known hosts entry')}
+              aria-label="Copy known hosts entry"
+            >
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      {/if}
+    </div>
+  {:else}
+    <p class="text-muted-foreground text-sm">Using global Cloudflare DNS configuration.</p>
   {/if}
 </Card>
 

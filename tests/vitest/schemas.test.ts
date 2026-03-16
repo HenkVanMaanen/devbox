@@ -24,7 +24,8 @@ const validConfig = {
     zerosslEabKey: '',
     zerosslEabKeyId: '',
   },
-  ssh: { keys: [{ name: 'test', pubKey: 'ssh-ed25519 AAAA test@dev' }] },
+  cloudflare: { apiToken: '', hostname: '', zoneId: '' },
+  ssh: { hostKey: { privateKey: '', publicKey: '' }, keys: [{ name: 'test', pubKey: 'ssh-ed25519 AAAA test@dev' }] },
 };
 
 describe('globalConfigSchema', () => {

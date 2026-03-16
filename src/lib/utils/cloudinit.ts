@@ -6,6 +6,7 @@ import type { GlobalConfig } from '$lib/types';
 
 import {
   buildCaddyConfig,
+  buildCloudflareDnsScript,
   buildDaemonConfig,
   buildDaemonScript,
   buildGitCredentials,
@@ -26,6 +27,10 @@ interface CloudInitConfig {
   package_upgrade: boolean;
   packages: string[];
   runcmd: (string | string[])[];
+  ssh_keys?: {
+    ed25519_private: string;
+    ed25519_public: string;
+  };
   users: {
     groups: string[];
     name: string;
@@ -105,6 +110,15 @@ export function generateCloudInit(
     ],
     write_files: [],
   };
+
+  // Inject fixed SSH host key if configured
+  const hostKey = config.ssh.hostKey;
+  if (hostKey.privateKey && hostKey.publicKey) {
+    cloudInit.ssh_keys = {
+      ed25519_private: hostKey.privateKey,
+      ed25519_public: hostKey.publicKey,
+    };
+  }
   // Stryker restore all
 
   // Stryker disable all: write_files and runcmd data constants
@@ -219,13 +233,27 @@ export function generateCloudInit(
     permissions: '0644',
   });
 
+  // Cloudflare DNS update script (updates A record to point to this server's IP)
+  const cf = config.cloudflare;
+  if (cf.apiToken && cf.zoneId && cf.hostname) {
+    cloudInit.packages.push('jq');
+    cloudInit.write_files.push({
+      content: buildCloudflareDnsScript(cf.apiToken, cf.zoneId, cf.hostname),
+      path: '/usr/local/bin/devbox-dns-update',
+      permissions: '0755',
+    });
+  }
+
   // ========== RUNCMD ==========
   const runcmd: (string | string[])[] = [
     '/usr/local/bin/devbox-progress configuring',
     'ufw default deny incoming && ufw default allow outgoing && ufw allow 22 && ufw allow 80 && ufw allow 443 && ufw allow 60000:61000/udp && ufw --force enable',
   ];
 
-  // Report progress: packages installed, now configuring
+  // Update Cloudflare DNS early so hostname resolves while rest of setup runs
+  if (cf.apiToken && cf.zoneId && cf.hostname) {
+    runcmd.push('/usr/local/bin/devbox-dns-update || true');
+  }
 
   // Chezmoi install and init (if repoUrl is set and valid)
   const chezmoiUrl = config.chezmoi.repoUrl.trim();
@@ -266,7 +294,7 @@ export function generateCloudInit(
 
 // Stryker disable all: data constant, not testable logic
 // Keys that custom cloud-init is not allowed to override
-export const BLOCKED_CUSTOM_KEYS = new Set(['apt', 'package_update', 'package_upgrade', 'users']);
+export const BLOCKED_CUSTOM_KEYS = new Set(['apt', 'package_update', 'package_upgrade', 'ssh_keys', 'users']);
 // Stryker restore all
 
 // Merge user-provided cloud-init YAML into the generated base config

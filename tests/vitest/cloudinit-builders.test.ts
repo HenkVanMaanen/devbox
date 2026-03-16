@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { shellEscape, toBase64URL, buildGitCredentials, buildCaddyConfig } from '$lib/utils/cloudinit-builders';
+import {
+  buildCaddyConfig,
+  buildCloudflareDnsScript,
+  buildGitCredentials,
+  shellEscape,
+  toBase64URL,
+} from '$lib/utils/cloudinit-builders';
 
 // Helper to build a minimal GlobalConfig with service overrides
 function makeConfig(overrides = {}) {
@@ -25,7 +31,8 @@ function makeConfig(overrides = {}) {
       zerosslEabKeyId: '',
       ...overrides,
     },
-    ssh: { keys: [] },
+    cloudflare: { apiToken: '', hostname: '', zoneId: '' },
+    ssh: { hostKey: { privateKey: '', publicKey: '' }, keys: [] },
   };
 }
 
@@ -216,5 +223,43 @@ describe('buildCaddyConfig', () => {
     const result = buildCaddyConfig(makeConfig());
     expect(result).toContain('basic_auth');
     expect(result).toContain('devbox __HASH__');
+  });
+});
+
+describe('buildCloudflareDnsScript', () => {
+  it('generates a bash script with the correct variables', () => {
+    const script = buildCloudflareDnsScript('test-token', 'zone123', 'devbox.example.com');
+    expect(script).toContain('#!/bin/bash');
+    expect(script).toContain('CF_TOKEN="test-token"');
+    expect(script).toContain('CF_ZONE="zone123"');
+    expect(script).toContain('CF_HOST="devbox.example.com"');
+  });
+
+  it('calls Cloudflare API to update DNS', () => {
+    const script = buildCloudflareDnsScript('tok', 'z', 'h.example.com');
+    expect(script).toContain('api.cloudflare.com/client/v4');
+    expect(script).toContain('dns_records');
+  });
+
+  it('creates a new record if none exists', () => {
+    const script = buildCloudflareDnsScript('tok', 'z', 'h.example.com');
+    expect(script).toContain('POST');
+  });
+
+  it('updates an existing record', () => {
+    const script = buildCloudflareDnsScript('tok', 'z', 'h.example.com');
+    expect(script).toContain('PUT');
+  });
+
+  it('escapes shell metacharacters in token', () => {
+    const script = buildCloudflareDnsScript('tok$en`with"special', 'z', 'h.example.com');
+    expect(script).not.toContain('tok$en');
+    expect(script).toContain('tok\\$en');
+  });
+
+  it('sets TTL to 60 and proxied to false', () => {
+    const script = buildCloudflareDnsScript('tok', 'z', 'h.example.com');
+    expect(script).toContain('\\"ttl\\":60');
+    expect(script).toContain('\\"proxied\\":false');
   });
 });

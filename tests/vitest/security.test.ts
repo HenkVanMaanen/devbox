@@ -37,7 +37,8 @@ const minimalConfig = {
     zerosslEabKey: '',
     zerosslEabKeyId: '',
   },
-  ssh: { keys: [] },
+  cloudflare: { apiToken: '', hostname: '', zoneId: '' },
+  ssh: { hostKey: { privateKey: '', publicKey: '' }, keys: [] },
 };
 
 describe('Security tests', () => {

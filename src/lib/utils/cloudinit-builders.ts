@@ -39,6 +39,28 @@ export interface ThemeColors {
   warning: string;
 }
 
+// Build Cloudflare DNS update script (updates A record to point to this server's IP)
+export function buildCloudflareDnsScript(apiToken: string, zoneId: string, hostname: string): string {
+  return String.raw`#!/bin/bash
+set -euo pipefail
+CF_TOKEN="${shellEscape(apiToken)}"
+CF_ZONE="${shellEscape(zoneId)}"
+CF_HOST="${shellEscape(hostname)}"
+CF_API="https://api.cloudflare.com/client/v4"
+IP=$(curl -s http://169.254.169.254/hetzner/v1/metadata/public-ipv4)
+RID=$(curl -s -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" \
+  "$CF_API/zones/$CF_ZONE/dns_records?type=A&name=$CF_HOST" | jq -r '.result[0].id // empty')
+DATA="{\"type\":\"A\",\"name\":\"$CF_HOST\",\"content\":\"$IP\",\"ttl\":60,\"proxied\":false}"
+if [ -n "$RID" ]; then
+  curl -s -X PUT "$CF_API/zones/$CF_ZONE/dns_records/$RID" \
+    -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" --data "$DATA" > /dev/null
+else
+  curl -s -X POST "$CF_API/zones/$CF_ZONE/dns_records" \
+    -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" --data "$DATA" > /dev/null
+fi
+`;
+}
+
 // Build daemon config JSON (written to /etc/devbox/config.json by cloud-init)
 export function buildDaemonConfig(config: GlobalConfig, hetznerToken: string): string {
   const dnsService =

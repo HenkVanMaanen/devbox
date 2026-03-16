@@ -33,7 +33,8 @@ function makeConfig(overrides: Partial<GlobalConfig> = {}): GlobalConfig {
       zerosslEabKey: '',
       zerosslEabKeyId: '',
     },
-    ssh: { keys: [] },
+    cloudflare: { apiToken: '', hostname: '', zoneId: '' },
+    ssh: { hostKey: { privateKey: '', publicKey: '' }, keys: [] },
     ...overrides,
   } as GlobalConfig;
 }

@@ -4,7 +4,7 @@ import { generateCloudInit } from '$lib/utils/cloudinit';
 
 // Minimal GlobalConfig fixture with required fields
 const minimalConfig = {
-  ssh: { keys: [{ name: 'test', pubKey: 'ssh-ed25519 AAAA test@dev' }] },
+  ssh: { hostKey: { privateKey: '', publicKey: '' }, keys: [{ name: 'test', pubKey: 'ssh-ed25519 AAAA test@dev' }] },
   git: { credential: { host: 'github.com', username: 'user', token: 'ghp_test123' } },
   chezmoi: { repoUrl: '', ageKey: '' },
   services: {
@@ -23,6 +23,7 @@ const minimalConfig = {
   },
   hetzner: { serverType: 'cx22', location: 'fsn1', baseImage: 'ubuntu-24.04' },
   autoDelete: { enabled: false, timeoutMinutes: 60, warningMinutes: 5 },
+  cloudflare: { apiToken: '', hostname: '', zoneId: '' },
   customCloudInit: { yaml: '', mode: 'merge' },
 };
 

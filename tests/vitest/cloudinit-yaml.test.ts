@@ -5,7 +5,7 @@ import { generateCloudInit, mergeCustomCloudInit } from '$lib/utils/cloudinit';
 // Minimal GlobalConfig fixture
 function makeConfig(overrides: Record<string, unknown> = {}) {
   return {
-    ssh: { keys: [{ name: 'test', pubKey: 'ssh-ed25519 AAAA test@dev' }] },
+    ssh: { hostKey: { privateKey: '', publicKey: '' }, keys: [{ name: 'test', pubKey: 'ssh-ed25519 AAAA test@dev' }] },
     git: { credential: { host: 'github.com', username: 'user', token: 'ghp_test123' } },
     chezmoi: { repoUrl: '', ageKey: '' },
     services: {
@@ -24,6 +24,7 @@ function makeConfig(overrides: Record<string, unknown> = {}) {
     },
     hetzner: { serverType: 'cx22', location: 'fsn1', baseImage: 'ubuntu-24.04' },
     autoDelete: { enabled: false, timeoutMinutes: 60, warningMinutes: 5 },
+    cloudflare: { apiToken: '', hostname: '', zoneId: '' },
     customCloudInit: { yaml: '', mode: 'merge' },
     ...overrides,
   };
@@ -214,6 +215,7 @@ describe('generateCloudInit SSH keys', () => {
   it('filters empty pubKeys', () => {
     const config = makeConfig({
       ssh: {
+        hostKey: { privateKey: '', publicKey: '' },
         keys: [
           { name: 'key1', pubKey: 'ssh-ed25519 AAAA test@dev' },
           { name: 'empty', pubKey: '' },
@@ -612,6 +614,7 @@ describe('generateCloudInit specific field values', () => {
   it('ssh_authorized_keys filters empty keys', () => {
     const configWithEmpty = makeConfig({
       ssh: {
+        hostKey: { privateKey: '', publicKey: '' },
         keys: [
           { name: 'key1', pubKey: 'ssh-ed25519 AAAA test@dev' },
           { name: 'empty', pubKey: '' },

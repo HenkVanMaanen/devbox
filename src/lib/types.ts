@@ -28,6 +28,17 @@ export const gitCredentialSchema = z.object({
 });
 export type GitCredential = z.infer<typeof gitCredentialSchema>;
 
+export const cloudflareConfigSchema = z.object({
+  apiToken: z.string(),
+  hostname: z.string(),
+  zoneId: z.string(),
+});
+
+export const sshHostKeySchema = z.object({
+  privateKey: z.string(),
+  publicKey: z.string(),
+});
+
 export const sshKeySchema = z.object({
   name: z.string(),
   pubKey: z.string(),
@@ -57,6 +68,7 @@ export const servicesConfigSchema = z.object({
 export const globalConfigSchema = z.object({
   autoDelete: autoDeleteConfigSchema,
   chezmoi: chezmoiConfigSchema,
+  cloudflare: cloudflareConfigSchema,
   customCloudInit: customCloudInitConfigSchema,
   git: z.object({
     credential: gitCredentialSchema,
@@ -64,6 +76,7 @@ export const globalConfigSchema = z.object({
   hetzner: hetznerConfigSchema,
   services: servicesConfigSchema,
   ssh: z.object({
+    hostKey: sshHostKeySchema,
     keys: z.array(sshKeySchema),
   }),
 });
