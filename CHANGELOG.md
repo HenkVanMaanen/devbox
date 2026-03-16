@@ -4,6 +4,11 @@ All notable changes to Devbox will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [3.8.1] - 2026-03-16
+
+### Fixed
+
+- Improve snapshot-before-delete reliability
 ## [3.8.0] - 2026-03-16
 
 ### Added
