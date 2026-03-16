@@ -4,6 +4,11 @@ All notable changes to Devbox will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [3.7.0] - 2026-03-16
+
+### Added
+
+- Add Cloudflare DNS auto-update and fixed SSH host key
 ## [3.6.2] - 2026-03-13
 
 ### Fixed
