@@ -9,7 +9,7 @@
   import { serversStore } from '$lib/stores/servers.svelte';
   import { themeStore } from '$lib/stores/theme.svelte';
   import { toast } from '$lib/stores/toast.svelte';
-  import { generateCloudInit } from '$lib/utils/cloudinit';
+  import { generateCloudInit, generateSnapshotCloudInit } from '$lib/utils/cloudinit';
   import { generateServerName } from '$lib/utils/names';
 
   let deleteModal = $state({ open: false, server: null as null | { id: number; name: string } });
@@ -78,17 +78,32 @@
         ),
       ];
 
-      // Generate cloud-init with current theme
-      const userData = generateCloudInit(serverName, credentialsStore.token, config, {
-        terminalColors: themeStore.theme.terminal,
-        themeColors: themeStore.theme.colors,
-      });
+      // Check for existing devbox snapshot
+      let snapshotId: number | undefined;
+      try {
+        const snapshots = await hetzner.listDevboxSnapshots(credentialsStore.token);
+        if (snapshots.length > 0) {
+          snapshotId = snapshots[0]?.id;
+        }
+      } catch {
+        // No snapshot available, use base image
+      }
 
-      // Create server
+      // Generate cloud-init (minimal for snapshot, full for fresh)
+      const userData = snapshotId
+        ? generateSnapshotCloudInit(serverName, credentialsStore.token, config, {
+            themeColors: themeStore.theme.colors,
+          })
+        : generateCloudInit(serverName, credentialsStore.token, config, {
+            terminalColors: themeStore.theme.terminal,
+            themeColors: themeStore.theme.colors,
+          });
+
+      // Create server (from snapshot or base image)
       await serversStore.create(
         credentialsStore.token,
         {
-          image: config.hetzner.baseImage,
+          image: snapshotId ?? config.hetzner.baseImage,
           labels: { managed: 'devbox', progress: 'provisioning' },
           location: config.hetzner.location,
           name: serverName,

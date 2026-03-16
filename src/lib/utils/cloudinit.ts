@@ -292,6 +292,76 @@ export function generateCloudInit(
   return '#cloud-config\n' + YAML.stringify(cloudInit, { lineWidth: 0 });
 }
 
+// Minimal cloud-init for snapshot boots — only updates configs and restarts services
+export function generateSnapshotCloudInit(
+  serverName: string,
+  hetznerToken: string,
+  config: GlobalConfig,
+  options: {
+    themeColors?: ThemeColors;
+  } = {},
+): string {
+  const themeColors = options.themeColors ?? defaultThemeColors;
+
+  // Stryker disable all: cloud-init data constants
+  const writeFiles: CloudInitConfig['write_files'] = [
+    {
+      content: `#!/bin/bash\nSID=$(curl -s -H "Metadata-Flavor:hetzner" http://169.254.169.254/hetzner/v1/metadata/instance-id)\ncurl -sf -X PUT \\\n  -H "Authorization: Bearer ${shellEscape(hetznerToken)}" \\\n  -H "Content-Type: application/json" \\\n  -d "{\\"labels\\":{\\"managed\\":\\"devbox\\",\\"progress\\":\\"$1\\"}}" \\\n  "https://api.hetzner.cloud/v1/servers/$SID" > /dev/null 2>&1 || true\n`,
+      path: '/usr/local/bin/devbox-progress',
+      permissions: '0755',
+    },
+    {
+      content: buildDaemonConfig(config, hetznerToken),
+      owner: 'root:dev',
+      path: '/etc/devbox/config.json',
+      permissions: '0640',
+    },
+    {
+      content: buildCaddyConfig(config),
+      path: '/etc/caddy/Caddyfile.template',
+      permissions: '0644',
+    },
+    {
+      content: buildOverviewPage(serverName),
+      path: '/var/www/devbox-overview/index.html.template',
+      permissions: '0644',
+    },
+    {
+      content: buildOverviewConfig(config, themeColors),
+      path: '/var/www/devbox-overview/config.js',
+      permissions: '0644',
+    },
+  ];
+
+  const cf = config.cloudflare;
+  if (cf.apiToken && cf.zoneId && cf.hostname) {
+    writeFiles.push({
+      content: buildCloudflareDnsScript(cf.apiToken, cf.zoneId, cf.hostname),
+      path: '/usr/local/bin/devbox-dns-update',
+      permissions: '0755',
+    });
+  }
+
+  const runcmd: string[] = ['/usr/local/bin/devbox-progress configuring'];
+
+  if (cf.apiToken && cf.zoneId && cf.hostname) {
+    runcmd.push('/usr/local/bin/devbox-dns-update || true');
+  }
+
+  runcmd.push(
+    "IP=$(ip -4 -o addr show scope global | awk '{print $4}' | cut -d/ -f1 | head -1 | awk -F. '{printf \"%02x%02x%02x%02x\", $1, $2, $3, $4}')",
+    `HASH=$(caddy hash-password --plaintext "${shellEscape(config.services.accessToken)}")`,
+    'sed -e "s/__IP__/$IP/g" -e "s|__HASH__|$HASH|g" /etc/caddy/Caddyfile.template > /etc/caddy/Caddyfile',
+    'sed "s/__IP__/$IP/g" /var/www/devbox-overview/index.html.template > /var/www/devbox-overview/index.html',
+    'systemctl restart caddy devbox-daemon || true',
+    '/usr/local/bin/devbox-progress ready',
+  );
+  // Stryker restore all
+
+  const cloudInit = { runcmd, write_files: writeFiles };
+  return '#cloud-config\n' + YAML.stringify(cloudInit, { lineWidth: 0 });
+}
+
 // Stryker disable all: data constant, not testable logic
 // Keys that custom cloud-init is not allowed to override
 export const BLOCKED_CUSTOM_KEYS = new Set(['apt', 'package_update', 'package_upgrade', 'ssh_keys', 'users']);

@@ -199,19 +199,100 @@ try {
   }).trim();
 } catch {}
 
+// Generic Hetzner API call helper
+function apiCall(method, path, body, callback) {
+  const req = https.request(
+    {
+      hostname: 'api.hetzner.cloud',
+      path: '/v1' + path,
+      method,
+      headers: { Authorization: 'Bearer ' + TOKEN, 'Content-Type': 'application/json' },
+    },
+    (res) => {
+      let data = '';
+      res.on('data', (chunk) => (data += chunk));
+      res.on('end', () => {
+        try {
+          callback(null, res.statusCode, JSON.parse(data));
+        } catch {
+          callback(null, res.statusCode, {});
+        }
+      });
+    },
+  );
+  req.on('error', (e) => callback(e));
+  if (body) req.write(JSON.stringify(body));
+  req.end();
+}
+
+function createSnapshot(cb) {
+  console.log('Creating snapshot before deletion...');
+  apiCall(
+    'POST',
+    '/servers/' + sid + '/actions/create_image',
+    { description: 'devbox-snapshot', type: 'snapshot', labels: { managed: 'devbox' } },
+    (err, status, data) => {
+      if (err || status >= 300) {
+        console.error('Snapshot failed:', err || status);
+        return cb(null);
+      }
+      const actionId = data.action && data.action.id;
+      const imageId = data.image && data.image.id;
+      console.log('Snapshot started, action:', actionId, 'image:', imageId);
+      cb({ actionId, imageId });
+    },
+  );
+}
+
+function waitForAction(actionId, cb) {
+  if (!actionId) return cb();
+  const poll = () => {
+    apiCall('GET', '/actions/' + actionId, null, (err, _status, data) => {
+      if (err || !data.action) return cb();
+      if (data.action.status === 'success') {
+        console.log('Snapshot complete');
+        return cb();
+      }
+      if (data.action.status === 'error') {
+        console.error('Snapshot action failed');
+        return cb();
+      }
+      setTimeout(poll, 5000);
+    });
+  };
+  poll();
+}
+
+function cleanupSnapshots(keepImageId, cb) {
+  // cspell:disable-next-line
+  apiCall('GET', '/images?type=snapshot&label_selector=managed%3Ddevbox', null, (err, _status, data) => {
+    if (err || !data.images) return cb();
+    const toDelete = data.images.filter((i) => i.id !== keepImageId);
+    if (toDelete.length === 0) return cb();
+    let remaining = toDelete.length;
+    for (const img of toDelete) {
+      console.log('Deleting old snapshot:', img.id);
+      apiCall('DELETE', '/images/' + img.id, null, () => {
+        remaining--;
+        if (remaining <= 0) cb();
+      });
+    }
+  });
+}
+
+function deleteServer() {
+  console.log('Deleting server...');
+  apiCall('DELETE', '/servers/' + sid, null, () => process.exit(0));
+}
+
 function del() {
   if (!sid) return;
-  https
-    .request(
-      {
-        hostname: 'api.hetzner.cloud',
-        path: '/v1/servers/' + sid,
-        method: 'DELETE',
-        headers: { Authorization: 'Bearer ' + TOKEN },
-      },
-      () => process.exit(0),
-    )
-    .end();
+  createSnapshot((result) => {
+    if (!result) return deleteServer();
+    waitForAction(result.actionId, () => {
+      cleanupSnapshots(result.imageId, deleteServer);
+    });
+  });
 }
 
 function checkActivityAndMaybeDelete() {

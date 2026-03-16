@@ -9,7 +9,7 @@ import { imageSchema, locationSchema, serverSchema, serverTypeSchema } from '$li
 const API_BASE = 'https://api.hetzner.cloud/v1';
 
 export interface CreateServerOptions {
-  image: string;
+  image: number | string;
   labels?: Record<string, string>;
   location: string;
   name: string;
@@ -65,6 +65,10 @@ export async function createSSHKey(token: string, name: string, publicKey: strin
   return validate(hetznerSSHKeySchema, data.ssh_key);
 }
 
+export async function deleteImage(token: string, id: number): Promise<void> {
+  await request(token, `/images/${id}`, { method: 'DELETE' });
+}
+
 export async function deleteServer(token: string, id: number): Promise<void> {
   await request(token, `/servers/${id}`, { method: 'DELETE' });
 }
@@ -91,6 +95,14 @@ export async function ensureSSHKey(token: string, name: string, publicKey: strin
 export async function getServer(token: string, serverId: number): Promise<Server> {
   const data = await request<{ server: Server }>(token, `/servers/${serverId}`);
   return validate(serverSchema, data.server);
+}
+
+export async function listDevboxSnapshots(token: string): Promise<Image[]> {
+  const data = await request<{ images: Image[] }>(
+    token,
+    '/images?type=snapshot&label_selector=managed%3Ddevbox&sort=created:desc', // cspell:disable-line
+  );
+  return validate(z.array(imageSchema), data.images);
 }
 
 // Images
