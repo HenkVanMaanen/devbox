@@ -4,6 +4,11 @@ All notable changes to Devbox will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [3.8.2] - 2026-03-17
+
+### Fixed
+
+- Cloud-init write_files crash due to owner root:dev
 ## [3.8.1] - 2026-03-16
 
 ### Fixed
