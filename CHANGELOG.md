@@ -4,6 +4,11 @@ All notable changes to Devbox will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [3.8.3] - 2026-03-17
+
+### Fixed
+
+- Skip snapshot restore when disk size exceeds server type
 ## [3.8.2] - 2026-03-17
 
 ### Fixed
