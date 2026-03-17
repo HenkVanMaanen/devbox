@@ -4,6 +4,17 @@ All notable changes to Devbox will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [3.8.4] - 2026-03-17
+
+### Fixed
+
+- Accept null image name from Hetzner snapshot API
+
+### Other
+
+- Revert "fix: skip snapshot restore when disk size exceeds server type"
+
+This reverts commit 4e54a5ed97634f05865f94bce404a8f8523c8c36.
 ## [3.8.3] - 2026-03-17
 
 ### Fixed
