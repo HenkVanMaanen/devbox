@@ -168,9 +168,8 @@ export function generateCloudInit(
   cloudInit.write_files.push(
     {
       content: buildDaemonConfig(config, hetznerToken),
-      owner: 'root:dev',
       path: '/etc/devbox/config.json',
-      permissions: '0640',
+      permissions: '0644',
     },
     {
       content: buildDaemonScript(),
@@ -312,9 +311,8 @@ export function generateSnapshotCloudInit(
     },
     {
       content: buildDaemonConfig(config, hetznerToken),
-      owner: 'root:dev',
       path: '/etc/devbox/config.json',
-      permissions: '0640',
+      permissions: '0644',
     },
     {
       content: buildCaddyConfig(config),
