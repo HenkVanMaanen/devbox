@@ -54,10 +54,9 @@ const mockSSHKey = {
 
 const mockImage = {
   architecture: 'x86',
-  description: 'Ubuntu 24.04',
-  disk_size: 40,
   id: 1,
   name: 'ubuntu-24.04',
+  description: 'Ubuntu 24.04',
   os_flavor: 'ubuntu',
   os_version: '24.04',
   type: 'system',

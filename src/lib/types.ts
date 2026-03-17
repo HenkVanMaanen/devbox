@@ -87,7 +87,6 @@ export const imageSchema = z
   .object({
     architecture: z.string(),
     description: z.string(),
-    disk_size: z.number(),
     id: z.number(),
     name: z.string(),
     os_flavor: z.string(),

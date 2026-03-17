@@ -22,11 +22,7 @@
       void serversStore.load(credentialsStore.token);
       void serversStore.loadOptions(credentialsStore.token);
       void hetzner.listDevboxSnapshots(credentialsStore.token).then(
-        (snapshots) => {
-          const snapshot = snapshots[0];
-          const targetType = serversStore.serverTypes.find((t) => t.name === selectedConfig.hetzner.serverType);
-          hasSnapshot = Boolean(snapshot && targetType && snapshot.disk_size <= targetType.disk);
-        },
+        (snapshots) => (hasSnapshot = snapshots.length > 0),
         () => (hasSnapshot = false),
       );
     }
@@ -87,16 +83,12 @@
         ),
       ];
 
-      // Check for existing devbox snapshot that fits the target server type
+      // Check for existing devbox snapshot
       let snapshotId: number | undefined;
       try {
         const snapshots = await hetzner.listDevboxSnapshots(credentialsStore.token);
-        const snapshot = snapshots[0];
-        if (snapshot) {
-          const targetType = serversStore.serverTypes.find((t) => t.name === config.hetzner.serverType);
-          if (targetType && snapshot.disk_size <= targetType.disk) {
-            snapshotId = snapshot.id;
-          }
+        if (snapshots.length > 0) {
+          snapshotId = snapshots[0]?.id;
         }
       } catch {
         // No snapshot available, use base image
