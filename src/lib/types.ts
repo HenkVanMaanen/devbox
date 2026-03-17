@@ -88,7 +88,7 @@ export const imageSchema = z
     architecture: z.string(),
     description: z.string(),
     id: z.number(),
-    name: z.string(),
+    name: z.string().nullable(),
     os_flavor: z.string(),
     os_version: z.string(),
     type: z.enum(['app', 'backup', 'snapshot', 'system']),
