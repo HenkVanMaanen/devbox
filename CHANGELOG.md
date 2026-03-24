@@ -4,6 +4,15 @@ All notable changes to Devbox will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [3.9.0] - 2026-03-24
+
+### Added
+
+- Replace basic auth with Authelia forward auth
+
+### Chore
+
+- Trigger deploy for v3.8.4
 ## [3.8.4] - 2026-03-17
 
 ### Fixed
