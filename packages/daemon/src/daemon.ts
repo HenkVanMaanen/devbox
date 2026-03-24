@@ -327,7 +327,27 @@ function apiCall(method, path, body, callback) {
   req.end();
 }
 
+function runHooks(dir) {
+  try {
+    const files = fs
+      .readdirSync(dir)
+      .filter((f) => f.endsWith('.sh'))
+      .sort();
+    for (const file of files) {
+      const script = dir + '/' + file;
+      console.log('Running hook:', script);
+      try {
+        execSync('bash ' + script, { timeout: 30000, stdio: 'inherit' });
+      } catch (e) {
+        console.error('Hook failed:', script, e.message);
+      }
+    }
+  } catch {}
+}
+
 function createSnapshot(cb) {
+  console.log('Running pre-snapshot hooks...');
+  runHooks('/etc/devbox/hooks/pre-snapshot.d');
   console.log('Syncing filesystem...');
   try {
     execSync('sync', { timeout: 30000 });

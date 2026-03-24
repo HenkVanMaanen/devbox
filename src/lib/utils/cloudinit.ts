@@ -293,6 +293,7 @@ export function generateCloudInit(
     'TTYD_ARCH=$(uname -m | sed "s/aarch64/aarch64/;s/x86_64/x86_64/") && curl -fsSL "https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.${TTYD_ARCH}" -o /usr/local/bin/ttyd && chmod +x /usr/local/bin/ttyd || true',
     `AUTHELIA_ARCH=$(uname -m | sed "s/x86_64/amd64/;s/aarch64/arm64/") && curl -fsSL "https://github.com/authelia/authelia/releases/download/v${AUTHELIA_VERSION}/authelia-v${AUTHELIA_VERSION}-linux-$AUTHELIA_ARCH.tar.gz" | tar xz -C /usr/local/bin/ authelia && chmod +x /usr/local/bin/authelia`,
     'mkdir -p /var/lib/authelia',
+    'mkdir -p /etc/devbox/hooks/pre-snapshot.d /etc/devbox/hooks/post-boot.d',
     'systemctl daemon-reload && systemctl enable --now devbox-daemon ttyd-term authelia || true',
     'mkdir -p /var/www/devbox-overview',
     "IP=$(ip -4 -o addr show scope global | awk '{print $4}' | cut -d/ -f1 | head -1 | awk -F. '{printf \"%02x%02x%02x%02x\", $1, $2, $3, $4}')",
@@ -401,6 +402,7 @@ export function generateSnapshotCloudInit(
     `AUTHELIA_ARCH=$(uname -m | sed "s/x86_64/amd64/;s/aarch64/arm64/") && curl -fsSL "https://github.com/authelia/authelia/releases/download/v${AUTHELIA_VERSION}/authelia-v${AUTHELIA_VERSION}-linux-$AUTHELIA_ARCH.tar.gz" | tar xz -C /usr/local/bin/ authelia && chmod +x /usr/local/bin/authelia || true`,
     'mkdir -p /var/lib/authelia',
     'systemctl restart caddy devbox-daemon authelia || true',
+    String.raw`su - dev -c 'run-parts --regex="\.sh$" /etc/devbox/hooks/post-boot.d' 2>/dev/null || true`,
     '/usr/local/bin/devbox-progress ready',
   );
   // Stryker restore all
