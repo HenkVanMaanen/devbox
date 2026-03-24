@@ -146,11 +146,30 @@ async function createGuest() {
   gbtn.textContent = 'Generate';
 }
 
+function showToast(msg: string) {
+  const el = document.createElement('div');
+  el.textContent = msg;
+  el.style.cssText =
+    'position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:var(--card,#171717);color:var(--fg,#f5f5f5);border:1px solid var(--border,#333);border-radius:0.375rem;padding:0.5rem 1rem;font-size:0.875rem;z-index:9999;opacity:0;transition:opacity 0.2s';
+  document.body.appendChild(el);
+  requestAnimationFrame(() => (el.style.opacity = '1'));
+  setTimeout(() => {
+    el.style.opacity = '0';
+    setTimeout(() => el.remove(), 200);
+  }, 2000);
+}
+
+function copyLink(url: string) {
+  navigator.clipboard.writeText(url);
+  showToast('Link copied');
+}
+
 async function revokeGuest(id: string) {
   try {
     await fetch(location.origin + '/api/guests?id=' + id, { method: 'DELETE' });
     guestList = guestList.filter((g) => g.id !== id);
     renderGuests();
+    showToast('Guest revoked');
   } catch {}
 }
 
@@ -177,7 +196,7 @@ function renderGuests() {
     html += '<div style="display:flex;gap:0.5rem;margin-top:0.5rem">';
     if (g.magicUrl) {
       html +=
-        '<button onclick="navigator.clipboard.writeText(\'' +
+        '<button onclick="window.__copy(\'' +
         g.magicUrl.replace(/'/g, "\\'") +
         '\')" style="background:var(--card,#171717);color:var(--fg,#f5f5f5);border:1px solid var(--border,#333);border-radius:0.25rem;padding:0.25rem 0.5rem;font-size:0.75rem;cursor:pointer">Copy link</button>';
     }
@@ -191,6 +210,7 @@ function renderGuests() {
 }
 
 window.__revoke = revokeGuest;
+window.__copy = copyLink;
 gbtn.addEventListener('click', createGuest);
 
 getStatus();
