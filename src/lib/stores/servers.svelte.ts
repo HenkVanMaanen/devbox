@@ -1,12 +1,10 @@
 // Servers store using Svelte 5 runes
 
 import { SvelteMap } from 'svelte/reactivity';
-import { z } from 'zod';
 
 import type { Image, Location, Server, ServerType } from '$lib/types';
 
 import * as hetzner from '$lib/api/hetzner';
-import { loadValidated, save } from '$lib/utils/storage';
 import { backgroundRefresh, CACHE_KEYS, clearSwrCache, peekCache, swrFetch } from '$lib/utils/swr-cache';
 
 const filterDevbox = (allServers: Server[]): Server[] => allServers.filter((s) => s.labels['managed'] === 'devbox');
@@ -24,11 +22,6 @@ function createServersStore() {
   let creating = $state(false);
   let createProgress = $state('');
   let error = $state<null | string>(null);
-
-  // Server tokens stored separately (not visible in Hetzner API)
-  const serverTokens = $state<Record<string, string>>(
-    loadValidated('serverTokens', z.record(z.string(), z.string())) ?? {},
-  );
 
   // Progress polling timers
   const pollingTimers = new SvelteMap<
@@ -90,7 +83,7 @@ function createServersStore() {
       clearSwrCache(Object.values(CACHE_KEYS));
     },
     // Create a new server
-    async create(token: string, opts: hetzner.CreateServerOptions, accessToken: string): Promise<Server> {
+    async create(token: string, opts: hetzner.CreateServerOptions): Promise<Server> {
       creating = true;
       createProgress = 'Creating server...';
 
@@ -98,8 +91,7 @@ function createServersStore() {
         createProgress = 'Provisioning server...';
         const server = await hetzner.createServer(token, opts);
 
-        // Save access token and show server card immediately
-        this.saveServerToken(server.name, accessToken);
+        // Show server card immediately
         servers = [...servers.filter((s) => s.id !== server.id), server];
 
         createProgress = 'Waiting for server to start...';
@@ -140,7 +132,7 @@ function createServersStore() {
       return creating;
     },
     // Delete a server (optimistic)
-    async delete(token: string, id: number, name: string): Promise<void> {
+    async delete(token: string, id: number): Promise<void> {
       // Optimistic: remove server from UI immediately
       const previousServers = [...servers];
       servers = servers.filter((s) => s.id !== id);
@@ -148,7 +140,6 @@ function createServersStore() {
       try {
         await hetzner.deleteServer(token, id);
         stopProgressPolling(id);
-        this.removeServerToken(name);
 
         // Sync cache with API reality in background
         void backgroundRefresh({
@@ -172,11 +163,6 @@ function createServersStore() {
     get error() {
       return error;
     },
-    // Get server access token
-    getServerToken(serverName: string): string | undefined {
-      return serverTokens[serverName];
-    },
-
     get images() {
       return images;
     },
@@ -269,26 +255,8 @@ function createServersStore() {
       return locations;
     },
 
-    // Remove server access token
-    removeServerToken(serverName: string): void {
-      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-      delete serverTokens[serverName];
-      save('serverTokens', serverTokens);
-    },
-
-    // Save server access token
-    saveServerToken(serverName: string, token: string): void {
-      serverTokens[serverName] = token;
-      save('serverTokens', serverTokens);
-    },
-
     get servers() {
       return servers;
-    },
-
-    // Get all server tokens (for export)
-    get serverTokens() {
-      return serverTokens;
     },
 
     get serverTypes() {

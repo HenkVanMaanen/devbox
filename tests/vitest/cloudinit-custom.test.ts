@@ -24,11 +24,11 @@ function makeBaseConfig() {
 
 // Minimal GlobalConfig fixture for generateCloudInit tests
 const minimalConfig = {
+  auth: { users: [] },
   ssh: { hostKey: { privateKey: '', publicKey: '' }, keys: [{ name: 'test', pubKey: 'ssh-ed25519 AAAA test@dev' }] },
   git: { credential: { host: 'github.com', username: 'user', token: 'ghp_test123' } },
   chezmoi: { repoUrl: '', ageKey: '' },
   services: {
-    accessToken: 'test-token',
     dnsService: 'sslip.io',
     customDnsDomain: '',
     acmeProvider: 'letsencrypt',

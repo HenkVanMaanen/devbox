@@ -10,6 +10,11 @@ export const dnsServices = [
 export const acmeProviders = [
   { description: 'No rate limits, recommended for testing', label: 'ZeroSSL', value: 'zerossl' },
   { description: 'Most popular CA', label: "Let's Encrypt", value: 'letsencrypt' },
+  {
+    description: "Let's Encrypt staging (no rate limits)",
+    label: "Let's Encrypt Staging",
+    value: 'letsencrypt-staging',
+  },
   { description: 'Norwegian CA', label: 'Buypass', value: 'buypass' },
   { description: 'Italian CA', label: 'Actalis', value: 'actalis' },
   { description: 'Self-hosted or other CA', label: 'Custom ACME', value: 'custom' },

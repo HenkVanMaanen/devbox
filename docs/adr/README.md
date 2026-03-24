@@ -39,6 +39,7 @@ ADRs capture important architectural decisions along with their context and cons
 | [023](./0023-chezmoi-dotfile-management.md)   | chezmoi for Dotfile Management        | Accepted   | Personal dev config managed via dotfiles repo, not UI                 |
 | [024](./0024-swr-caching.md)                  | SWR Caching for API Calls             | Accepted   | Cache-then-revalidate pattern for instant UI with background refresh  |
 | [025](./0025-zod-runtime-validation.md)       | Zod Runtime Validation                | Accepted   | Runtime validation for localStorage, API responses, and config import |
+| [026](./0026-authelia-forward-auth.md)        | Authelia Forward Auth                 | Accepted   | Replace Basic Auth with Authelia session-based forward auth           |
 
 ## ADR Template
 

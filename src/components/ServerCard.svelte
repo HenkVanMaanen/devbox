@@ -2,9 +2,8 @@
   import type { Server } from '$lib/types';
 
   import { configStore } from '$lib/stores/config.svelte';
-  import { serversStore } from '$lib/stores/servers.svelte';
   import { copyToClipboard } from '$lib/utils/clipboard';
-  import { generateQR } from '$lib/utils/qrcode';
+  import { getDomainPrefix, resolveDnsService } from '$lib/utils/cloudinit-builders';
   import { isValidSSHHostKey } from '$lib/utils/ssh-keygen';
 
   import Button from './ui/Button.svelte';
@@ -24,26 +23,13 @@
       .join('');
   }
 
-  const accessToken = $derived(serversStore.getServerToken(server.name));
   // Use custom domain if configured, otherwise use the selected DNS service
-  const dnsService = $derived(
-    configStore.value.services.dnsService === 'custom'
-      ? configStore.value.services.customDnsDomain || 'sslip.io'
-      : configStore.value.services.dnsService,
-  );
+  const dnsService = $derived(resolveDnsService(configStore.value));
+  const devPrefix = $derived(getDomainPrefix(configStore.value.services.dnsService));
   const ipHex = $derived(ipToHex(server.public_net.ipv4.ip));
-  const baseUrl = $derived(`https://${ipHex}.${dnsService}`);
-
-  // Generate QR code for easy mobile access
-  const qrCodeSvg = $derived.by(() => {
-    if (!accessToken || server.status !== 'running') return '';
-    try {
-      const url = `https://devbox:${encodeURIComponent(accessToken)}@${ipHex}.${dnsService}/`;
-      return generateQR(url);
-    } catch {
-      return '';
-    }
-  });
+  const baseUrl = $derived(`https://${devPrefix}${ipHex}.${dnsService}`);
+  const overviewUrl = $derived(`${baseUrl}/`);
+  const terminalUrl = $derived(`https://65534.${devPrefix}${ipHex}.${dnsService}/`);
 
   // Progress tracking
   const progress = $derived(server.labels['progress'] ?? '');
@@ -169,74 +155,49 @@
         </button>
       </div>
 
-      {#if accessToken}
-        {@const overviewUrl = `${baseUrl}/`}
-        {@const terminalUrl = `https://65534.${ipHex}.${dnsService}/`}
-
-        <div class="space-y-2">
-          <div class="flex items-center gap-2">
-            <a
-              href="https://devbox:{accessToken}@{ipHex}.{dnsService}/"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="text-primary text-sm hover:underline"
-            >
-              Overview
-            </a>
-            <button
-              type="button"
-              class="text-muted-foreground hover:text-foreground"
-              onclick={() => copyToClipboard(overviewUrl, 'Overview URL')}
-              aria-label="Copy Overview URL"
-            >
-              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                />
-              </svg>
-            </button>
-          </div>
-
-          <div class="flex items-center gap-2">
-            <a
-              href="https://devbox:{accessToken}@65534.{ipHex}.{dnsService}/"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="text-primary text-sm hover:underline"
-            >
-              Terminal
-            </a>
-            <button
-              type="button"
-              class="text-muted-foreground hover:text-foreground"
-              onclick={() => copyToClipboard(terminalUrl, 'Terminal URL')}
-              aria-label="Copy Terminal URL"
-            >
-              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                />
-              </svg>
-            </button>
-          </div>
-
-          {#if qrCodeSvg}
-            <div class="border-border mt-3 border-t pt-3">
-              <p class="text-muted-foreground mb-2 text-xs">Scan to access on mobile</p>
-              <div class="flex justify-center">
-                <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-                <div class="rounded-md bg-white p-2" style="width: 144px; height: 144px;">{@html qrCodeSvg}</div>
-              </div>
-            </div>
-          {/if}
+      <div class="space-y-2">
+        <div class="flex items-center gap-2">
+          <a href={overviewUrl} target="_blank" rel="noopener noreferrer" class="text-primary text-sm hover:underline">
+            Overview
+          </a>
+          <button
+            type="button"
+            class="text-muted-foreground hover:text-foreground"
+            onclick={() => copyToClipboard(overviewUrl, 'Overview URL')}
+            aria-label="Copy Overview URL"
+          >
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+              />
+            </svg>
+          </button>
         </div>
-      {/if}
+
+        <div class="flex items-center gap-2">
+          <a href={terminalUrl} target="_blank" rel="noopener noreferrer" class="text-primary text-sm hover:underline">
+            Terminal
+          </a>
+          <button
+            type="button"
+            class="text-muted-foreground hover:text-foreground"
+            onclick={() => copyToClipboard(terminalUrl, 'Terminal URL')}
+            aria-label="Copy Terminal URL"
+          >
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
     </div>
   {/if}
 </Card>

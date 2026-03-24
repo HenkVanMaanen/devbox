@@ -5,13 +5,13 @@ import { sshPublicKeySchema } from '$lib/utils/validation';
 
 // Minimal valid config matching DEFAULT_CONFIG shape
 const validConfig = {
+  auth: { users: [] },
   autoDelete: { enabled: true, timeoutMinutes: 90, warningMinutes: 5 },
   chezmoi: { ageKey: '', repoUrl: '' },
   customCloudInit: { mode: 'merge', yaml: '' },
   git: { credential: { host: 'github.com', token: '', username: '' } },
   hetzner: { baseImage: 'ubuntu-24.04', location: 'fsn1', serverType: 'cx22' },
   services: {
-    accessToken: 'abc12345',
     acmeEmail: '',
     acmeProvider: 'zerossl',
     actalisEabKey: '',

@@ -188,51 +188,19 @@ describe('servers store - create()', () => {
     const store = await getStore();
 
     await expect(
-      store.create(
-        'test-token',
-        {
-          image: 'ubuntu-24.04',
-          labels: { managed: 'devbox' },
-          location: 'fsn1',
-          name: 'new-server',
-          serverType: 'cx22',
-          sshKeys: [1],
-          userData: '#cloud-config',
-        },
-        'access-token',
-      ),
+      store.create('test-token', {
+        image: 'ubuntu-24.04',
+        labels: { managed: 'devbox' },
+        location: 'fsn1',
+        name: 'new-server',
+        serverType: 'cx22',
+        sshKeys: [1],
+        userData: '#cloud-config',
+      }),
     ).rejects.toThrow('Create failed');
 
     expect(store.creating).toBe(false);
     expect(store.createProgress).toBe('');
-  });
-
-  it('create() saves token with server name from API response', async () => {
-    const hetznerMod = await getHetzner();
-    const createdServer: Server = { ...mockServer, id: 10, name: 'api-returned-name', status: 'initializing' };
-    const runningServer: Server = { ...mockServer, id: 10, name: 'api-returned-name', status: 'running' };
-
-    vi.mocked(hetznerMod.createServer).mockResolvedValue(createdServer);
-    vi.mocked(hetznerMod.waitForRunning).mockResolvedValue(runningServer);
-    mockBackgroundRefresh.mockResolvedValue(undefined);
-
-    const store = await getStore();
-    await store.create(
-      'test-token',
-      {
-        image: 'ubuntu-24.04',
-        labels: { managed: 'devbox' },
-        location: 'fsn1',
-        name: 'request-name',
-        serverType: 'cx22',
-        sshKeys: [1],
-        userData: '#cloud-config',
-      },
-      'my-access-token',
-    );
-
-    // Token should be saved with the server name from the API response
-    expect(store.getServerToken('api-returned-name')).toBe('my-access-token');
   });
 
   it('create() adds server to list immediately after createServer', async () => {
@@ -245,19 +213,15 @@ describe('servers store - create()', () => {
     mockBackgroundRefresh.mockResolvedValue(undefined);
 
     const store = await getStore();
-    await store.create(
-      'test-token',
-      {
-        image: 'ubuntu-24.04',
-        labels: { managed: 'devbox' },
-        location: 'fsn1',
-        name: 'new-server',
-        serverType: 'cx22',
-        sshKeys: [1],
-        userData: '#cloud-config',
-      },
-      'access-token',
-    );
+    await store.create('test-token', {
+      image: 'ubuntu-24.04',
+      labels: { managed: 'devbox' },
+      location: 'fsn1',
+      name: 'new-server',
+      serverType: 'cx22',
+      sshKeys: [1],
+      userData: '#cloud-config',
+    });
 
     // Server should be in the list
     expect(store.servers.some((s) => s.id === 10)).toBe(true);
@@ -289,13 +253,13 @@ describe('servers store - delete()', () => {
 
     const store = await getStore();
     await store.load('test-token');
-    store.saveServerToken('test-server', 'tok');
+    // Server loaded
 
     const hetznerMod = await getHetzner();
     vi.mocked(hetznerMod.deleteServer).mockResolvedValue(undefined);
     mockBackgroundRefresh.mockResolvedValue(undefined);
 
-    await store.delete('test-token', 1, 'test-server');
+    await store.delete('test-token', 1);
 
     expect(mockBackgroundRefresh).toHaveBeenCalled();
     const callArg = mockBackgroundRefresh.mock.calls[0]?.[0];
@@ -317,7 +281,7 @@ describe('servers store - delete()', () => {
     vi.mocked(hetznerMod.deleteServer).mockResolvedValue(undefined);
     mockBackgroundRefresh.mockResolvedValue(undefined);
 
-    await store.delete('test-token', 1, 'test-server');
+    await store.delete('test-token', 1);
     expect(store.servers).toHaveLength(0);
   });
 });
@@ -362,7 +326,7 @@ describe('servers store - backgroundRefresh callbacks', () => {
     vi.mocked(hetznerMod.listServers).mockResolvedValue([mockServer, provisioningServer]);
 
     const store = await getStore();
-    await store.create('test-token', createOpts, 'access-token');
+    await store.create('test-token', createOpts);
 
     // onData should have filtered to devbox servers
     expect(store.servers).toHaveLength(2);
@@ -386,7 +350,7 @@ describe('servers store - backgroundRefresh callbacks', () => {
     vi.mocked(hetznerMod.listServers).mockResolvedValue([mockServer]);
 
     const store = await getStore();
-    await store.create('test-token', createOpts, 'access-token');
+    await store.create('test-token', createOpts);
 
     expect(hetznerMod.listServers).toHaveBeenCalledWith('test-token');
     // servers should not have been updated since onData was not called
@@ -402,7 +366,7 @@ describe('servers store - backgroundRefresh callbacks', () => {
 
     const store = await getStore();
     await store.load('test-token');
-    store.saveServerToken('test-server', 'tok');
+    // Server loaded
 
     const hetznerMod = await getHetzner();
     vi.mocked(hetznerMod.deleteServer).mockResolvedValue(undefined);
@@ -416,7 +380,7 @@ describe('servers store - backgroundRefresh callbacks', () => {
     // After deletion, listServers returns empty
     vi.mocked(hetznerMod.listServers).mockResolvedValue([]);
 
-    await store.delete('test-token', 1, 'test-server');
+    await store.delete('test-token', 1);
 
     expect(store.servers).toHaveLength(0);
     expect(hetznerMod.listServers).toHaveBeenCalledWith('test-token');
@@ -431,7 +395,7 @@ describe('servers store - backgroundRefresh callbacks', () => {
 
     const store = await getStore();
     await store.load('test-token');
-    store.saveServerToken('test-server', 'tok');
+    // Server loaded
 
     const hetznerMod = await getHetzner();
     vi.mocked(hetznerMod.deleteServer).mockResolvedValue(undefined);
@@ -443,7 +407,7 @@ describe('servers store - backgroundRefresh callbacks', () => {
 
     vi.mocked(hetznerMod.listServers).mockResolvedValue([]);
 
-    await store.delete('test-token', 1, 'test-server');
+    await store.delete('test-token', 1);
 
     expect(hetznerMod.listServers).toHaveBeenCalledWith('test-token');
   });
@@ -742,7 +706,7 @@ describe('servers store - progress polling', () => {
     mockBackgroundRefresh.mockResolvedValue(undefined);
 
     const store = await getStore();
-    await store.create('test-token', createOpts, 'access-token');
+    await store.create('test-token', createOpts);
 
     // Now the store should be polling for server id=10
     const readyServer: Server = {

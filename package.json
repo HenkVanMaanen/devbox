@@ -33,6 +33,7 @@
     "@devbox/daemon": "workspace:*",
     "@devbox/overview": "workspace:*",
     "@noble/curves": "^2.0.1",
+    "bcryptjs": "^3.0.3",
     "unique-names-generator": "^4.7.1",
     "uqr": "^0.1.2",
     "zod": "^4.3.6"

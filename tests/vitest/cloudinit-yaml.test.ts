@@ -5,11 +5,11 @@ import { generateCloudInit, mergeCustomCloudInit } from '$lib/utils/cloudinit';
 // Minimal GlobalConfig fixture
 function makeConfig(overrides: Record<string, unknown> = {}) {
   return {
+    auth: { users: [] },
     ssh: { hostKey: { privateKey: '', publicKey: '' }, keys: [{ name: 'test', pubKey: 'ssh-ed25519 AAAA test@dev' }] },
     git: { credential: { host: 'github.com', username: 'user', token: 'ghp_test123' } },
     chezmoi: { repoUrl: '', ageKey: '' },
     services: {
-      accessToken: 'test-access-token',
       dnsService: 'sslip.io',
       customDnsDomain: '',
       acmeProvider: 'letsencrypt',
@@ -414,12 +414,9 @@ describe('generateCloudInit structure', () => {
     expect(output).toContain('__IP__');
   });
 
-  it('includes caddy hash-password command', () => {
-    expect(output).toContain('caddy hash-password');
-  });
-
-  it('escapes access token in caddy hash-password', () => {
-    expect(output).toContain('test-access-token');
+  it('includes Authelia config in write_files', () => {
+    expect(output).toContain('/etc/authelia/configuration.yml');
+    expect(output).toContain('/etc/authelia/users.yml');
   });
 
   it('includes gitconfig with credential helper', () => {
@@ -532,13 +529,13 @@ describe('generateCloudInit specific field values', () => {
     expect(output).toContain('IP=$(ip -4 -o addr');
   });
 
-  it('has sed commands for IP and HASH replacement', () => {
+  it('has sed commands for IP replacement', () => {
     expect(output).toContain('sed -e "s/__IP__/$IP/g"');
-    expect(output).toContain('__HASH__');
   });
 
-  it('has caddy hash-password command', () => {
-    expect(output).toContain('caddy hash-password --plaintext');
+  it('has Authelia config file paths in write_files', () => {
+    expect(output).toContain('/etc/authelia/configuration.yml');
+    expect(output).toContain('/etc/authelia/users.yml');
   });
 
   it('has apt-get clean command', () => {

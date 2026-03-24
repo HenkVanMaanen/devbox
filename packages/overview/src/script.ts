@@ -2,9 +2,6 @@
 // @ts-nocheck — This file runs in the browser on the provisioned server's overview page.
 // It is bundled by esbuild into a minified script inlined into the HTML.
 
-// Runtime config is injected by config.js (loaded synchronously before this script)
-const token = window.__DEVBOX.accessToken;
-
 const d = document.getElementById('d');
 const s = document.getElementById('s');
 const cd = document.getElementById('cd');
@@ -45,7 +42,7 @@ async function getServices() {
 function renderServices(svcs: { name: string; port: number; url: string; active: boolean }[]) {
   svcsEl.innerHTML = '';
   for (const svc of svcs) {
-    const url = 'https://devbox:' + encodeURIComponent(token) + '@' + new URL(svc.url).host + '/';
+    const url = 'https://' + new URL(svc.url).host + '/';
     const a = document.createElement('a');
     a.href = url;
     a.target = '_blank';
@@ -84,8 +81,17 @@ function t() {
   }
 }
 
+async function getWhoami() {
+  try {
+    const data = await (await fetch(location.origin + '/api/whoami')).json();
+    const el = document.getElementById('user');
+    if (el && data.user) el.textContent = 'Logged in as ' + esc(data.user);
+  } catch {}
+}
+
 getStatus();
 getServices();
+getWhoami();
 setInterval(getStatus, 10000);
 setInterval(getServices, 10000);
 setInterval(t, 1000);

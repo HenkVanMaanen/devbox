@@ -23,6 +23,7 @@ flowchart TB
     subgraph Server
         Init["cloud-init (first boot)"]
         Init --> Caddy["Caddy (reverse proxy)"]
+        Caddy -->|"forward_auth"| Authelia["Authelia (session auth)"]
         Caddy --> ttyd["ttyd (terminal)"]
         Caddy -->|HTTPS| Internet((Internet))
     end
@@ -163,10 +164,12 @@ flowchart TB
     subgraph Server["Cloud Server"]
         subgraph Services["Services"]
             Caddy["Caddy<br/>(port 443)<br/>- Auto HTTPS<br/>- Subdomains"]
+            Authelia["Authelia<br/>(forward auth)<br/>- Session cookies"]
             ttyd["ttyd<br/>(port 65534)<br/>- WebSocket<br/>- Terminal"]
             DevServers["Dev Servers<br/>(port 3000+)"]
         end
 
+        Caddy -->|"forward_auth"| Authelia
         Caddy --> ttyd
         Caddy --> DevServers
 
@@ -177,6 +180,12 @@ flowchart TB
 
     Internet((HTTPS)) --> Caddy
 ```
+
+### Authentication Flow
+
+Caddy delegates authentication to Authelia via `forward_auth`. Authelia uses a file-based user database with bcrypt-hashed passwords, pre-provisioned via cloud-init. Session cookies provide single sign-on across all service subdomains.
+
+For wildcard DNS services (sslip.io, nip.io, traefik.me), a `dev.` subdomain prefix is added (e.g., `terminal.dev.1-2-3-4.sslip.io`) to create a common parent domain below the Public Suffix List boundary, enabling cross-subdomain cookie sharing.
 
 ## Build Pipeline
 

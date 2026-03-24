@@ -14,13 +14,13 @@ import type { GlobalConfig } from '$lib/types';
 // Helper to build a minimal GlobalConfig
 function makeConfig(overrides: Partial<GlobalConfig> = {}): GlobalConfig {
   return {
+    auth: { users: [] },
     autoDelete: { enabled: true, timeoutMinutes: 60, warningMinutes: 5 },
     chezmoi: { ageKey: '', repoUrl: '' },
     customCloudInit: { mode: 'merge', yaml: '' },
     git: { credential: { host: '', username: '', token: '' } },
     hetzner: { baseImage: 'ubuntu-24.04', location: 'fsn1', serverType: 'cx22' },
     services: {
-      accessToken: 'test-token',
       acmeEmail: '',
       acmeProvider: 'letsencrypt',
       actalisEabKey: '',
@@ -69,7 +69,7 @@ describe('buildDaemonScript', () => {
 
   it('contains Caddy readiness polling', () => {
     const script = buildDaemonScript();
-    expect(script).toContain('localhost:2019');
+    expect(script).toContain('127.0.0.1:2019');
   });
 
   it('contains certificate pre-warming logic', () => {
@@ -201,9 +201,9 @@ describe('buildOverviewPage', () => {
     expect(html).toContain('<script src="config.js"></script>');
   });
 
-  it('reads access token from window.__DEVBOX', () => {
+  it('loads config.js for theme configuration', () => {
     const html = buildOverviewPage('test');
-    expect(html).toContain('__DEVBOX');
+    expect(html).toContain('config.js');
   });
 
   it('contains services section', () => {
@@ -225,7 +225,7 @@ describe('buildOverviewPage', () => {
 
 describe('buildOverviewConfig', () => {
   it('contains theme colors as CSS variable setters', () => {
-    const configJs = buildOverviewConfig(makeConfig(), defaultThemeColors);
+    const configJs = buildOverviewConfig(defaultThemeColors);
     expect(configJs).toContain("setProperty('--bg'");
     expect(configJs).toContain("setProperty('--fg'");
     expect(configJs).toContain("setProperty('--card'");
@@ -238,7 +238,7 @@ describe('buildOverviewConfig', () => {
   });
 
   it('contains default theme color values', () => {
-    const configJs = buildOverviewConfig(makeConfig(), defaultThemeColors);
+    const configJs = buildOverviewConfig(defaultThemeColors);
     expect(configJs).toContain(defaultThemeColors.background);
     expect(configJs).toContain(defaultThemeColors.foreground);
     expect(configJs).toContain(defaultThemeColors.success);
@@ -254,70 +254,33 @@ describe('buildOverviewConfig', () => {
       background: '#custom-bg',
       foreground: '#custom-fg',
     };
-    const configJs = buildOverviewConfig(makeConfig(), customColors);
+    const configJs = buildOverviewConfig(customColors);
     expect(configJs).toContain('#custom-bg');
     expect(configJs).toContain('#custom-fg');
   });
 
-  it('contains access token', () => {
-    const config = makeConfig({
-      services: { ...makeConfig().services, accessToken: 'my-secret-token' },
-    });
-    const configJs = buildOverviewConfig(config, defaultThemeColors);
-    expect(configJs).toContain('my-secret-token');
-  });
-
-  it('escapes special chars in access token', () => {
-    const config = makeConfig({
-      services: { ...makeConfig().services, accessToken: "tok'en" },
-    });
-    const configJs = buildOverviewConfig(config, defaultThemeColors);
-    expect(configJs).toContain("tok\\'en");
-  });
-
   it('exposes config on window.__DEVBOX', () => {
-    const configJs = buildOverviewConfig(makeConfig(), defaultThemeColors);
+    const configJs = buildOverviewConfig(defaultThemeColors);
     expect(configJs).toContain('window.__DEVBOX=c');
   });
 
   it('is a self-executing function', () => {
-    const configJs = buildOverviewConfig(makeConfig(), defaultThemeColors);
+    const configJs = buildOverviewConfig(defaultThemeColors);
     expect(configJs).toContain('(function(){');
     expect(configJs).toContain('})();');
   });
 });
 
-describe('escapeSingleQuotedJS (via buildOverviewConfig)', () => {
-  it('escapes backslashes', () => {
-    const config = makeConfig({
-      services: { ...makeConfig().services, accessToken: 'tok\\en' },
-    });
-    const configJs = buildOverviewConfig(config, defaultThemeColors);
-    expect(configJs).toContain('tok\\\\en');
+describe('buildOverviewConfig color embedding', () => {
+  it('embeds color values directly in output', () => {
+    const colors = { ...defaultThemeColors, background: '#ff0000' };
+    const configJs = buildOverviewConfig(colors);
+    expect(configJs).toContain('#ff0000');
   });
 
-  it('escapes single quotes', () => {
-    const config = makeConfig({
-      services: { ...makeConfig().services, accessToken: "tok'en" },
-    });
-    const configJs = buildOverviewConfig(config, defaultThemeColors);
-    expect(configJs).toContain("tok\\'en");
-  });
-
-  it('escapes newlines', () => {
-    const config = makeConfig({
-      services: { ...makeConfig().services, accessToken: 'tok\nen' },
-    });
-    const configJs = buildOverviewConfig(config, defaultThemeColors);
-    expect(configJs).toContain('tok\\nen');
-  });
-
-  it('escapes </ to prevent script tag injection', () => {
-    const config = makeConfig({
-      services: { ...makeConfig().services, accessToken: 'tok</script>en' },
-    });
-    const configJs = buildOverviewConfig(config, defaultThemeColors);
-    expect(configJs).toContain('tok<\\/script>en');
+  it('exposes config on window.__DEVBOX', () => {
+    const configJs = buildOverviewConfig(defaultThemeColors);
+    expect(configJs).toContain('window.__DEVBOX=c');
   });
 });
 

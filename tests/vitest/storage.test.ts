@@ -45,7 +45,6 @@ describe('clearAll', () => {
     localStorage.setItem('devbox_default_profile', '"default"');
     localStorage.setItem('devbox_hetzner_token', '"tok"');
     localStorage.setItem('devbox_profiles', '[]');
-    localStorage.setItem('devbox_server_tokens', '{}');
     localStorage.setItem('devbox_theme', '"dark"');
 
     clearAll();
@@ -54,7 +53,6 @@ describe('clearAll', () => {
     expect(localStorage.getItem('devbox_default_profile')).toBeNull();
     expect(localStorage.getItem('devbox_hetzner_token')).toBeNull();
     expect(localStorage.getItem('devbox_profiles')).toBeNull();
-    expect(localStorage.getItem('devbox_server_tokens')).toBeNull();
     expect(localStorage.getItem('devbox_theme')).toBeNull();
   });
 

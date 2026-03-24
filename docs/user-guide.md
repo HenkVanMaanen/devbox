@@ -17,6 +17,7 @@
    - SSH public keys
    - Chezmoi dotfiles repo URL and age key
    - Git credential for cloning
+   - At least one auth user (see Authentication below)
 
 ## Core Concepts
 
@@ -27,7 +28,8 @@ Global config contains settings that apply to all servers by default:
 - **SSH Keys**: Your public keys for server access
 - **Chezmoi Dotfiles**: Repo URL, age key, and bootstrap git credential
 - **Hetzner Settings**: Server type, location, base image
-- **Services**: DNS service, ACME provider, access token
+- **Services**: DNS service, ACME provider
+- **Authentication**: Users for Authelia forward auth on provisioned servers
 - **Auto-Delete**: Idle timeout settings
 
 Personal dev environment config (shell, packages, git user, Claude Code, env vars) is managed by [chezmoi](https://github.com/twpayne/chezmoi) in your dotfiles repo.
@@ -116,8 +118,18 @@ A single bootstrap credential used to clone your chezmoi repo and any private re
 services.dnsService: "sslip.io"         # DNS service for subdomains
 services.acmeProvider: "zerossl"        # Certificate provider
 services.acmeEmail: "admin@example.com" # ACME registration email
-services.accessToken: "abc123"          # Basic auth token for services
 ```
+
+### Authentication
+
+At least one auth user must be configured before creating a server. Auth users are provisioned into Authelia's file-based user database on the server.
+
+1. Go to **Global Config** (or a profile)
+2. In the **Authentication** section, click **Add User**
+3. Enter a username and password
+4. Passwords are hashed client-side with bcrypt before being stored
+
+When you access a service on the provisioned server, Authelia prompts you to log in. A single login covers all service subdomains for the session.
 
 ## Workflows
 

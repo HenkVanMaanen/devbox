@@ -50,10 +50,15 @@ export const hetznerConfigSchema = z.object({
   serverType: z.string(),
 });
 
+export const authUserSchema = z.object({
+  passwordHash: z.string().min(1),
+  username: z.string().min(1),
+});
+export type AuthUser = z.infer<typeof authUserSchema>;
+
 export const servicesConfigSchema = z.object({
-  accessToken: z.string(),
   acmeEmail: z.string(),
-  acmeProvider: z.enum(['actalis', 'buypass', 'custom', 'letsencrypt', 'zerossl']),
+  acmeProvider: z.enum(['actalis', 'buypass', 'custom', 'letsencrypt', 'letsencrypt-staging', 'zerossl']),
   actalisEabKey: z.string(),
   actalisEabKeyId: z.string(),
   customAcmeUrl: z.string(),
@@ -66,6 +71,9 @@ export const servicesConfigSchema = z.object({
 });
 
 export const globalConfigSchema = z.object({
+  auth: z.object({
+    users: z.array(authUserSchema),
+  }),
   autoDelete: autoDeleteConfigSchema,
   chezmoi: chezmoiConfigSchema,
   cloudflare: cloudflareConfigSchema,

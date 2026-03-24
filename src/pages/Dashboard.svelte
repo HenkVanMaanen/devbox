@@ -105,19 +105,15 @@
           });
 
       // Create server (from snapshot or base image)
-      await serversStore.create(
-        credentialsStore.token,
-        {
-          image: snapshotId ?? config.hetzner.baseImage,
-          labels: { managed: 'devbox', progress: 'provisioning' },
-          location: config.hetzner.location,
-          name: serverName,
-          serverType: config.hetzner.serverType,
-          sshKeys: sshKeyIds,
-          userData,
-        },
-        config.services.accessToken,
-      );
+      await serversStore.create(credentialsStore.token, {
+        image: snapshotId ?? config.hetzner.baseImage,
+        labels: { managed: 'devbox', progress: 'provisioning' },
+        location: config.hetzner.location,
+        name: serverName,
+        serverType: config.hetzner.serverType,
+        sshKeys: sshKeyIds,
+        userData,
+      });
 
       toast.success('Server created successfully!');
     } catch (error) {
@@ -129,7 +125,7 @@
     if (!deleteModal.server) return;
 
     try {
-      await serversStore.delete(credentialsStore.token, deleteModal.server.id, deleteModal.server.name);
+      await serversStore.delete(credentialsStore.token, deleteModal.server.id);
       toast.success('Server deleted');
     } catch (error) {
       toast.error(`Failed to delete: ${error instanceof Error ? error.message : 'Unknown error'}`);

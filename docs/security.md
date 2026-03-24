@@ -39,14 +39,14 @@ flowchart LR
 
 ### Storage
 
-| Credential        | Storage Location | Encryption | Justification                                 |
-| ----------------- | ---------------- | ---------- | --------------------------------------------- |
-| Hetzner API token | localStorage     | None       | User-controlled, trusted machine assumed      |
-| Git credential    | localStorage     | None       | Bootstrap credential for chezmoi/repo cloning |
-| SSH public keys   | localStorage     | N/A        | Public data                                   |
-| Access tokens     | localStorage     | None       | Per-server, ephemeral                         |
-| Age key           | localStorage     | None       | For chezmoi secret decryption                 |
-| ACME EAB keys     | localStorage     | None       | Optional, user-provided                       |
+| Credential                   | Storage Location | Encryption | Justification                                 |
+| ---------------------------- | ---------------- | ---------- | --------------------------------------------- |
+| Hetzner API token            | localStorage     | None       | User-controlled, trusted machine assumed      |
+| Git credential               | localStorage     | None       | Bootstrap credential for chezmoi/repo cloning |
+| SSH public keys              | localStorage     | N/A        | Public data                                   |
+| Auth user passwords (bcrypt) | localStorage     | Hashed     | Pre-provisioned for Authelia forward auth     |
+| Age key                      | localStorage     | None       | For chezmoi secret decryption                 |
+| ACME EAB keys                | localStorage     | None       | Optional, user-provided                       |
 
 **Why no encryption at rest?**
 
@@ -63,32 +63,8 @@ All API calls use HTTPS:
 
 Tokens are transmitted in:
 
-- `Authorization: Bearer <token>` header (Hetzner API) ✓ Secure
-- URL for Basic Auth (`https://user:pass@host/`) ⚠️ See considerations below
-
-### Tokens in URLs
-
-Service URLs include access tokens for Basic Auth:
-
-```
-https://devbox:TOKEN@terminal.example.com/
-```
-
-**Exposure vectors:**
-
-| Vector           | Risk   | Mitigation                                                       |
-| ---------------- | ------ | ---------------------------------------------------------------- |
-| Browser history  | Low    | Ephemeral servers, tokens invalid after deletion                 |
-| Referrer header  | Medium | Services are terminal endpoints, unlikely to have external links |
-| Server logs      | Low    | User controls the server                                         |
-| Shoulder surfing | Low    | Trusted machine assumption                                       |
-
-**Why this approach?**
-
-- OAuth requires fixed callback URLs (incompatible with dynamic subdomains)
-- Client certificates have poor UX
-- Session cookies require server-side session management
-- Basic Auth is simple and works with ephemeral servers
+- `Authorization: Bearer <token>` header (Hetzner API) -- Secure
+- Authelia session cookies (service access) -- Secure, session-based
 
 ## Cloud-Init Security
 
@@ -99,7 +75,7 @@ Cloud-init scripts contain:
 - Bootstrap git credential (username + token for cloning chezmoi repo)
 - Age private key (for chezmoi secret decryption)
 - Hetzner API token (for auto-delete daemon)
-- Service access tokens
+- Authelia user database (bcrypt-hashed passwords)
 
 **Where this data lives on the server:**
 
@@ -244,17 +220,20 @@ let id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
 ### Service Authentication
 
-Services on provisioned servers use HTTP Basic Auth:
+Services on provisioned servers use Authelia forward auth:
 
 ```mermaid
 flowchart TD
-    Caddy["Caddy (reverse proxy)"]
-    Caddy -->|"basic_auth { devbox BCRYPT_HASH }"| ttyd["reverse_proxy localhost:7681 (ttyd)"]
+    Internet((HTTPS)) --> Caddy["Caddy (reverse proxy)"]
+    Caddy -->|"forward_auth"| Authelia["Authelia<br/>(session auth)"]
+    Caddy --> ttyd["ttyd (terminal)"]
+    Caddy --> DevServers["Dev servers"]
 ```
 
-- Access tokens generated with `crypto.getRandomValues()` (CSPRNG)
-- Passwords hashed with bcrypt by Caddy
-- Rate limiting handled by Hetzner's infrastructure
+- Caddy delegates authentication to a local Authelia instance via `forward_auth`
+- Users are pre-provisioned with bcrypt-hashed passwords in Authelia's file-based user database
+- Session cookies enable single sign-on across all service subdomains
+- For wildcard DNS, a `dev.` subdomain prefix ensures cookies can be shared across subdomains (avoids Public Suffix List restrictions)
 
 ### TLS Certificates
 

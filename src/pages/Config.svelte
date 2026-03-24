@@ -22,7 +22,6 @@
     exportedAt: z.string().optional(),
     hetznerToken: z.string().optional(),
     profiles: profilesSchema.optional(),
-    serverTokens: z.record(z.string(), z.string()).optional(),
     theme: z.string().optional(),
   });
 
@@ -91,7 +90,6 @@
       exportedAt: new Date().toISOString(),
       hetznerToken: credentialsStore.token,
       profiles: profilesStore.profiles,
-      serverTokens: serversStore.serverTokens,
       theme: themeStore.themeId,
     };
 
@@ -157,13 +155,6 @@
         // Import theme if present
         if (data.theme) {
           themeStore.setTheme(data.theme);
-        }
-
-        // Import server tokens if present
-        if (data.serverTokens) {
-          for (const [name, token] of Object.entries(data.serverTokens)) {
-            serversStore.saveServerToken(name, token);
-          }
         }
 
         toast.success('Configuration imported successfully');

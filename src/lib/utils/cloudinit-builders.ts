@@ -3,7 +3,7 @@
 import { daemonTemplate } from '@devbox/daemon/template';
 import { overviewTemplate } from '@devbox/overview/template';
 
-import type { GitCredential, GlobalConfig } from '$lib/types';
+import type { AuthUser, GitCredential, GlobalConfig } from '$lib/types';
 
 export interface TerminalColors {
   black?: string;
@@ -39,6 +39,73 @@ export interface ThemeColors {
   warning: string;
 }
 
+export const AUTHELIA_VERSION = '4.39.16';
+
+// Build Authelia configuration.yml template (placeholders replaced at runtime via sed)
+export function buildAutheliaConfig(config: GlobalConfig): string {
+  const devPrefix = getDomainPrefix(config.services.dnsService);
+
+  return `---
+server:
+  address: 'tcp://127.0.0.1:9091/'
+
+log:
+  level: warn
+
+totp:
+  disable: true
+
+webauthn:
+  disable: true
+
+identity_validation:
+  reset_password:
+    jwt_secret: '__SESSION_SECRET__'
+
+authentication_backend:
+  file:
+    path: /etc/authelia/users.yml
+
+session:
+  secret: '__SESSION_SECRET__'
+  cookies:
+    - domain: '${devPrefix}__IP__.__DNS_SERVICE__'
+      authelia_url: 'https://auth.${devPrefix}__IP__.__DNS_SERVICE__'
+      default_redirection_url: 'https://${devPrefix}__IP__.__DNS_SERVICE__'
+      expiration: 16h
+      inactivity: 16h
+
+storage:
+  encryption_key: '__ENCRYPTION_KEY__'
+  local:
+    path: /var/lib/authelia/db.sqlite3
+
+notifier:
+  filesystem:
+    filename: /var/lib/authelia/notifications.txt
+
+access_control:
+  default_policy: one_factor
+`;
+}
+
+// Build Authelia users.yml from pre-provisioned user list
+export function buildAutheliaUsers(users: AuthUser[]): string {
+  if (users.length === 0) return 'users: {}\n';
+
+  let yaml = 'users:\n';
+  for (const user of users) {
+    const name = sanitizeUsername(user.username);
+    if (!name) continue;
+    yaml += `  ${name}:\n`;
+    yaml += `    displayname: '${name}'\n`;
+    const hash = user.passwordHash.replaceAll("'", '');
+    yaml += `    password: '${hash}'\n`;
+    yaml += `    email: '${name}@devbox.local'\n`;
+  }
+  return yaml;
+}
+
 // Build Cloudflare DNS update script (updates A record to point to this server's IP)
 export function buildCloudflareDnsScript(apiToken: string, zoneId: string, hostname: string): string {
   return String.raw`#!/bin/bash
@@ -63,15 +130,13 @@ fi
 
 // Build daemon config JSON (written to /etc/devbox/config.json by cloud-init)
 export function buildDaemonConfig(config: GlobalConfig, hetznerToken: string): string {
-  const dnsService =
-    config.services.dnsService === 'custom'
-      ? config.services.customDnsDomain || 'sslip.io'
-      : config.services.dnsService;
+  const dnsService = resolveDnsService(config);
 
   return JSON.stringify({
     dnsService,
     timeout: config.autoDelete.timeoutMinutes,
     token: hetznerToken,
+    useDevPrefix: config.services.dnsService !== 'custom',
     warning: config.autoDelete.warningMinutes,
   });
 }
@@ -89,6 +154,18 @@ export function buildGitCredentials(credential: GitCredential): string {
   // Validate host to prevent injection (only allow valid hostname chars)
   const host = credential.host.replaceAll(/[^a-zA-Z0-9._-]/g, '');
   return `https://${username}:${token}@${host}\n`;
+}
+
+// Get domain prefix: 'dev.' for wildcard DNS services (PSL cookie workaround), '' for custom domains
+export function getDomainPrefix(dnsService: string): string {
+  return dnsService === 'custom' ? '' : 'dev.';
+}
+
+// Resolve the effective DNS service domain from config
+export function resolveDnsService(config: GlobalConfig): string {
+  return config.services.dnsService === 'custom'
+    ? config.services.customDnsDomain || 'sslip.io'
+    : config.services.dnsService;
 }
 
 // Escape shell metacharacters in double-quoted strings
@@ -113,19 +190,27 @@ function escapeSingleQuotedJS(s: string): string {
     .replaceAll('</', String.raw`<\/`);
 }
 
+// Sanitize a username for safe embedding in YAML keys and single-quoted values
+function sanitizeUsername(s: string): string {
+  return s.replaceAll(/[^a-zA-Z0-9_.-]/g, '');
+}
+
 // Stryker disable all
 // ACME provider configurations
 const ACME_PROVIDERS: Record<string, { ca: string; requiresEab?: boolean }> = {
   actalis: { ca: 'https://acme-api.actalis.com/acme/directory', requiresEab: true },
   buypass: { ca: 'https://api.buypass.com/acme/directory' },
   letsencrypt: { ca: 'https://acme-v02.api.letsencrypt.org/directory' },
+  'letsencrypt-staging': { ca: 'https://acme-staging-v02.api.letsencrypt.org/directory' },
   zerossl: { ca: 'https://acme.zerossl.com/v2/DV90', requiresEab: true },
 };
 // Stryker restore all
 
-// Build Caddyfile for services (domain-agnostic)
-// Accepts any domain matching {port}.{ipHex}.{anything} or {ipHex}.{anything}
+// Build Caddyfile for services (domain-agnostic, Authelia forward auth)
+// Domain patterns use 'dev.' prefix for wildcard DNS (PSL cookie workaround)
 export function buildCaddyConfig(config: GlobalConfig): string {
+  const devPrefix = getDomainPrefix(config.services.dnsService);
+
   let caddyfile = '{\n';
   caddyfile += '  on_demand_tls {\n    ask http://localhost:65531/verify-domain\n  }\n';
 
@@ -157,7 +242,12 @@ export function buildCaddyConfig(config: GlobalConfig): string {
 
   caddyfile += '}\n\n';
 
-  const authBlock = '  basic_auth {\n    devbox __HASH__\n  }\n';
+  // Authelia forward auth snippet (reused in base and service handlers)
+  const forwardAuth = `    forward_auth localhost:9091 {
+      uri /api/authz/forward-auth
+      copy_headers Remote-User Remote-Groups
+    }
+`;
 
   // HTTP to HTTPS redirect (also needed for ACME HTTP-01 challenge)
   caddyfile += `:80 {
@@ -171,10 +261,17 @@ export function buildCaddyConfig(config: GlobalConfig): string {
   tls {
     on_demand
   }
-${authBlock}
-  # Base domain: {ipHex}.{any-suffix} - serves overview page
-  @base header_regexp basehost Host (?i)^__IP__\.[a-z0-9.-]+$
+
+  # Authelia portal: auth.{devPrefix}{ipHex}.{any-suffix} (no forward_auth — would loop)
+  @auth header_regexp authhost Host (?i)^auth\.${devPrefix}__IP__\.[a-z0-9.-]+$
+  handle @auth {
+    reverse_proxy localhost:9091
+  }
+
+  # Base domain: {devPrefix}{ipHex}.{any-suffix} - serves overview page
+  @base header_regexp basehost Host (?i)^${devPrefix}__IP__\.[a-z0-9.-]+$
   handle @base {
+${forwardAuth}
     route /api/* {
       uri strip_prefix /api
       reverse_proxy localhost:65531
@@ -183,9 +280,10 @@ ${authBlock}
     file_server
   }
 
-  # Service subdomain: {port}.{ipHex}.{any-suffix} - proxies to port
-  @service header_regexp svchost Host (?i)^(\d+)\.__IP__\.[a-z0-9.-]+$
+  # Service subdomain: {port}.{devPrefix}{ipHex}.{any-suffix} - proxies to port
+  @service header_regexp svchost Host (?i)^(\d+)\.${devPrefix}__IP__\.[a-z0-9.-]+$
   handle @service {
+${forwardAuth}
     reverse_proxy localhost:{re.svchost.1}
   }
 
@@ -201,10 +299,11 @@ ${authBlock}
 
 // Build overview config.js (written to /var/www/devbox-overview/config.js by cloud-init)
 // Loaded synchronously before paint to set CSS variables — no flash
-export function buildOverviewConfig(config: GlobalConfig, themeColors: ThemeColors): string {
+export function buildOverviewConfig(themeColors: ThemeColors): string {
+  const e = escapeSingleQuotedJS;
   const colors = themeColors;
   return `(function(){
-var c={accessToken:'${escapeSingleQuotedJS(config.services.accessToken)}',colors:{bg:'${colors.background}',fg:'${colors.foreground}',card:'${colors.card}',border:'${colors.border}',muted:'${colors.muted}',mutedFg:'${colors.mutedForeground}',success:'${colors.success}',warning:'${colors.warning}',destructive:'${colors.destructive}',focus:'${colors.focus}'}};
+var c={colors:{bg:'${e(colors.background)}',fg:'${e(colors.foreground)}',card:'${e(colors.card)}',border:'${e(colors.border)}',muted:'${e(colors.muted)}',mutedFg:'${e(colors.mutedForeground)}',success:'${e(colors.success)}',warning:'${e(colors.warning)}',destructive:'${e(colors.destructive)}',focus:'${e(colors.focus)}'}};
 var r=document.documentElement.style;
 r.setProperty('--bg',c.colors.bg);r.setProperty('--fg',c.colors.fg);r.setProperty('--card',c.colors.card);r.setProperty('--border',c.colors.border);r.setProperty('--muted',c.colors.muted);r.setProperty('--muted-fg',c.colors.mutedFg);r.setProperty('--success',c.colors.success);r.setProperty('--warning',c.colors.warning);r.setProperty('--destructive',c.colors.destructive);r.setProperty('--focus',c.colors.focus);
 window.__DEVBOX=c;

@@ -11,13 +11,13 @@ import {
 // Helper to build a minimal GlobalConfig with service overrides
 function makeConfig(overrides = {}) {
   return {
+    auth: { users: [] },
     autoDelete: { enabled: true, timeoutMinutes: 60, warningMinutes: 5 },
     chezmoi: { ageKey: '', repoUrl: '' },
     customCloudInit: { mode: 'merge', yaml: '' },
     git: { credential: { host: '', username: '', token: '' } },
     hetzner: { baseImage: 'ubuntu-24.04', location: 'fsn1', serverType: 'cx22' },
     services: {
-      accessToken: 'test-token',
       acmeEmail: '',
       acmeProvider: 'letsencrypt',
       actalisEabKey: '',
@@ -219,10 +219,17 @@ describe('buildCaddyConfig', () => {
     expect(withEab).toContain('mac_key custom-key');
   });
 
-  it('always includes basic_auth block with __HASH__ placeholder', () => {
+  it('always includes forward_auth block for Authelia', () => {
     const result = buildCaddyConfig(makeConfig());
-    expect(result).toContain('basic_auth');
-    expect(result).toContain('devbox __HASH__');
+    expect(result).toContain('forward_auth');
+    expect(result).toContain('localhost:9091');
+    expect(result).toContain('/api/authz/forward-auth');
+  });
+
+  it('includes @auth handler for Authelia portal', () => {
+    const result = buildCaddyConfig(makeConfig());
+    expect(result).toContain('@auth');
+    expect(result).toContain('reverse_proxy localhost:9091');
   });
 });
 

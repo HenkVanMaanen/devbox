@@ -1,4 +1,8 @@
 <script lang="ts">
+  import bcrypt from 'bcryptjs';
+
+  import type { AuthUser } from '$lib/types';
+
   import CustomCloudInitEditor from '$components/CustomCloudInitEditor.svelte';
   import Button from '$components/ui/Button.svelte';
   import Card from '$components/ui/Card.svelte';
@@ -102,6 +106,42 @@
     return isValidSSHHostKey(key);
   });
 
+  // Auth user management
+  let newAuthUsername = $state('');
+  let newAuthPassword = $state('');
+  let authHashing = $state(false);
+
+  async function addAuthUser() {
+    const username = newAuthUsername.trim();
+    if (!username || !newAuthPassword) {
+      notify('Please enter both username and password', 'error');
+      return;
+    }
+    const current = getValue('auth.users') as AuthUser[];
+    if (current.some((u) => u.username === username)) {
+      notify(`User "${username}" already exists`, 'error');
+      return;
+    }
+    authHashing = true;
+    try {
+      const passwordHash = await bcrypt.hash(newAuthPassword, 10);
+      setValue('auth.users', [...current, { passwordHash, username }]);
+      newAuthUsername = '';
+      newAuthPassword = '';
+      notify(`User "${username}" added`, 'success');
+    } finally {
+      authHashing = false;
+    }
+  }
+
+  function removeAuthUser(index: number) {
+    const current = getValue('auth.users') as AuthUser[];
+    setValue(
+      'auth.users',
+      current.filter((_, i) => i !== index),
+    );
+  }
+
   // Helper to check if field is disabled (profile mode only, when not overridden)
   function isDisabled(path: string): boolean {
     if (mode === 'global') return false;
@@ -121,6 +161,71 @@
     }
   }
 </script>
+
+<!-- Authentication -->
+<Card title="Authentication">
+  {#if mode === 'profile'}
+    <div class="mb-4 flex items-start gap-3">
+      <input
+        type="checkbox"
+        checked={hasOverride('auth.users')}
+        onchange={() => {
+          toggle('auth.users');
+        }}
+        class="border-border text-primary focus:ring-focus bg-background mt-1 h-5 w-5 cursor-pointer rounded border-2 focus:ring-3"
+      />
+      <p class="text-muted-foreground text-sm">Override authentication users for this profile</p>
+    </div>
+  {/if}
+
+  {#if mode === 'global' || hasOverride('auth.users')}
+    {#if (getValue('auth.users') as AuthUser[]).length > 0}
+      <div class="mb-4 space-y-2">
+        {#each getValue('auth.users') as AuthUser[] as user, i (i)}
+          <div class="bg-muted flex items-center justify-between rounded-md p-3">
+            <div>
+              <p class="font-medium">{user.username}</p>
+              <p class="text-muted-foreground text-sm">Password set</p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onclick={() => {
+                removeAuthUser(i);
+              }}>Remove</Button
+            >
+          </div>
+        {/each}
+      </div>
+    {/if}
+
+    <div class="border-border space-y-3 rounded-md border p-4">
+      <div>
+        <label for="{idPrefix}auth-username" class="mb-1.5 block text-sm font-medium">Username</label>
+        <input
+          id="{idPrefix}auth-username"
+          type="text"
+          bind:value={newAuthUsername}
+          placeholder="alice"
+          class="bg-background border-border text-foreground focus:border-primary focus:ring-focus w-full rounded-md border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
+        />
+      </div>
+      <div>
+        <label for="{idPrefix}auth-password" class="mb-1.5 block text-sm font-medium">Password</label>
+        <input
+          id="{idPrefix}auth-password"
+          type="password"
+          bind:value={newAuthPassword}
+          placeholder="Enter password"
+          class="bg-background border-border text-foreground focus:border-primary focus:ring-focus w-full rounded-md border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
+        />
+      </div>
+      <Button size="sm" onclick={addAuthUser} disabled={authHashing}>
+        {authHashing ? 'Hashing...' : 'Add User'}
+      </Button>
+    </div>
+  {/if}
+</Card>
 
 <!-- SSH Keys -->
 <Card title="SSH Keys">

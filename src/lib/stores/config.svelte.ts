@@ -3,10 +3,13 @@
 import type { GlobalConfig } from '$lib/types';
 
 import { globalConfigSchema } from '$lib/types';
-import { clone, deepMerge, getNestedValue, load, save, setNestedValue, uuid } from '$lib/utils/storage';
+import { clone, deepMerge, getNestedValue, load, save, setNestedValue } from '$lib/utils/storage';
 
 // Stryker disable all: default config data constant
 const DEFAULT_CONFIG: GlobalConfig = {
+  auth: {
+    users: [],
+  },
   autoDelete: {
     enabled: true,
     timeoutMinutes: 90,
@@ -34,7 +37,6 @@ const DEFAULT_CONFIG: GlobalConfig = {
     serverType: 'cx22',
   },
   services: {
-    accessToken: uuid().slice(0, 8),
     acmeEmail: '',
     acmeProvider: 'zerossl',
     actalisEabKey: '',

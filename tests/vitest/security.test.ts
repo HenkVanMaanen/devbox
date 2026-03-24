@@ -13,6 +13,7 @@ import { getNestedValue, setNestedValue } from '$lib/utils/storage';
 
 // Minimal config for buildOverviewPage / buildDaemonScript
 const minimalConfig = {
+  auth: { users: [] },
   autoDelete: { timeoutMinutes: 60, warningMinutes: 5 },
   chezmoi: { ageKey: '', repoUrl: '' },
   customCloudInit: { mode: 'merge' as const, yaml: '' },
@@ -24,7 +25,6 @@ const minimalConfig = {
     serverType: 'cx22',
   },
   services: {
-    accessToken: 'test-token',
     acmeEmail: '',
     acmeProvider: 'letsencrypt',
     actalisEabKey: '',
@@ -92,18 +92,12 @@ describe('Security tests', () => {
       });
     }
 
-    it('access token is escaped in config.js string', () => {
-      const maliciousConfig = {
-        ...minimalConfig,
-        services: {
-          ...minimalConfig.services,
-          accessToken: "'; alert(document.cookie); '",
-        },
-      };
-      const configJs = buildOverviewConfig(maliciousConfig, defaultThemeColors);
-      // The token should be escaped - single quotes should be escaped
-      expect(configJs).not.toContain("'; alert(document.cookie); '");
-      expect(configJs).toContain("\\'");
+    it('config.js only contains theme colors (no secrets)', () => {
+      const configJs = buildOverviewConfig(defaultThemeColors);
+      // config.js should only contain color values, no tokens or credentials
+      expect(configJs).toContain('window.__DEVBOX=c');
+      expect(configJs).toContain(defaultThemeColors.background);
+      expect(configJs).not.toContain('token');
     });
   });
 

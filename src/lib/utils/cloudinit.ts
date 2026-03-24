@@ -5,6 +5,9 @@ import YAML from 'yaml';
 import type { GlobalConfig } from '$lib/types';
 
 import {
+  AUTHELIA_VERSION,
+  buildAutheliaConfig,
+  buildAutheliaUsers,
   buildCaddyConfig,
   buildCloudflareDnsScript,
   buildDaemonConfig,
@@ -14,6 +17,7 @@ import {
   buildOverviewPage,
   defaultTerminalColors,
   defaultThemeColors,
+  resolveDnsService,
   shellEscape,
   type TerminalColors,
   type ThemeColors,
@@ -227,10 +231,29 @@ export function generateCloudInit(
     permissions: '0644',
   });
   cloudInit.write_files.push({
-    content: buildOverviewConfig(config, themeColors),
+    content: buildOverviewConfig(themeColors),
     path: '/var/www/devbox-overview/config.js',
     permissions: '0644',
   });
+
+  // Authelia authentication
+  cloudInit.write_files.push(
+    {
+      content: buildAutheliaConfig(config),
+      path: '/etc/authelia/configuration.yml.template',
+      permissions: '0600',
+    },
+    {
+      content: buildAutheliaUsers(config.auth.users),
+      path: '/etc/authelia/users.yml',
+      permissions: '0600',
+    },
+    {
+      content: `[Unit]\nDescription=Authelia\nAfter=network.target\n[Service]\nType=simple\nExecStart=/usr/local/bin/authelia --config /etc/authelia/configuration.yml\nRestart=always\nRestartSec=5\n[Install]\nWantedBy=multi-user.target\n`,
+      path: '/etc/systemd/system/authelia.service',
+      permissions: '0644',
+    },
+  );
 
   // Cloudflare DNS update script (updates A record to point to this server's IP)
   const cf = config.cloudflare;
@@ -261,18 +284,25 @@ export function generateCloudInit(
     runcmd.push(`su - dev -c '/usr/local/bin/chezmoi init --apply "${shellEscape(chezmoiUrl)}"' || true`);
   }
 
-  // Install ttyd
+  // Resolve DNS service for Authelia config template
+  const dnsService = resolveDnsService(config);
+
+  // Install ttyd and Authelia
   runcmd.push(
     'TTYD_ARCH=$(uname -m | sed "s/aarch64/aarch64/;s/x86_64/x86_64/") && curl -fsSL "https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.${TTYD_ARCH}" -o /usr/local/bin/ttyd && chmod +x /usr/local/bin/ttyd || true',
-    'systemctl daemon-reload && systemctl enable --now devbox-daemon ttyd-term || true',
+    `AUTHELIA_ARCH=$(uname -m | sed "s/x86_64/amd64/;s/aarch64/arm64/") && curl -fsSL "https://github.com/authelia/authelia/releases/download/v${AUTHELIA_VERSION}/authelia-v${AUTHELIA_VERSION}-linux-$AUTHELIA_ARCH.tar.gz" | tar xz -C /usr/local/bin/ authelia && chmod +x /usr/local/bin/authelia`,
+    'mkdir -p /var/lib/authelia',
+    'systemctl daemon-reload && systemctl enable --now devbox-daemon ttyd-term authelia || true',
     'mkdir -p /var/www/devbox-overview',
     "IP=$(ip -4 -o addr show scope global | awk '{print $4}' | cut -d/ -f1 | head -1 | awk -F. '{printf \"%02x%02x%02x%02x\", $1, $2, $3, $4}')",
   );
   runcmd.push(
-    `HASH=$(caddy hash-password --plaintext "${shellEscape(config.services.accessToken)}")`,
-    'sed -e "s/__IP__/$IP/g" -e "s|__HASH__|$HASH|g" /etc/caddy/Caddyfile.template > /etc/caddy/Caddyfile',
+    'SESSION_SECRET=$(openssl rand -hex 32)',
+    'ENCRYPTION_KEY=$(openssl rand -hex 32)',
+    'sed "s/__IP__/$IP/g" /etc/caddy/Caddyfile.template > /etc/caddy/Caddyfile',
     'sed "s/__IP__/$IP/g" /var/www/devbox-overview/index.html.template > /var/www/devbox-overview/index.html',
-    'systemctl restart caddy || true',
+    `sed -e "s/__IP__/$IP/g" -e "s/__DNS_SERVICE__/${shellEscape(dnsService)}/g" -e "s/__SESSION_SECRET__/$SESSION_SECRET/g" -e "s/__ENCRYPTION_KEY__/$ENCRYPTION_KEY/g" /etc/authelia/configuration.yml.template > /etc/authelia/configuration.yml`,
+    'systemctl restart caddy authelia || true',
     'apt-get clean && rm -rf /var/lib/apt/lists/* || true',
     'touch /home/dev/.devbox-ready && chown -R dev:dev /home/dev',
     '/usr/local/bin/devbox-progress ready',
@@ -325,9 +355,19 @@ export function generateSnapshotCloudInit(
       permissions: '0644',
     },
     {
-      content: buildOverviewConfig(config, themeColors),
+      content: buildOverviewConfig(themeColors),
       path: '/var/www/devbox-overview/config.js',
       permissions: '0644',
+    },
+    {
+      content: buildAutheliaConfig(config),
+      path: '/etc/authelia/configuration.yml.template',
+      permissions: '0600',
+    },
+    {
+      content: buildAutheliaUsers(config.auth.users),
+      path: '/etc/authelia/users.yml',
+      permissions: '0600',
     },
   ];
 
@@ -346,12 +386,19 @@ export function generateSnapshotCloudInit(
     runcmd.push('/usr/local/bin/devbox-dns-update || true');
   }
 
+  // Resolve DNS service for Authelia config template
+  const snapshotDnsService = resolveDnsService(config);
+
   runcmd.push(
     "IP=$(ip -4 -o addr show scope global | awk '{print $4}' | cut -d/ -f1 | head -1 | awk -F. '{printf \"%02x%02x%02x%02x\", $1, $2, $3, $4}')",
-    `HASH=$(caddy hash-password --plaintext "${shellEscape(config.services.accessToken)}")`,
-    'sed -e "s/__IP__/$IP/g" -e "s|__HASH__|$HASH|g" /etc/caddy/Caddyfile.template > /etc/caddy/Caddyfile',
+    'SESSION_SECRET=$(openssl rand -hex 32)',
+    'ENCRYPTION_KEY=$(openssl rand -hex 32)',
+    'sed "s/__IP__/$IP/g" /etc/caddy/Caddyfile.template > /etc/caddy/Caddyfile',
     'sed "s/__IP__/$IP/g" /var/www/devbox-overview/index.html.template > /var/www/devbox-overview/index.html',
-    'systemctl restart caddy devbox-daemon || true',
+    `sed -e "s/__IP__/$IP/g" -e "s/__DNS_SERVICE__/${shellEscape(snapshotDnsService)}/g" -e "s/__SESSION_SECRET__/$SESSION_SECRET/g" -e "s/__ENCRYPTION_KEY__/$ENCRYPTION_KEY/g" /etc/authelia/configuration.yml.template > /etc/authelia/configuration.yml`,
+    `AUTHELIA_ARCH=$(uname -m | sed "s/x86_64/amd64/;s/aarch64/arm64/") && curl -fsSL "https://github.com/authelia/authelia/releases/download/v${AUTHELIA_VERSION}/authelia-v${AUTHELIA_VERSION}-linux-$AUTHELIA_ARCH.tar.gz" | tar xz -C /usr/local/bin/ authelia && chmod +x /usr/local/bin/authelia || true`,
+    'mkdir -p /var/lib/authelia',
+    'systemctl restart caddy devbox-daemon authelia || true',
     '/usr/local/bin/devbox-progress ready',
   );
   // Stryker restore all

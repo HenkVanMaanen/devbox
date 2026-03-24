@@ -14,9 +14,10 @@ const TIMEOUT = config.timeout;
 const WARNING = config.warning;
 const TOKEN = config.token;
 const DNS_SERVICE = config.dnsService;
+const DEV_PREFIX = config.useDevPrefix ? 'dev.' : '';
 
 const PORT_NAMES = { 65534: 'Terminal' };
-const IGNORED_PORTS = new Set([22, 80, 443, 2019, 65531]);
+const IGNORED_PORTS = new Set([22, 80, 443, 2019, 9091, 65531]);
 let last = Date.now();
 let warn = false;
 let services = new Map();
@@ -71,7 +72,7 @@ function getServices() {
     .map((s) => ({
       name: s.name,
       port: s.port,
-      url: `https://${s.port}.${ipHex}.${DNS_SERVICE}`,
+      url: `https://${s.port}.${DEV_PREFIX}${ipHex}.${DNS_SERVICE}`,
       active: true,
     }))
     .sort((a, b) => a.port - b.port);
@@ -94,16 +95,24 @@ function updateServices() {
 
 function prewarmCert(port) {
   https
-    .get(`https://${port}.${ipHex}.${DNS_SERVICE}/`, { rejectUnauthorized: false, timeout: 30000 }, () => {})
+    .get(
+      `https://${port}.${DEV_PREFIX}${ipHex}.${DNS_SERVICE}/`,
+      { rejectUnauthorized: false, timeout: 30000 },
+      () => {},
+    )
     .on('error', () => {});
   console.log(`Pre-warming certificate for port ${port}`);
 }
 
 function prewarmOverview() {
   https
-    .get(`https://${ipHex}.${DNS_SERVICE}/`, { rejectUnauthorized: false, timeout: 30000 }, () => {})
+    .get(`https://${DEV_PREFIX}${ipHex}.${DNS_SERVICE}/`, { rejectUnauthorized: false, timeout: 30000 }, () => {})
     .on('error', () => {});
   console.log('Pre-warming certificate for overview page');
+  // Also prewarm the auth subdomain
+  https
+    .get(`https://auth.${DEV_PREFIX}${ipHex}.${DNS_SERVICE}/`, { rejectUnauthorized: false, timeout: 30000 }, () => {})
+    .on('error', () => {});
 }
 
 function prewarmAll() {
@@ -115,7 +124,7 @@ function prewarmAll() {
 function waitForCaddy(cb) {
   const poll = () => {
     http
-      .get('http://localhost:2019/config/', (r) => {
+      .get('http://127.0.0.1:2019/config/', (r) => {
         if (r.statusCode === 200) {
           console.log('Caddy ready');
           cb();
@@ -129,14 +138,17 @@ function waitForCaddy(cb) {
 }
 
 // Domain-agnostic verification: accepts any domain matching our IP hex
-// This allows the same server to work with sslip.io, nip.io, custom domains, etc.
+// Supports optional 'dev.' prefix for wildcard DNS (PSL cookie workaround)
 function verifyDomain(domain) {
   if (!domain) return false;
-  // Pattern 1: {ipHex}.{any-suffix} - base domain for overview page
-  const basePattern = new RegExp(`^${ipHex}\\.[a-z0-9.-]+$`, 'i');
+  // Pattern 1: auth.{devPrefix}{ipHex}.{suffix} - Authelia portal
+  const authPattern = new RegExp(`^auth\\.${DEV_PREFIX}${ipHex}\\.[a-z0-9.-]+$`, 'i');
+  if (authPattern.test(domain)) return true;
+  // Pattern 2: {devPrefix}{ipHex}.{suffix} - base domain for overview page
+  const basePattern = new RegExp(`^${DEV_PREFIX}${ipHex}\\.[a-z0-9.-]+$`, 'i');
   if (basePattern.test(domain)) return true;
-  // Pattern 2: {port}.{ipHex}.{any-suffix} - service subdomain
-  const svcPattern = new RegExp(`^(\\d+)\\.${ipHex}\\.[a-z0-9.-]+$`, 'i');
+  // Pattern 3: {port}.{devPrefix}{ipHex}.{suffix} - service subdomain
+  const svcPattern = new RegExp(`^(\\d+)\\.${DEV_PREFIX}${ipHex}\\.[a-z0-9.-]+$`, 'i');
   const match = domain.match(svcPattern);
   if (!match) return false;
   const port = parseInt(match[1]);
@@ -313,6 +325,10 @@ function main() {
         last = Date.now();
         warn = false;
         return json(200, { ok: true });
+      }
+      if (url.pathname === '/whoami') {
+        const user = req.headers['remote-user'] || 'unknown';
+        return json(200, { user });
       }
       if (url.pathname === '/verify-domain') {
         const domain = url.searchParams.get('domain');
