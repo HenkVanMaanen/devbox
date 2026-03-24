@@ -245,8 +245,9 @@ export function generateCloudInit(
     },
     {
       content: buildAutheliaUsers(config.auth.users),
+      owner: 'dev:dev',
       path: '/etc/authelia/users.yml',
-      permissions: '0600',
+      permissions: '0644',
     },
     {
       content: `[Unit]\nDescription=Authelia\nAfter=network.target\n[Service]\nType=simple\nExecStart=/usr/local/bin/authelia --config /etc/authelia/configuration.yml\nRestart=always\nRestartSec=5\n[Install]\nWantedBy=multi-user.target\n`,
@@ -366,8 +367,9 @@ export function generateSnapshotCloudInit(
     },
     {
       content: buildAutheliaUsers(config.auth.users),
+      owner: 'dev:dev',
       path: '/etc/authelia/users.yml',
-      permissions: '0600',
+      permissions: '0644',
     },
   ];
 

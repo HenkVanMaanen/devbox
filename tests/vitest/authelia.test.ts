@@ -91,10 +91,11 @@ describe('buildAutheliaConfig', () => {
     expect(yaml).toContain('default_policy: one_factor');
   });
 
-  it('configures file-based authentication backend', () => {
+  it('configures file-based authentication backend with watch', () => {
     const config = makeConfig();
     const yaml = buildAutheliaConfig(config);
     expect(yaml).toContain('path: /etc/authelia/users.yml');
+    expect(yaml).toContain('watch: true');
   });
 
   it('configures local SQLite storage', () => {
@@ -124,7 +125,7 @@ describe('buildAutheliaUsers', () => {
     expect(yaml).toContain('users:');
     expect(yaml).toContain('  admin:');
     expect(yaml).toContain("    displayname: 'admin'");
-    expect(yaml).toContain("    password: '$argon2id$hash'");
+    expect(yaml).toContain('    password: "$argon2id$hash"');
     expect(yaml).toContain("    email: 'admin@devbox.local'");
   });
 
@@ -135,8 +136,8 @@ describe('buildAutheliaUsers', () => {
     ]);
     expect(yaml).toContain('  alice:');
     expect(yaml).toContain('  bob:');
-    expect(yaml).toContain("    password: '$hash1'");
-    expect(yaml).toContain("    password: '$hash2'");
+    expect(yaml).toContain('    password: "$hash1"');
+    expect(yaml).toContain('    password: "$hash2"');
   });
 
   it('handles empty users array', () => {

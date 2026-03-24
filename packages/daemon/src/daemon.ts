@@ -5,7 +5,7 @@
 const http = require('http');
 const fs = require('fs');
 const https = require('https');
-const { execSync } = require('child_process');
+const { execSync, execFileSync } = require('child_process');
 
 // Read runtime config written by cloud-init
 const configRaw = fs.readFileSync('/etc/devbox/config.json', 'utf8');
@@ -18,10 +18,135 @@ const DEV_PREFIX = config.useDevPrefix ? 'dev.' : '';
 
 const PORT_NAMES = { 65534: 'Terminal' };
 const IGNORED_PORTS = new Set([22, 80, 443, 2019, 9091, 65531]);
+const USERS_FILE = '/etc/authelia/users.yml';
 let last = Date.now();
 let warn = false;
 let services = new Map();
 let ipHex;
+const guests = new Map(); // id -> { username, password, hash, expires }
+const magicTokens = new Map(); // token -> { username, password, expires }
+
+function randomId() {
+  return 'guest_' + require('crypto').randomBytes(4).toString('hex');
+}
+
+function randomPassword() {
+  const c = require('crypto');
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  const bytes = c.randomBytes(12);
+  let pw = '';
+  for (let i = 0; i < 12; i++) pw += chars[bytes[i] % chars.length];
+  return pw;
+}
+
+function randomToken() {
+  return require('crypto').randomBytes(32).toString('hex');
+}
+
+function hashPassword(pw) {
+  try {
+    const out = execFileSync('/usr/local/bin/authelia', ['crypto', 'hash', 'generate', 'bcrypt', '--password', pw], {
+      encoding: 'utf8',
+      timeout: 10000,
+    }).trim();
+    // Strip "Digest: " prefix if present
+    return out.replace(/^Digest:\s*/, '');
+  } catch (e) {
+    console.error('Failed to hash password:', e.message);
+    return null;
+  }
+}
+
+function rewriteUsersFile() {
+  try {
+    // Read base users (non-guest) from current file
+    const content = fs.readFileSync(USERS_FILE, 'utf8');
+    const lines = content.split('\n');
+    let yaml = '';
+    let inUser = false;
+    let isGuest = false;
+    // Preserve non-guest users
+    for (const line of lines) {
+      if (/^  \S+:/.test(line) && !line.startsWith('users:')) {
+        const name = line.trim().replace(':', '');
+        isGuest = name.startsWith('guest_');
+        inUser = true;
+      }
+      if (inUser && isGuest) continue;
+      yaml += line + '\n';
+    }
+    // Remove trailing newlines, ensure one
+    yaml = yaml.replace(/\n+$/, '\n');
+    // Append active guests
+    for (const [, g] of guests) {
+      if (Date.now() >= g.expires) continue;
+      yaml += `  ${g.username}:\n`;
+      yaml += `    displayname: '${g.displayName || g.username}'\n`;
+      yaml += `    password: "${g.hash}"\n`;
+      yaml += `    email: '${g.username}@devbox.local'\n`;
+    }
+    fs.writeFileSync(USERS_FILE, yaml, { mode: 0o644 });
+  } catch (e) {
+    console.error('Failed to rewrite users file:', e.message);
+  }
+}
+
+function cleanupGuests() {
+  let changed = false;
+  for (const [id, g] of guests) {
+    if (Date.now() >= g.expires) {
+      guests.delete(id);
+      changed = true;
+      console.log('Guest expired:', g.username);
+    }
+  }
+  for (const [t, m] of magicTokens) {
+    if (Date.now() >= m.expires) magicTokens.delete(t);
+  }
+  if (changed) rewriteUsersFile();
+}
+
+function createGuest(durationMinutes, name) {
+  const safeName = name ? name.replace(/[^a-zA-Z0-9_.-]/g, '').slice(0, 32) : '';
+  const username = safeName ? 'guest_' + safeName : randomId();
+  if (guests.has(username)) return null; // duplicate name
+  const password = randomPassword();
+  const hash = hashPassword(password);
+  if (!hash) return null;
+  const id = username;
+  const expires = Date.now() + durationMinutes * 60 * 1000;
+  const token = randomToken();
+  const displayName = safeName || username.replace('guest_', '');
+  guests.set(id, { username, password, hash, expires, displayName });
+  magicTokens.set(token, { username, password, expires });
+  rewriteUsersFile();
+  const magicUrl = `https://auth.${DEV_PREFIX}${ipHex}.${DNS_SERVICE}/magic?token=${token}`;
+  console.log('Guest created:', username, '(' + displayName + ') expires in', durationMinutes, 'min');
+  return { id, username, displayName, expires, magicUrl };
+}
+
+function revokeGuest(id) {
+  if (!guests.has(id)) return false;
+  const g = guests.get(id);
+  guests.delete(id);
+  rewriteUsersFile();
+  console.log('Guest revoked:', g.username);
+  return true;
+}
+
+function listGuests() {
+  const result = [];
+  for (const [id, g] of guests) {
+    if (Date.now() >= g.expires) continue;
+    result.push({
+      id,
+      username: g.username,
+      displayName: g.displayName || g.username.replace('guest_', ''),
+      remaining: Math.max(0, Math.floor((g.expires - Date.now()) / 1000)),
+    });
+  }
+  return result;
+}
 
 function loadConfig() {
   // Get public IP from network interface (no external dependency)
@@ -328,7 +453,55 @@ function main() {
       }
       if (url.pathname === '/whoami') {
         const user = req.headers['remote-user'] || 'unknown';
-        return json(200, { user });
+        const guest = guests.get(user);
+        return json(200, { user, displayName: guest ? guest.displayName : user, isGuest: user.startsWith('guest_') });
+      }
+      if (url.pathname === '/magic') {
+        const token = url.searchParams.get('token');
+        const creds = token ? magicTokens.get(token) : null;
+        if (!creds || Date.now() >= creds.expires) {
+          res.writeHead(200, { 'Content-Type': 'text/html' });
+          res.end(
+            '<html><body style="font-family:sans-serif;padding:2rem;color:#f5f5f5;background:#0d0d0d"><h2>Link expired or invalid</h2></body></html>',
+          );
+          return;
+        }
+        // Consume token (one-time use)
+        magicTokens.delete(token);
+        const targetUrl = `https://${DEV_PREFIX}${ipHex}.${DNS_SERVICE}/`;
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(`<html><body style="font-family:sans-serif;padding:2rem;color:#f5f5f5;background:#0d0d0d"><p>Logging in...</p><script>
+fetch('/api/firstfactor',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:'${creds.username}',password:'${creds.password}',keepMeLoggedIn:false,targetURL:'${targetUrl}'})}).then(function(r){return r.json()}).then(function(d){if(d.status==='OK')window.location='${targetUrl}';else document.body.innerHTML='<h2>Login failed: '+(d.message||'unknown error')+'</h2>'}).catch(function(){document.body.innerHTML='<h2>Login failed</h2>'})
+</script></body></html>`);
+        return;
+      }
+      if (url.pathname === '/guests' && req.method === 'GET') {
+        return json(200, listGuests());
+      }
+      if (url.pathname === '/guests' && req.method === 'POST') {
+        const remoteUser = req.headers['remote-user'] || '';
+        if (remoteUser.startsWith('guest_')) return json(403, { error: 'Guests cannot create guests' });
+        let body = '';
+        req.on('data', (chunk) => (body += chunk));
+        req.on('end', () => {
+          try {
+            const parsed = JSON.parse(body);
+            const dur = Math.min(Math.max(parseInt(parsed.minutes) || 60, 5), 960);
+            const guest = createGuest(dur, parsed.name || '');
+            if (!guest) return json(500, { error: 'Failed to create guest' });
+            json(201, guest);
+          } catch {
+            json(400, { error: 'Invalid request' });
+          }
+        });
+        return;
+      }
+      if (url.pathname === '/guests' && req.method === 'DELETE') {
+        const remoteUser = req.headers['remote-user'] || '';
+        if (remoteUser.startsWith('guest_')) return json(403, { error: 'Guests cannot revoke guests' });
+        const id = url.searchParams.get('id');
+        if (id && revokeGuest(id)) return json(200, { ok: true });
+        return json(404, { error: 'Guest not found' });
       }
       if (url.pathname === '/verify-domain') {
         const domain = url.searchParams.get('domain');
@@ -346,6 +519,7 @@ function main() {
     .listen(65531, '127.0.0.1');
   console.log('HTTP server listening on 127.0.0.1:65531');
   setInterval(checkActivityAndMaybeDelete, 30000);
+  setInterval(cleanupGuests, 60000);
 }
 
 main();

@@ -85,13 +85,119 @@ async function getWhoami() {
   try {
     const data = await (await fetch(location.origin + '/api/whoami')).json();
     const el = document.getElementById('user');
-    if (el && data.user) el.textContent = 'Logged in as ' + esc(data.user);
+    if (el && data.displayName) el.textContent = 'Logged in as ' + esc(data.displayName);
+    if (data.isGuest) {
+      isGuest = true;
+      const guestCard = document.getElementById('guestcard');
+      if (guestCard) guestCard.style.display = 'none';
+    }
   } catch {}
 }
+
+// Guest access management
+const guestsEl = document.getElementById('guests');
+const gbtn = document.getElementById('gbtn');
+const gdur = document.getElementById('gdur') as HTMLSelectElement;
+const gname = document.getElementById('gname') as HTMLInputElement;
+let guestList: { id: string; username: string; displayName?: string; magicUrl?: string; remaining: number }[] = [];
+let isGuest = false;
+
+async function loadGuests() {
+  try {
+    const data = await (await fetch(location.origin + '/api/guests')).json();
+    // Merge: keep passwords for guests we created this session
+    for (const g of data) {
+      const existing = guestList.find((e) => e.id === g.id);
+      if (existing) {
+        existing.remaining = g.remaining;
+        existing.displayName = g.displayName || existing.displayName;
+      } else {
+        guestList.push(g);
+      }
+    }
+    // Remove expired
+    guestList = guestList.filter((g) => g.remaining > 0 || data.some((d: { id: string }) => d.id === g.id));
+    renderGuests();
+  } catch {}
+}
+
+async function createGuest() {
+  gbtn.textContent = '...';
+  try {
+    const nameVal = gname.value.trim();
+    const res = await fetch(location.origin + '/api/guests', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ minutes: parseInt(gdur.value), name: nameVal }),
+    });
+    const g = await res.json();
+    if (g.username) {
+      guestList.push({
+        id: g.id,
+        username: g.username,
+        displayName: g.displayName,
+        magicUrl: g.magicUrl,
+        remaining: Math.floor((g.expires - Date.now()) / 1000),
+      });
+      gname.value = '';
+      renderGuests();
+    }
+  } catch {}
+  gbtn.textContent = 'Generate';
+}
+
+async function revokeGuest(id: string) {
+  try {
+    await fetch(location.origin + '/api/guests?id=' + id, { method: 'DELETE' });
+    guestList = guestList.filter((g) => g.id !== id);
+    renderGuests();
+  } catch {}
+}
+
+function renderGuests() {
+  if (!guestsEl) return;
+  if (guestList.length === 0) {
+    guestsEl.innerHTML = '<div style="color:var(--muted-fg,#a3a3a3);font-size:0.875rem">No active guests</div>';
+    return;
+  }
+  guestsEl.innerHTML = '';
+  for (const g of guestList) {
+    const el = document.createElement('div');
+    el.style.cssText =
+      'background:var(--muted,#262626);border-radius:0.375rem;padding:0.75rem;margin-bottom:0.5rem;font-size:0.875rem';
+    const mins = Math.floor(g.remaining / 60);
+    let html =
+      '<div style="display:flex;justify-content:space-between;align-items:center">' +
+      '<strong>' +
+      esc(g.displayName || g.username) +
+      '</strong>' +
+      '<span style="color:var(--muted-fg,#a3a3a3)">' +
+      mins +
+      'm left</span></div>';
+    html += '<div style="display:flex;gap:0.5rem;margin-top:0.5rem">';
+    if (g.magicUrl) {
+      html +=
+        '<button onclick="navigator.clipboard.writeText(\'' +
+        g.magicUrl.replace(/'/g, "\\'") +
+        '\')" style="background:var(--card,#171717);color:var(--fg,#f5f5f5);border:1px solid var(--border,#333);border-radius:0.25rem;padding:0.25rem 0.5rem;font-size:0.75rem;cursor:pointer">Copy link</button>';
+    }
+    html +=
+      '<button onclick="window.__revoke(\'' +
+      g.id +
+      '\')" style="background:var(--card,#171717);color:var(--destructive,#ef4444);border:1px solid var(--border,#333);border-radius:0.25rem;padding:0.25rem 0.5rem;font-size:0.75rem;cursor:pointer">Revoke</button></div>';
+    el.innerHTML = html;
+    guestsEl.appendChild(el);
+  }
+}
+
+window.__revoke = revokeGuest;
+gbtn.addEventListener('click', createGuest);
 
 getStatus();
 getServices();
 getWhoami();
+loadGuests();
 setInterval(getStatus, 10000);
 setInterval(getServices, 10000);
+setInterval(loadGuests, 10000);
 setInterval(t, 1000);

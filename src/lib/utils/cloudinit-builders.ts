@@ -65,6 +65,7 @@ identity_validation:
 authentication_backend:
   file:
     path: /etc/authelia/users.yml
+    watch: true
 
 session:
   secret: '__SESSION_SECRET__'
@@ -99,8 +100,8 @@ export function buildAutheliaUsers(users: AuthUser[]): string {
     if (!name) continue;
     yaml += `  ${name}:\n`;
     yaml += `    displayname: '${name}'\n`;
-    const hash = user.passwordHash.replaceAll("'", '');
-    yaml += `    password: '${hash}'\n`;
+    const hash = user.passwordHash.replaceAll('"', '');
+    yaml += `    password: "${hash}"\n`;
     yaml += `    email: '${name}@devbox.local'\n`;
   }
   return yaml;
@@ -260,6 +261,15 @@ export function buildCaddyConfig(config: GlobalConfig): string {
   caddyfile += String.raw`:443 {
   tls {
     on_demand
+  }
+
+  # Magic link auto-login (on auth subdomain, handled by daemon before Authelia)
+  @magic {
+    header_regexp Host (?i)^auth\.${devPrefix}__IP__\.[a-z0-9.-]+$
+    path /magic
+  }
+  handle @magic {
+    reverse_proxy localhost:65531
   }
 
   # Authelia portal: auth.{devPrefix}{ipHex}.{any-suffix} (no forward_auth — would loop)

@@ -231,6 +231,12 @@ describe('buildCaddyConfig', () => {
     expect(result).toContain('@auth');
     expect(result).toContain('reverse_proxy localhost:9091');
   });
+
+  it('includes @magic handler for magic link auto-login', () => {
+    const result = buildCaddyConfig(makeConfig());
+    expect(result).toContain('@magic');
+    expect(result).toContain('path /magic');
+  });
 });
 
 describe('buildCloudflareDnsScript', () => {
