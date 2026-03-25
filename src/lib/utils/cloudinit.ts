@@ -245,6 +245,7 @@ export function generateCloudInit(
     },
     {
       content: buildAutheliaUsers(config.auth.users),
+      defer: true,
       owner: 'dev:dev',
       path: '/etc/authelia/users.yml',
       permissions: '0644',
@@ -368,6 +369,7 @@ export function generateSnapshotCloudInit(
     },
     {
       content: buildAutheliaUsers(config.auth.users),
+      defer: true,
       owner: 'dev:dev',
       path: '/etc/authelia/users.yml',
       permissions: '0644',

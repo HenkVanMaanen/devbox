@@ -23,6 +23,7 @@ let last = Date.now();
 let warn = false;
 let services = new Map();
 let ipHex;
+let prevCpuTicks = 0; // previous total CPU ticks for PTY processes
 const guests = new Map(); // id -> { username, password, hash, expires }
 const magicTokens = new Map(); // token -> { username, password, expires }
 
@@ -280,14 +281,59 @@ function verifyDomain(domain) {
   return isPortListening(port);
 }
 
-function check() {
-  let a = false;
+function getUserCpuTicks() {
   try {
-    for (const f of fs.readdirSync('/dev/pts')) {
-      if (/^\d+$/.test(f) && Date.now() - fs.statSync('/dev/pts/' + f).mtimeMs < 60000) a = true;
+    const myPid = String(process.pid);
+    const out = execSync('ps -u $(whoami) -o pid --no-headers', { encoding: 'utf8', timeout: 5000 });
+    let total = 0;
+    for (const line of out.trim().split('\n')) {
+      const pid = line.trim();
+      if (!pid || pid === myPid) continue;
+      try {
+        const stat = fs.readFileSync('/proc/' + pid + '/stat', 'utf8');
+        const fields = stat.split(' ');
+        total += parseInt(fields[13]) + parseInt(fields[14]); // user + system time
+      } catch {}
     }
+    return total;
   } catch {}
-  if (a) {
+  return 0;
+}
+
+function check() {
+  let active = false;
+
+  // Signal 1: active SSH connections
+  try {
+    const ssh = execSync('ss -t state established sport = :22', { encoding: 'utf8', timeout: 5000 });
+    if (ssh.trim().split('\n').length > 1) active = true;
+  } catch {}
+
+  // Signal 2: recent tmux client input
+  if (!active) {
+    try {
+      const out = execSync("tmux list-clients -F '#{client_activity}' 2>/dev/null", {
+        encoding: 'utf8',
+        timeout: 5000,
+      });
+      const now = Math.floor(Date.now() / 1000);
+      for (const line of out.trim().split('\n')) {
+        const ts = parseInt(line);
+        if (ts && now - ts < 60) active = true;
+      }
+    } catch {}
+  }
+
+  // Signal 3: user process CPU activity (catches compilers, LLM agents, builds)
+  if (!active) {
+    const CPU_THRESHOLD = 50; // ticks per check interval (~30s)
+    const currTicks = getUserCpuTicks();
+    const delta = prevCpuTicks > 0 ? currTicks - prevCpuTicks : 0;
+    if (delta > CPU_THRESHOLD) active = true;
+    prevCpuTicks = currTicks;
+  }
+
+  if (active) {
     last = Date.now();
     warn = false;
   }
