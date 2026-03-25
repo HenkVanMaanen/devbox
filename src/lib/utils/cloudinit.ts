@@ -402,6 +402,7 @@ export function generateSnapshotCloudInit(
     'sed "s/__IP__/$IP/g" /var/www/devbox-overview/index.html.template > /var/www/devbox-overview/index.html',
     `sed -e "s/__IP__/$IP/g" -e "s/__DNS_SERVICE__/${shellEscape(snapshotDnsService)}/g" -e "s/__SESSION_SECRET__/$SESSION_SECRET/g" -e "s/__ENCRYPTION_KEY__/$ENCRYPTION_KEY/g" /etc/authelia/configuration.yml.template > /etc/authelia/configuration.yml`,
     `AUTHELIA_ARCH=$(uname -m | sed "s/x86_64/amd64/;s/aarch64/arm64/") && curl -fsSL "https://github.com/authelia/authelia/releases/download/v${AUTHELIA_VERSION}/authelia-v${AUTHELIA_VERSION}-linux-$AUTHELIA_ARCH.tar.gz" | tar xz -C /usr/local/bin/ authelia && chmod +x /usr/local/bin/authelia || true`,
+    'rm -f /var/lib/authelia/db.sqlite3',
     'mkdir -p /var/lib/authelia',
     'systemctl restart caddy devbox-daemon authelia || true',
     String.raw`su - dev -c 'run-parts --regex="\.sh$" /etc/devbox/hooks/post-boot.d' 2>/dev/null || true`,
