@@ -414,6 +414,16 @@ export function generateSnapshotCloudInit(
   const sshKeys = config.ssh.keys.map((k) => k.pubKey).filter(Boolean);
 
   const cloudInit: Record<string, unknown> = { runcmd, write_files: writeFiles };
+
+  // Re-inject fixed SSH host key so it survives snapshot recreation
+  const hostKey = config.ssh.hostKey;
+  if (hostKey.privateKey && hostKey.publicKey) {
+    cloudInit['ssh_keys'] = {
+      ed25519_private: hostKey.privateKey,
+      ed25519_public: hostKey.publicKey,
+    };
+  }
+
   if (sshKeys.length > 0) {
     cloudInit['users'] = [
       {
