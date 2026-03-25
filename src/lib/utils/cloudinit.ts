@@ -330,10 +330,12 @@ export function generateSnapshotCloudInit(
   hetznerToken: string,
   config: GlobalConfig,
   options: {
+    terminalColors?: TerminalColors;
     themeColors?: ThemeColors;
   } = {},
 ): string {
   const themeColors = options.themeColors ?? defaultThemeColors;
+  const terminalColors = options.terminalColors ?? defaultTerminalColors;
 
   // Stryker disable all: cloud-init data constants
   const writeFiles: CloudInitConfig['write_files'] = [
@@ -374,7 +376,69 @@ export function generateSnapshotCloudInit(
       path: '/etc/authelia/users.yml',
       permissions: '0644',
     },
+    {
+      content: buildDaemonScript(),
+      path: '/usr/local/bin/devbox-daemon',
+      permissions: '0755',
+    },
   ];
+
+  // Git credentials (update in case token was rotated since snapshot)
+  const credential = config.git.credential;
+  const gitCredsContent = buildGitCredentials(credential);
+  if (gitCredsContent) {
+    writeFiles.push({
+      content: gitCredsContent,
+      defer: true,
+      owner: 'dev:dev',
+      path: '/home/dev/.git-credentials',
+      permissions: '0600',
+    });
+  }
+
+  // Age key for chezmoi secret decryption (update in case key changed)
+  const ageKey = config.chezmoi.ageKey.trim();
+  if (ageKey) {
+    writeFiles.push({
+      content: ageKey.endsWith('\n') ? ageKey : ageKey + '\n',
+      defer: true,
+      owner: 'dev:dev',
+      path: '/home/dev/.config/chezmoi/key.txt',
+      permissions: '0600',
+    });
+  }
+
+  // Terminal service (update theme colors)
+  {
+    const ttydTheme = JSON.stringify({
+      background: themeColors.background,
+      black: terminalColors.black,
+      blue: terminalColors.blue,
+      brightBlack: terminalColors.brightBlack,
+      brightBlue: terminalColors.brightBlue,
+      brightCyan: terminalColors.brightCyan,
+      brightGreen: terminalColors.brightGreen,
+      brightMagenta: terminalColors.brightMagenta,
+      brightRed: terminalColors.brightRed,
+      brightWhite: terminalColors.brightWhite,
+      brightYellow: terminalColors.brightYellow,
+      cursor: themeColors.primary,
+      cursorAccent: themeColors.background,
+      cyan: terminalColors.cyan,
+      foreground: themeColors.foreground,
+      green: terminalColors.green,
+      magenta: terminalColors.magenta,
+      red: terminalColors.red,
+      selectionBackground: themeColors.muted,
+      white: terminalColors.white,
+      yellow: terminalColors.yellow,
+    });
+    writeFiles.push({
+      content: `[Unit]\nDescription=Terminal\nAfter=network.target\n[Service]\nType=simple\nUser=dev\nWorkingDirectory=/home/dev\nEnvironment=HOME=/home/dev\nExecStart=/usr/local/bin/ttyd -p 65534 -t fontSize=14 -t smoothScrollDuration=50 -t 'theme=${ttydTheme}' -W bash --login\nRestart=always\nRestartSec=10\n[Install]\nWantedBy=multi-user.target\n`,
+      path: '/etc/systemd/system/ttyd-term.service',
+      permissions: '0644',
+    });
+  }
 
   const cf = config.cloudflare;
   if (cf.apiToken && cf.zoneId && cf.hostname) {
@@ -404,7 +468,7 @@ export function generateSnapshotCloudInit(
     `AUTHELIA_ARCH=$(uname -m | sed "s/x86_64/amd64/;s/aarch64/arm64/") && curl -fsSL "https://github.com/authelia/authelia/releases/download/v${AUTHELIA_VERSION}/authelia-v${AUTHELIA_VERSION}-linux-$AUTHELIA_ARCH.tar.gz" | tar xz -C /usr/local/bin/ authelia && chmod +x /usr/local/bin/authelia || true`,
     'rm -f /var/lib/authelia/db.sqlite3',
     'mkdir -p /var/lib/authelia',
-    'systemctl restart caddy devbox-daemon authelia || true',
+    'systemctl daemon-reload && systemctl restart caddy devbox-daemon authelia ttyd-term || true',
     String.raw`su - dev -c 'run-parts --regex="\.sh$" /etc/devbox/hooks/post-boot.d' 2>/dev/null || true`,
     '/usr/local/bin/devbox-progress ready',
   );

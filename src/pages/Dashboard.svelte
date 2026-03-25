@@ -97,6 +97,7 @@
       // Generate cloud-init (minimal for snapshot, full for fresh)
       const userData = snapshotId
         ? generateSnapshotCloudInit(serverName, credentialsStore.token, config, {
+            terminalColors: themeStore.theme.terminal,
             themeColors: themeStore.theme.colors,
           })
         : generateCloudInit(serverName, credentialsStore.token, config, {
