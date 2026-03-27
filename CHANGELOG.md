@@ -4,6 +4,16 @@ All notable changes to Devbox will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [3.12.0] - 2026-03-27
+
+### Added
+
+- Add automatic light/dark theme switching
+- Add first-use setup wizard and improve guidance text
+
+### Fixed
+
+- Update sslip.io nameservers to current values
 ## [3.11.2] - 2026-03-25
 
 ### Fixed
