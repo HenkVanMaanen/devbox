@@ -7,7 +7,7 @@
   import { credentialsStore } from '$lib/stores/credentials.svelte';
   import { profilesStore } from '$lib/stores/profiles.svelte';
   import { serversStore } from '$lib/stores/servers.svelte';
-  import { themeStore } from '$lib/stores/theme.svelte';
+  import { THEMES, themeStore } from '$lib/stores/theme.svelte';
   import { toast } from '$lib/stores/toast.svelte';
   import { generateCloudInit, generateSnapshotCloudInit } from '$lib/utils/cloudinit';
   import { generateServerName } from '$lib/utils/names';
@@ -95,15 +95,15 @@
       }
 
       // Generate cloud-init (minimal for snapshot, full for fresh)
+      const light = themeStore.isAuto ? THEMES.find((t) => t.id === 'default-light') : undefined;
+      const themeOptions = {
+        ...(light ? { lightThemeColors: light.colors } : {}),
+        terminalColors: themeStore.theme.terminal,
+        themeColors: themeStore.theme.colors,
+      };
       const userData = snapshotId
-        ? generateSnapshotCloudInit(serverName, credentialsStore.token, config, {
-            terminalColors: themeStore.theme.terminal,
-            themeColors: themeStore.theme.colors,
-          })
-        : generateCloudInit(serverName, credentialsStore.token, config, {
-            terminalColors: themeStore.theme.terminal,
-            themeColors: themeStore.theme.colors,
-          });
+        ? generateSnapshotCloudInit(serverName, credentialsStore.token, config, themeOptions)
+        : generateCloudInit(serverName, credentialsStore.token, config, themeOptions);
 
       // Create server (from snapshot or base image)
       await serversStore.create(credentialsStore.token, {

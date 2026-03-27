@@ -4,6 +4,8 @@ import { z } from 'zod';
 
 import { loadValidated, save } from '$lib/utils/storage';
 
+export const AUTO_THEME_ID = 'auto';
+
 export interface TerminalColors {
   [key: string]: string;
   black: string;
@@ -365,41 +367,86 @@ function applyThemeToDOM(theme: Theme): void {
 const FALLBACK_THEME: Theme = THEMES[0]!;
 // Stryker restore all
 
+function getSystemPreference(): 'dark' | 'light' {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function resolveAutoTheme(): string {
+  return getSystemPreference() === 'dark' ? 'default-dark' : 'default-light';
+}
+
+function startListening(onChange: () => void): () => void {
+  const mql = window.matchMedia('(prefers-color-scheme: dark)');
+  mql.addEventListener('change', onChange);
+  return () => {
+    mql.removeEventListener('change', onChange);
+  };
+}
+
+let mediaCleanup: (() => void) | null = null;
+
 function createThemeStore() {
   const stored = loadValidated('theme', z.string());
-  const defaultTheme = stored ?? (getSystemPreference() === 'dark' ? 'default-dark' : 'default-light');
-  let currentThemeId = $state(defaultTheme);
+  const initialPreference = stored ?? AUTO_THEME_ID;
+
+  let preference = $state(initialPreference);
+  let resolvedThemeId = $state(initialPreference === AUTO_THEME_ID ? resolveAutoTheme() : initialPreference);
+
+  function applyResolved(): void {
+    const id = resolveAutoTheme();
+    resolvedThemeId = id;
+    const theme = THEMES.find((t) => t.id === id) ?? FALLBACK_THEME;
+    applyThemeToDOM(theme);
+  }
+
+  // Start listening if auto
+  if (typeof window !== 'undefined' && initialPreference === AUTO_THEME_ID) {
+    mediaCleanup = startListening(applyResolved);
+  }
 
   // Apply theme on initialization
   if (typeof document !== 'undefined') {
-    const theme = THEMES.find((t) => t.id === currentThemeId) ?? FALLBACK_THEME;
+    const theme = THEMES.find((t) => t.id === resolvedThemeId) ?? FALLBACK_THEME;
     applyThemeToDOM(theme);
   }
 
   return {
+    get isAuto() {
+      return preference === AUTO_THEME_ID;
+    },
     setTheme(themeId: string) {
+      if (themeId === AUTO_THEME_ID) {
+        preference = AUTO_THEME_ID;
+        save('theme', AUTO_THEME_ID);
+        applyResolved();
+
+        mediaCleanup ??= startListening(applyResolved);
+        return;
+      }
+
       const theme = THEMES.find((t) => t.id === themeId);
       if (!theme) return;
 
-      currentThemeId = themeId;
+      if (mediaCleanup) {
+        mediaCleanup();
+        mediaCleanup = null;
+      }
+
+      preference = themeId;
+      resolvedThemeId = themeId;
       save('theme', themeId);
       applyThemeToDOM(theme);
     },
     get theme() {
-      return THEMES.find((t) => t.id === currentThemeId) ?? FALLBACK_THEME;
+      return THEMES.find((t) => t.id === resolvedThemeId) ?? FALLBACK_THEME;
     },
     get themeId() {
-      return currentThemeId;
+      return preference;
     },
-
     get themes() {
       return THEMES;
     },
   };
-}
-
-function getSystemPreference(): 'dark' | 'light' {
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
 function toKebabCase(str: string): string {

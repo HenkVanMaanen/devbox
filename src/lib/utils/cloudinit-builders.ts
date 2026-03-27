@@ -309,8 +309,22 @@ ${forwardAuth}
 
 // Build overview config.js (written to /var/www/devbox-overview/config.js by cloud-init)
 // Loaded synchronously before paint to set CSS variables — no flash
-export function buildOverviewConfig(themeColors: ThemeColors): string {
+// When lightColors is provided, generates a dual-theme script that follows OS preference
+export function buildOverviewConfig(themeColors: ThemeColors, lightColors?: ThemeColors): string {
   const e = escapeSingleQuotedJS;
+
+  function colorObj(c: ThemeColors): string {
+    return `{bg:'${e(c.background)}',fg:'${e(c.foreground)}',card:'${e(c.card)}',border:'${e(c.border)}',muted:'${e(c.muted)}',mutedFg:'${e(c.mutedForeground)}',success:'${e(c.success)}',warning:'${e(c.warning)}',destructive:'${e(c.destructive)}',focus:'${e(c.focus)}'}`;
+  }
+
+  if (lightColors) {
+    return `(function(){
+var d=${colorObj(themeColors)},l=${colorObj(lightColors)};
+function a(c){var r=document.documentElement.style;r.setProperty('--bg',c.bg);r.setProperty('--fg',c.fg);r.setProperty('--card',c.card);r.setProperty('--border',c.border);r.setProperty('--muted',c.muted);r.setProperty('--muted-fg',c.mutedFg);r.setProperty('--success',c.success);r.setProperty('--warning',c.warning);r.setProperty('--destructive',c.destructive);r.setProperty('--focus',c.focus);window.__DEVBOX={colors:c}}
+var m=window.matchMedia('(prefers-color-scheme: dark)');a(m.matches?d:l);m.addEventListener('change',function(e){a(e.matches?d:l)});
+})();`;
+  }
+
   const colors = themeColors;
   return `(function(){
 var c={colors:{bg:'${e(colors.background)}',fg:'${e(colors.foreground)}',card:'${e(colors.card)}',border:'${e(colors.border)}',muted:'${e(colors.muted)}',mutedFg:'${e(colors.mutedForeground)}',success:'${e(colors.success)}',warning:'${e(colors.warning)}',destructive:'${e(colors.destructive)}',focus:'${e(colors.focus)}'}};

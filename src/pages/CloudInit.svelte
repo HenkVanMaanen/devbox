@@ -3,7 +3,7 @@
   import Card from '$components/ui/Card.svelte';
   import { credentialsStore } from '$lib/stores/credentials.svelte';
   import { profilesStore } from '$lib/stores/profiles.svelte';
-  import { themeStore } from '$lib/stores/theme.svelte';
+  import { THEMES, themeStore } from '$lib/stores/theme.svelte';
   import { toast } from '$lib/stores/toast.svelte';
   import { copyToClipboard } from '$lib/utils/clipboard';
   import { generateCloudInit } from '$lib/utils/cloudinit';
@@ -17,7 +17,9 @@
     void refreshCounter;
     if (!credentialsStore.hasToken) return '';
     const config = profilesStore.getConfigForProfile(selectedProfileId);
+    const light = themeStore.isAuto ? THEMES.find((t) => t.id === 'default-light') : undefined;
     return generateCloudInit('devbox-preview', credentialsStore.token, config, {
+      ...(light ? { lightThemeColors: light.colors } : {}),
       terminalColors: themeStore.theme.terminal,
       themeColors: themeStore.theme.colors,
     });

@@ -1,6 +1,40 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+type ChangeListener = (e: { matches: boolean }) => void;
+
+function createMatchMediaMock(prefersDark: boolean) {
+  let currentPrefersDark = prefersDark;
+  const listeners: ChangeListener[] = [];
+
+  const mql = {
+    get matches() {
+      return currentPrefersDark;
+    },
+    addEventListener: vi.fn((_event: string, cb: ChangeListener) => {
+      listeners.push(cb);
+    }),
+    removeEventListener: vi.fn((_event: string, cb: ChangeListener) => {
+      const idx = listeners.indexOf(cb);
+      if (idx >= 0) listeners.splice(idx, 1);
+    }),
+  };
+
+  return {
+    listeners,
+    mockFn: vi.fn().mockReturnValue(mql),
+    mql,
+    triggerChange(newPrefersDark: boolean) {
+      currentPrefersDark = newPrefersDark;
+      for (const listener of [...listeners]) {
+        listener({ matches: newPrefersDark });
+      }
+    },
+  };
+}
+
 describe('theme store', () => {
+  let mediaMock: ReturnType<typeof createMatchMediaMock>;
+
   beforeEach(() => {
     vi.resetModules();
     localStorage.clear();
@@ -14,12 +48,10 @@ describe('theme store', () => {
     }
 
     // Mock matchMedia for system preference (default: dark)
+    mediaMock = createMatchMediaMock(true);
     Object.defineProperty(window, 'matchMedia', {
       writable: true,
-      value: vi.fn().mockImplementation((query: string) => ({
-        matches: query === '(prefers-color-scheme: dark)',
-        addEventListener: vi.fn(),
-      })),
+      value: mediaMock.mockFn,
     });
   });
 
@@ -48,22 +80,24 @@ describe('theme store', () => {
     expect(ids).toContain('one-dark');
   });
 
-  it('initial theme is default-dark when system prefers dark', async () => {
+  it('initial theme is auto with resolved dark when system prefers dark', async () => {
     const { themeStore } = await getStore();
-    expect(themeStore.themeId).toBe('default-dark');
+    expect(themeStore.themeId).toBe('auto');
+    expect(themeStore.theme.id).toBe('default-dark');
+    expect(themeStore.isAuto).toBe(true);
   });
 
-  it('initial theme is default-light when system prefers light', async () => {
+  it('initial theme is auto with resolved light when system prefers light', async () => {
+    mediaMock = createMatchMediaMock(false);
     Object.defineProperty(window, 'matchMedia', {
       writable: true,
-      value: vi.fn().mockImplementation(() => ({
-        matches: false,
-        addEventListener: vi.fn(),
-      })),
+      value: mediaMock.mockFn,
     });
 
     const { themeStore } = await getStore();
-    expect(themeStore.themeId).toBe('default-light');
+    expect(themeStore.themeId).toBe('auto');
+    expect(themeStore.theme.id).toBe('default-light');
+    expect(themeStore.isAuto).toBe(true);
   });
 
   it('initial theme loads from localStorage when saved', async () => {
@@ -71,11 +105,21 @@ describe('theme store', () => {
 
     const { themeStore } = await getStore();
     expect(themeStore.themeId).toBe('dracula');
+    expect(themeStore.isAuto).toBe(false);
+  });
+
+  it('initial theme loads stored auto preference', async () => {
+    localStorage.setItem('devbox_theme', JSON.stringify('auto'));
+
+    const { themeStore } = await getStore();
+    expect(themeStore.themeId).toBe('auto');
+    expect(themeStore.isAuto).toBe(true);
+    expect(themeStore.theme.id).toBe('default-dark');
   });
 
   it('setTheme changes current theme', async () => {
     const { themeStore } = await getStore();
-    expect(themeStore.themeId).toBe('default-dark');
+    expect(themeStore.theme.id).toBe('default-dark');
 
     themeStore.setTheme('nord-dark');
     expect(themeStore.themeId).toBe('nord-dark');
@@ -83,10 +127,9 @@ describe('theme store', () => {
 
   it('setTheme with invalid id does nothing', async () => {
     const { themeStore } = await getStore();
-    const originalId = themeStore.themeId;
-
+    themeStore.setTheme('dracula');
     themeStore.setTheme('nonexistent-theme');
-    expect(themeStore.themeId).toBe(originalId);
+    expect(themeStore.themeId).toBe('dracula');
   });
 
   it('theme getter returns current theme object', async () => {
@@ -109,7 +152,7 @@ describe('theme store', () => {
   it('themeId getter returns current id string', async () => {
     const { themeStore } = await getStore();
     expect(typeof themeStore.themeId).toBe('string');
-    expect(themeStore.themeId).toBe('default-dark');
+    expect(themeStore.themeId).toBe('auto');
   });
 
   it('setTheme applies CSS variables to document.documentElement', async () => {
@@ -207,7 +250,7 @@ describe('theme store', () => {
     await getStore();
 
     const root = document.documentElement;
-    // default-dark is the initial theme (system prefers dark)
+    // default-dark is the resolved theme (system prefers dark, auto mode)
     expect(root.style.getPropertyValue('--color-background')).toBe('#0a0a0b');
     expect(root.style.getPropertyValue('--color-foreground')).toBe('#f5f5f5');
   });
@@ -218,15 +261,112 @@ describe('theme store', () => {
   });
 
   it('initialization does not apply dark class for light system preference', async () => {
+    mediaMock = createMatchMediaMock(false);
     Object.defineProperty(window, 'matchMedia', {
       writable: true,
-      value: vi.fn().mockImplementation(() => ({
-        matches: false,
-        addEventListener: vi.fn(),
-      })),
+      value: mediaMock.mockFn,
     });
 
     await getStore();
     expect(document.documentElement.classList.contains('dark')).toBe(false);
+  });
+
+  // Auto theme tests
+
+  it('AUTO_THEME_ID export equals auto', async () => {
+    const { AUTO_THEME_ID } = await getStore();
+    expect(AUTO_THEME_ID).toBe('auto');
+  });
+
+  it('setTheme auto activates auto mode', async () => {
+    const { themeStore } = await getStore();
+    themeStore.setTheme('dracula');
+    expect(themeStore.isAuto).toBe(false);
+
+    themeStore.setTheme('auto');
+    expect(themeStore.isAuto).toBe(true);
+    expect(themeStore.themeId).toBe('auto');
+    expect(themeStore.theme.id).toBe('default-dark');
+  });
+
+  it('setTheme auto saves auto to localStorage', async () => {
+    const { themeStore } = await getStore();
+    themeStore.setTheme('dracula');
+    themeStore.setTheme('auto');
+
+    const stored = localStorage.getItem('devbox_theme');
+    expect(stored).toBe(JSON.stringify('auto'));
+  });
+
+  it('auto mode responds to OS theme change from dark to light', async () => {
+    const { themeStore } = await getStore();
+    expect(themeStore.theme.id).toBe('default-dark');
+
+    mediaMock.triggerChange(false);
+    expect(themeStore.theme.id).toBe('default-light');
+    expect(document.documentElement.classList.contains('dark')).toBe(false);
+  });
+
+  it('auto mode responds to OS theme change from light to dark', async () => {
+    mediaMock = createMatchMediaMock(false);
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: mediaMock.mockFn,
+    });
+
+    const { themeStore } = await getStore();
+    expect(themeStore.theme.id).toBe('default-light');
+
+    mediaMock.triggerChange(true);
+    expect(themeStore.theme.id).toBe('default-dark');
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+  });
+
+  it('switching away from auto removes media query listener', async () => {
+    const { themeStore } = await getStore();
+    expect(mediaMock.listeners).toHaveLength(1);
+
+    themeStore.setTheme('dracula');
+    expect(mediaMock.mql.removeEventListener).toHaveBeenCalled();
+
+    // Verify listener is gone — trigger should not change theme
+    mediaMock.triggerChange(false);
+    expect(themeStore.theme.id).toBe('dracula');
+  });
+
+  it('switching to auto from specific theme starts listening', async () => {
+    localStorage.setItem('devbox_theme', JSON.stringify('dracula'));
+
+    const { themeStore } = await getStore();
+    expect(themeStore.isAuto).toBe(false);
+    expect(mediaMock.listeners).toHaveLength(0);
+
+    themeStore.setTheme('auto');
+    expect(mediaMock.listeners).toHaveLength(1);
+    expect(themeStore.isAuto).toBe(true);
+  });
+
+  it('setTheme auto when already auto does not add duplicate listener', async () => {
+    const { themeStore } = await getStore();
+    expect(mediaMock.listeners).toHaveLength(1);
+
+    themeStore.setTheme('auto');
+    expect(mediaMock.listeners).toHaveLength(1);
+  });
+
+  it('auto mode updates CSS variables on OS change', async () => {
+    await getStore();
+    const root = document.documentElement;
+
+    expect(root.style.getPropertyValue('--color-background')).toBe('#0a0a0b');
+
+    mediaMock.triggerChange(false);
+    expect(root.style.getPropertyValue('--color-background')).toBe('#ffffff');
+  });
+
+  it('isAuto is false for specific themes', async () => {
+    const { themeStore } = await getStore();
+    themeStore.setTheme('nord-dark');
+    expect(themeStore.isAuto).toBe(false);
   });
 });

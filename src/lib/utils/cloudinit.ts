@@ -58,6 +58,7 @@ export function generateCloudInit(
   hetznerToken: string,
   config: GlobalConfig,
   options: {
+    lightThemeColors?: ThemeColors;
     terminalColors?: TerminalColors;
     themeColors?: ThemeColors;
   } = {},
@@ -75,6 +76,7 @@ export function generateCloudInit(
 
   // Use provided theme colors or defaults
   const themeColors = options.themeColors ?? defaultThemeColors;
+  const lightThemeColors = options.lightThemeColors;
   const terminalColors = options.terminalColors ?? defaultTerminalColors;
 
   // Stryker disable all: cloud-init data constants
@@ -231,7 +233,7 @@ export function generateCloudInit(
     permissions: '0644',
   });
   cloudInit.write_files.push({
-    content: buildOverviewConfig(themeColors),
+    content: buildOverviewConfig(themeColors, lightThemeColors),
     path: '/var/www/devbox-overview/config.js',
     permissions: '0644',
   });
@@ -330,11 +332,13 @@ export function generateSnapshotCloudInit(
   hetznerToken: string,
   config: GlobalConfig,
   options: {
+    lightThemeColors?: ThemeColors;
     terminalColors?: TerminalColors;
     themeColors?: ThemeColors;
   } = {},
 ): string {
   const themeColors = options.themeColors ?? defaultThemeColors;
+  const lightThemeColors = options.lightThemeColors;
   const terminalColors = options.terminalColors ?? defaultTerminalColors;
 
   // Stryker disable all: cloud-init data constants
@@ -360,7 +364,7 @@ export function generateSnapshotCloudInit(
       permissions: '0644',
     },
     {
-      content: buildOverviewConfig(themeColors),
+      content: buildOverviewConfig(themeColors, lightThemeColors),
       path: '/var/www/devbox-overview/config.js',
       permissions: '0644',
     },

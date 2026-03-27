@@ -284,6 +284,60 @@ describe('buildOverviewConfig color embedding', () => {
   });
 });
 
+describe('buildOverviewConfig dual-theme', () => {
+  const lightColors = {
+    ...defaultThemeColors,
+    background: '#ffffff',
+    border: '#d4d4d8',
+    card: '#fafafa',
+    foreground: '#171717',
+    muted: '#f4f4f5',
+    mutedForeground: '#3f3f46',
+  };
+
+  it('generates dual-theme script with matchMedia when lightColors provided', () => {
+    const configJs = buildOverviewConfig(defaultThemeColors, lightColors);
+    expect(configJs).toContain("matchMedia('(prefers-color-scheme: dark)')");
+    expect(configJs).toContain('addEventListener');
+  });
+
+  it('contains both dark and light color values', () => {
+    const configJs = buildOverviewConfig(defaultThemeColors, lightColors);
+    expect(configJs).toContain(defaultThemeColors.background);
+    expect(configJs).toContain(lightColors.background);
+    expect(configJs).toContain(lightColors.foreground);
+  });
+
+  it('single-theme mode does not include matchMedia listener', () => {
+    const configJs = buildOverviewConfig(defaultThemeColors);
+    expect(configJs).not.toContain('addEventListener');
+  });
+
+  it('dual-theme is a self-executing function', () => {
+    const configJs = buildOverviewConfig(defaultThemeColors, lightColors);
+    expect(configJs).toContain('(function(){');
+    expect(configJs).toContain('})();');
+  });
+
+  it('dual-theme sets CSS variables', () => {
+    const configJs = buildOverviewConfig(defaultThemeColors, lightColors);
+    expect(configJs).toContain("setProperty('--bg'");
+    expect(configJs).toContain("setProperty('--fg'");
+    expect(configJs).toContain("setProperty('--card'");
+    expect(configJs).toContain("setProperty('--border'");
+    expect(configJs).toContain("setProperty('--muted'");
+    expect(configJs).toContain("setProperty('--success'");
+    expect(configJs).toContain("setProperty('--warning'");
+    expect(configJs).toContain("setProperty('--destructive'");
+    expect(configJs).toContain("setProperty('--focus'");
+  });
+
+  it('dual-theme exposes config on window.__DEVBOX', () => {
+    const configJs = buildOverviewConfig(defaultThemeColors, lightColors);
+    expect(configJs).toContain('window.__DEVBOX=');
+  });
+});
+
 describe('buildCaddyConfig edge cases', () => {
   it('includes Actalis ACME CA URL', () => {
     const result = buildCaddyConfig(
