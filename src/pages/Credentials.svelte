@@ -52,15 +52,25 @@
 
   <Card
     title="Hetzner Cloud API"
-    description="Your API token is stored locally and never sent to any server except Hetzner."
+    description="Your API token is stored locally in your browser and only sent directly to the Hetzner API."
   >
     <div class="space-y-4">
+      <p class="text-muted-foreground text-sm">
+        Create a token with <strong>read &amp; write</strong> permissions in the
+        <a
+          href="https://console.hetzner.cloud/"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-primary hover:underline">Hetzner Cloud Console</a
+        >
+        under <strong>Security &rarr; API Tokens</strong>.
+      </p>
+
       <Input
         label="API Token"
         type="password"
         bind:value={credentialsStore.token}
         placeholder="Enter your Hetzner API token"
-        help="Get your token from the Hetzner Cloud Console → Security → API Tokens"
       />
 
       <div class="flex gap-3">

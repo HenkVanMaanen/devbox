@@ -163,7 +163,15 @@
 </script>
 
 <!-- Authentication -->
-<Card title="Authentication">
+<Card
+  title="Authentication"
+  description="Users for the Authelia authentication proxy that protects web services on your server."
+>
+  <p class="text-muted-foreground mb-4 text-sm">
+    At least one user is required. These credentials are used to log in to VS Code Server, the terminal, file browser,
+    and other web-based services running on your Devbox.
+  </p>
+
   {#if mode === 'profile'}
     <div class="mb-4 flex items-start gap-3">
       <input
@@ -220,6 +228,9 @@
           class="bg-background border-border text-foreground focus:border-primary focus:ring-focus w-full rounded-md border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
         />
       </div>
+      <p class="text-muted-foreground text-xs">
+        The password is hashed with bcrypt in your browser before being stored. It is never saved in plain text.
+      </p>
       <Button size="sm" onclick={addAuthUser} disabled={authHashing}>
         {authHashing ? 'Hashing...' : 'Add User'}
       </Button>
@@ -228,7 +239,13 @@
 </Card>
 
 <!-- SSH Keys -->
-<Card title="SSH Keys">
+<Card title="SSH Keys" description="Public keys authorized for SSH access to your server.">
+  <p class="text-muted-foreground mb-4 text-sm">
+    Add your SSH public key to connect to the server. Find yours at
+    <code class="bg-muted rounded px-1 py-0.5 text-xs">~/.ssh/id_ed25519.pub</code> or generate one with
+    <code class="bg-muted rounded px-1 py-0.5 text-xs">ssh-keygen -t ed25519</code>.
+  </p>
+
   {#if mode === 'profile'}
     <div class="mb-4 flex items-start gap-3">
       <input
@@ -300,9 +317,12 @@
 </Card>
 
 <!-- SSH Host Key -->
-<Card title="SSH Host Key">
+<Card title="SSH Host Key" description="Optional: use a fixed host key across all your servers.">
   <p class="text-muted-foreground mb-4 text-sm">
-    Fixed SSH host key injected into every server. Prevents "host key changed" warnings when recreating servers.
+    By default, each new server generates a random SSH host key. If you recreate servers frequently, this causes
+    <code class="bg-muted rounded px-1 py-0.5 text-xs">WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED</code> errors. Generate
+    a fixed host key here to avoid that. When combined with Cloudflare DNS, you get a seamless SSH experience with a stable
+    hostname and key.
   </p>
 
   {#if hasHostKey()}
@@ -322,7 +342,7 @@
 </Card>
 
 <!-- Cloudflare DNS -->
-<Card title="Cloudflare DNS">
+<Card title="Cloudflare DNS" description="Optional: automatically update a DNS record when a server is created.">
   {#if mode === 'profile'}
     <div class="mb-4 flex items-start gap-3">
       <input
@@ -339,7 +359,15 @@
 
   {#if mode === 'global' || hasOverride('cloudflare')}
     <p class="text-muted-foreground mb-4 text-sm">
-      Automatically update a DNS A record when a server is created, so you can always SSH via the same hostname.
+      Automatically update a DNS A record when a server is created, so you can always SSH via the same hostname. Create
+      a Cloudflare API token with <code class="bg-muted rounded px-1 py-0.5 text-xs">Zone:DNS:Edit</code>
+      permission at
+      <a
+        href="https://dash.cloudflare.com/profile/api-tokens"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="text-primary hover:underline">dash.cloudflare.com</a
+      >.
     </p>
 
     <div class="space-y-4">
@@ -456,7 +484,13 @@
 </Card>
 
 <!-- Chezmoi Dotfiles -->
-<Card title="Chezmoi Dotfiles">
+<Card title="Chezmoi Dotfiles" description="Manage your dotfiles and dev environment with chezmoi.">
+  <p class="text-muted-foreground mb-4 text-sm">
+    <a href="https://www.chezmoi.io/" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline"
+      >Chezmoi</a
+    > clones your dotfiles repo on the server to configure your shell, editor, packages, and environment automatically.
+  </p>
+
   {#if mode === 'profile'}
     <div class="mb-4 flex items-start gap-3">
       <input
@@ -535,7 +569,15 @@
 
       <p class="mb-3 text-sm font-medium">Git Credential</p>
       <p class="text-muted-foreground mb-3 text-xs">
-        Used to clone your chezmoi repo and project repositories. Chezmoi manages additional credentials.
+        Used to clone your chezmoi repo and project repositories. For GitHub, create a
+        <a
+          href="https://github.com/settings/tokens"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-primary hover:underline">Personal Access Token</a
+        >
+        with
+        <strong>repo</strong> scope.
       </p>
       <div class="space-y-3">
         <div>
@@ -592,7 +634,16 @@
 </Card>
 
 <!-- Hetzner Settings -->
-<Card title="Hetzner Settings">
+<Card title="Hetzner Settings" description="Server configuration for your Devbox instances.">
+  <p class="text-muted-foreground mb-4 text-sm">
+    Configure the default server type, location, and base image. Manage your resources in the
+    <a
+      href="https://console.hetzner.cloud/"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="text-primary hover:underline">Hetzner Cloud Console</a
+    >.
+  </p>
   <div class="space-y-4">
     <!-- Server Type -->
     <div class="flex items-start gap-3">
@@ -705,7 +756,11 @@
 </Card>
 
 <!-- Services -->
-<Card title="Services">
+<Card title="Services" description="DNS and TLS certificate settings for your Devbox.">
+  <p class="text-muted-foreground mb-4 text-sm">
+    Configure how your server gets a domain name and TLS certificate. The default settings (sslip.io + ZeroSSL) work out
+    of the box with no additional setup.
+  </p>
   <div class="space-y-4">
     <!-- DNS Service -->
     <div class="flex items-start gap-3">
@@ -838,13 +893,24 @@
                  py-2 text-base focus:ring-3 focus:outline-none
                  disabled:cursor-not-allowed disabled:opacity-50"
         />
-        <p class="text-muted-foreground mt-1 text-xs">For Let's Encrypt certificates</p>
+        <p class="text-muted-foreground mt-1 text-xs">
+          Used for certificate expiry notifications from the ACME provider. Optional but recommended.
+        </p>
       </div>
     </div>
 
     <!-- ZeroSSL EAB Credentials -->
     {#if getValue('services.acmeProvider') === 'zerossl'}
       <div class="bg-muted/30 space-y-4 rounded-md p-4 {mode === 'profile' ? 'ml-8' : ''}">
+        <p class="text-muted-foreground text-xs">
+          Get your EAB credentials from
+          <a
+            href="https://app.zerossl.com/developer"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-primary hover:underline">app.zerossl.com/developer</a
+          >.
+        </p>
         <div class="flex items-start gap-3">
           {#if mode === 'profile'}
             <input
@@ -1061,7 +1127,11 @@
 </Card>
 
 <!-- Auto-Delete -->
-<Card title="Auto-Delete">
+<Card title="Auto-Delete" description="Automatically delete idle servers to save costs.">
+  <p class="text-muted-foreground mb-4 text-sm">
+    When enabled, the daemon on the server monitors for activity and deletes the server after the configured idle
+    timeout. A warning notification is shown before deletion so you can extend the session.
+  </p>
   <div class="space-y-4">
     <!-- Enabled -->
     <div class="flex items-center gap-3">
@@ -1151,7 +1221,7 @@
 </Card>
 
 <!-- Custom Cloud-Init -->
-<Card title="Custom Cloud-Init">
+<Card title="Custom Cloud-Init" description="Advanced: extend or replace the generated cloud-init configuration.">
   {#if mode === 'profile'}
     <div class="mb-4 flex items-start gap-3">
       <input

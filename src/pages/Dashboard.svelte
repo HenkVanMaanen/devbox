@@ -186,9 +186,10 @@
   {/if}
 
   {#if !credentialsStore.hasToken}
-    <Card>
-      <p class="text-muted-foreground">
-        Please <a href="#credentials" class="text-primary hover:underline">configure your Hetzner API token</a> to get started.
+    <Card title="Getting Started">
+      <p class="text-muted-foreground text-sm">
+        To create your first Devbox, you need a Hetzner Cloud API token.
+        <a href="#credentials" class="text-primary hover:underline">Go to API Token settings</a> to configure one.
       </p>
     </Card>
   {:else if serversStore.loading}
@@ -202,7 +203,10 @@
     </Card>
   {:else if serversStore.devboxServers.length === 0}
     <Card>
-      <p class="text-muted-foreground">No servers yet. Click "Create Server" to get started.</p>
+      <p class="text-muted-foreground text-sm">
+        No servers running. Use the form above to create your first Devbox. You can configure server settings, SSH keys,
+        and authentication users on the <a href="#config" class="text-primary hover:underline">Global</a> page.
+      </p>
     </Card>
   {:else}
     {#each serversStore.devboxServers as server (server.id)}

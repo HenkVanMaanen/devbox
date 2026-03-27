@@ -1,12 +1,14 @@
 <script lang="ts">
   import Nav from '$components/Nav.svelte';
   import Toast from '$components/ui/Toast.svelte';
+  import { setupStore } from '$lib/stores/setup.svelte';
   import CloudInit from '$pages/CloudInit.svelte';
   import Config from '$pages/Config.svelte';
   import Credentials from '$pages/Credentials.svelte';
   import Dashboard from '$pages/Dashboard.svelte';
   import ProfileEdit from '$pages/ProfileEdit.svelte';
   import Profiles from '$pages/Profiles.svelte';
+  import Setup from '$pages/Setup.svelte';
 
   // Simple hash-based routing with params
   let hash = $state(window.location.hash.slice(1) || 'dashboard');
@@ -25,13 +27,27 @@
       window.removeEventListener('hashchange', handleHashChange);
     };
   });
+
+  // Setup wizard guard: redirect to setup if not complete, away from setup if complete
+  $effect(() => {
+    if (!setupStore.isComplete && currentPage !== 'setup') {
+      window.location.hash = '#setup';
+    }
+    if (setupStore.isComplete && currentPage === 'setup') {
+      window.location.hash = '#dashboard';
+    }
+  });
 </script>
 
 <div class="bg-background text-foreground min-h-screen">
-  <Nav {currentPage} />
+  {#if currentPage !== 'setup'}
+    <Nav {currentPage} />
+  {/if}
 
   <main class="mx-auto max-w-4xl px-4 py-6">
-    {#if currentPage === 'dashboard'}
+    {#if currentPage === 'setup'}
+      <Setup />
+    {:else if currentPage === 'dashboard'}
       <Dashboard />
     {:else if currentPage === 'config'}
       <Config />

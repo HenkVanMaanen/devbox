@@ -13,6 +13,7 @@ const STORAGE_KEYS = {
   defaultProfile: 'devbox_default_profile',
   hetznerToken: 'devbox_hetzner_token',
   profiles: 'devbox_profiles',
+  setupComplete: 'devbox_setup_complete',
   theme: 'devbox_theme',
 } as const;
 
