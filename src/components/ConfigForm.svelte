@@ -770,10 +770,10 @@
                    disabled:cursor-not-allowed disabled:opacity-50"
           />
           <p class="text-muted-foreground mt-1.5 text-sm">
-            Delegate this domain to sslip.io nameservers:
-            <code class="bg-muted rounded px-1 py-0.5 text-xs">ns-aws.sslip.io</code>,
-            <code class="bg-muted rounded px-1 py-0.5 text-xs">ns-azure.sslip.io</code>,
-            <code class="bg-muted rounded px-1 py-0.5 text-xs">ns-gce.sslip.io</code>
+            Create NS records for this domain pointing to the sslip.io nameservers:
+            <code class="bg-muted rounded px-1 py-0.5 text-xs">ns-do-sg.sslip.io</code>,
+            <code class="bg-muted rounded px-1 py-0.5 text-xs">ns-hetzner.sslip.io</code>,
+            <code class="bg-muted rounded px-1 py-0.5 text-xs">ns-ovh.sslip.io</code>
           </p>
         </div>
       </div>
